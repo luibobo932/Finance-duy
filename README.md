@@ -25,8 +25,8 @@ Hệ thống tổng hợp tin tức đầu tư 2 lần/ngày (8h sáng & 6h chi�
 
 | Routine | Cron (UTC) | Giờ VN | Trigger ID |
 |---|---|---|---|
-| Bản tin đầu tư sáng 8h | `0 1 * * *` | ~08:04 | `trig_01FRDsJoxuve2rZqa155NJbL` |
-| Bản tin đầu tư chiều 6h | `0 11 * * *` | ~18:07 | `trig_015dnA1uyoL2zMK61MDwFgKD` |
+| Bản tin đầu tư sáng 8h | `0 1 * * *` | ~08:08 | `trig_01J8VtbY4668FdxszFZEW9r5` |
+| Bản tin đầu tư chiều 6h | `0 11 * * *` | ~18:03 | `trig_014yVdXy3ehVSrVP7RntMtHT` |
 
 Cả hai routine bắn vào phiên Claude Code gốc (session `session_013t34M5Yh9yPtmNDBRg4UYx`), dùng WebSearch lấy số liệu mới nhất kèm nguồn.
 
@@ -37,6 +37,9 @@ Cả hai routine bắn vào phiên Claude Code gốc (session `session_013t34M5Y
 
 ## Cấu hình theo dõi hiện tại
 
-- Danh mục: toàn thị trường theo nhóm ngành (chưa có danh sách mã cụ thể — thêm mã vào đây nếu muốn theo sát từng cổ phiếu)
-- Vàng: cả trong nước + thế giới
+- **Danh mục cá nhân: VCB (Vietcombank) và CTD (Coteccons)** — theo sát giá, tin tức, KQKD, giao dịch khối ngoại từng mã
+- Thị trường chung: toàn bộ nhóm ngành + động thái **quỹ đầu tư lớn và khối ngoại** (mua/bán ròng, ETF, dòng vốn trước nâng hạng)
+- **Cảnh báo rủi ro doanh nghiệp**: tin lãnh đạo/chủ tịch tập đoàn bị bắt/khởi tố → đánh giá lan tỏa + cách phòng ngừa
+- Vàng: trong nước + thế giới, kèm phân tích **địa chính trị/chiến tranh**, **động thái Trump** (đánh giá rủi ro với kinh tế thế giới) và **quyết định/tín hiệu Fed**
 - Tiền gửi: khoản dưới 1 tỷ đồng, ưu tiên so sánh online vs tại quầy
+- Phân tích: dùng plugin Finance (chuẩn CFA) khi khả dụng trong phiên
