@@ -87,6 +87,21 @@ def cmd_report():
     ]:
         print(delta_line(name, get(cur, *path), get(prev, *path) if prev else None, unit))
 
+    # Khối lượng đột biến: so KLGD kỳ này với bình quân các phiên chiều trước đó (tối đa 20)
+    for ticker in ("vcb", "ctd"):
+        vol = get(cur, ticker, "volume")
+        past = [get(h, ticker, "volume") for h in hist[:-1] if h["ky"] == "chieu"]
+        past = [v for v in past if v is not None][-20:]
+        if vol is None:
+            continue
+        if not past:
+            print(f"- KLGD {ticker.upper()}: {fmt(vol)} triệu cp (chưa đủ lịch sử tính bình quân)")
+            continue
+        avg = sum(past) / len(past)
+        ratio = vol / avg if avg else 0
+        flag = " ⚠️ ĐỘT BIẾN — kiểm tra tin tức, thỏa thuận, giao dịch nội bộ" if ratio >= 1.5 else ""
+        print(f"- KLGD {ticker.upper()}: {fmt(vol)} triệu cp = {ratio:.1f}× bình quân {len(past)} phiên{flag}")
+
     # Chuỗi khối ngoại: chỉ tính trên các kỳ "chieu" (số chốt phiên) để không đếm trùng
     flows = [(h["date"], h.get("foreign_net_ty")) for h in hist
              if h["ky"] == "chieu" and h.get("foreign_net_ty") is not None]
