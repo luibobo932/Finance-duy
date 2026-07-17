@@ -25,8 +25,17 @@ Hệ thống tổng hợp tin tức đầu tư 2 lần/ngày (8h sáng & 6h chi�
 
 | Routine | Cron (UTC) | Giờ VN | Trigger ID |
 |---|---|---|---|
-| Bản tin đầu tư sáng 8h | `0 1 * * *` | ~08:08 | `trig_01J8VtbY4668FdxszFZEW9r5` |
-| Bản tin đầu tư chiều 6h | `0 11 * * *` | ~18:03 | `trig_014yVdXy3ehVSrVP7RntMtHT` |
+| Bản tin đầu tư sáng 8h | `0 1 * * *` | ~08:04 | `trig_012337xnA5BwCxeb57cpcED3` |
+| Bản tin đầu tư chiều 6h | `0 11 * * *` | ~18:00 | `trig_015q15QGtgtVaN4N39sxh6rT` |
+
+## Lịch sử số liệu & xu hướng
+
+- `data/history.jsonl` — mỗi bản tin append 1 dòng JSON snapshot (VN-Index, VCB, CTD, khối ngoại, vàng, tỷ giá, top lãi suất, cờ rủi ro). Xem dòng đầu file làm schema mẫu.
+- `data/portfolio.json` — giá vốn + số lượng VCB/CTD để tính lãi/lỗ thực tế (null = chưa cung cấp).
+- `scripts/trend.py`:
+  - `append '<json>'` — validate và ghi snapshot mới (chặn ghi trùng ngày+kỳ)
+  - `report` — so sánh với kỳ trước: biến động VN-Index/VCB/CTD/vàng, chuỗi mua/bán ròng khối ngoại (chỉ tính kỳ chiều để không đếm trùng phiên), chênh lệch vàng nới/thu hẹp, ngân hàng thay đổi lãi suất, lãi/lỗ danh mục
+- Mỗi routine tự commit + push `data/` sau khi ghi để lịch sử bền vững qua các container.
 
 Cả hai routine bắn vào phiên Claude Code gốc (session `session_013t34M5Yh9yPtmNDBRg4UYx`), dùng WebSearch lấy số liệu mới nhất kèm nguồn.
 
