@@ -38,6 +38,20 @@ class TickTests(unittest.TestCase):
         self.assertIn("KHÔNG phải từng lệnh", text)
         self.assertNotIn("CỤM LỆNH TRÒN SỐ", text)
 
+    def test_candle_metrics_separates_sessions_atc_and_direction(self):
+        rows = [
+            ("09:15", 66.0, 1000),
+            ("09:16", 65.9, 2000),
+            ("13:00", 66.0, 3000),
+            ("14:45", 63.5, 4000),
+        ]
+        metrics = tick.candle_metrics(rows)
+        self.assertEqual(metrics["morning"], 3000)
+        self.assertEqual(metrics["afternoon"], 7000)
+        self.assertEqual(metrics["atc"], 4000)
+        self.assertEqual(metrics["up"], 3000)
+        self.assertEqual(metrics["down"], 6000)
+
 
 if __name__ == "__main__":
     unittest.main()

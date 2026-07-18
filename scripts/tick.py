@@ -41,6 +41,33 @@ def parse_number(value):
     return float(text)
 
 
+def candle_metrics(rows):
+    """Tóm tắt cấu trúc nến phút; chiều tăng/giảm chỉ là tick rule gần đúng."""
+    total = sum(v for _, _, v in rows)
+    morning = sum(v for t, _, v in rows if t < "12:00")
+    afternoon = sum(v for t, _, v in rows if t >= "13:00")
+    atc = sum(v for t, _, v in rows if t == "14:45")
+    direction = {"up": 0, "down": 0, "flat": rows[0][2]}
+    for index in range(1, len(rows)):
+        price = rows[index][1]
+        previous = rows[index - 1][1]
+        key = "up" if price > previous else ("down" if price < previous else "flat")
+        direction[key] += rows[index][2]
+    profile = {}
+    for _, price, volume in rows:
+        profile[price] = profile.get(price, 0) + volume
+    return {
+        "total": total,
+        "morning": morning,
+        "afternoon": afternoon,
+        "atc": atc,
+        "up": direction["up"],
+        "down": direction["down"],
+        "flat": direction["flat"],
+        "profile": sorted(profile.items(), key=lambda item: (-item[1], item[0])),
+    }
+
+
 def analyze(rows, label, data_kind="tick"):
     """rows: list of (time_str, price, volume) — từng lệnh khớp hoặc nến 1 phút."""
     if not rows:
@@ -66,11 +93,22 @@ def analyze(rows, label, data_kind="tick"):
     if data_kind == "candle":
         average = total_vol / len(rows)
         spikes = [(t, p, v) for t, p, v in rows if v >= average * 2]
+        metrics = candle_metrics(rows)
         print(f"- Nến 1 phút có volume ≥2× bình quân: {len(spikes)}")
+        print(f"- Phiên sáng: {metrics['morning']:,.0f} cp ({metrics['morning'] / total_vol * 100:.1f}%)")
+        print(f"- Phiên chiều: {metrics['afternoon']:,.0f} cp ({metrics['afternoon'] / total_vol * 100:.1f}%)")
+        print(f"- ATC: {metrics['atc']:,.0f} cp ({metrics['atc'] / total_vol * 100:.1f}%)")
+        print("- Tick rule theo giá đóng nến: "
+              f"tăng {metrics['up']:,.0f} cp, giảm {metrics['down']:,.0f} cp, "
+              f"đứng giá {metrics['flat']:,.0f} cp")
+        print("  Lưu ý: đây không phải cột mua/bán chủ động từ sở giao dịch.")
         print("\n- Dữ liệu nến KHÔNG phải từng lệnh: không chạy heuristic lệnh tròn số/gom hàng.")
+        print("\nTop 5 vùng giá theo khối lượng (giá: nghìn đồng/cp):")
+        for price, volume in metrics["profile"][:5]:
+            print(f"  {price:,.2f} | {volume:,.0f} cp | {volume / total_vol * 100:.1f}%")
         print("\nTop 10 nến 1 phút có khối lượng lớn nhất:")
         for t, p, v in sorted(rows, key=lambda x: -x[2])[:10]:
-            print(f"  {t} | giá đóng {p:,.0f} | {v:,.0f} cp")
+            print(f"  {t} | giá đóng {p:,.2f} nghìn | {v:,.0f} cp")
         return
     print(f"- Trong đó TRÒN SỐ: {len(round_big)} lệnh")
     if repeated:
