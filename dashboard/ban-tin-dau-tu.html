@@ -1,0 +1,157 @@
+<title>Bản tin Đầu tư — Chứng khoán · Vàng · Lãi suất</title>
+<style>
+  :root{
+    --bg:#F2F4F1; --surface:#FFFFFF; --ink:#1C2723; --muted:#5C6B64;
+    --accent:#A87B22; --up:#0B7A4B; --down:#C2372F; --line:#DDE3DE;
+    --chip-up:#E3F2EA; --chip-down:#F9E7E5; --chip-flat:#EEEFE9;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0F1513; --surface:#161E1B; --ink:#E6EBE8; --muted:#93A29B;
+      --accent:#D4A94C; --up:#3FBF87; --down:#E5685F; --line:#25302B;
+      --chip-up:#173328; --chip-down:#3A211E; --chip-flat:#222A26;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0F1513; --surface:#161E1B; --ink:#E6EBE8; --muted:#93A29B;
+    --accent:#D4A94C; --up:#3FBF87; --down:#E5685F; --line:#25302B;
+    --chip-up:#173328; --chip-down:#3A211E; --chip-flat:#222A26;
+  }
+  :root[data-theme="light"]{
+    --bg:#F2F4F1; --surface:#FFFFFF; --ink:#1C2723; --muted:#5C6B64;
+    --accent:#A87B22; --up:#0B7A4B; --down:#C2372F; --line:#DDE3DE;
+    --chip-up:#E3F2EA; --chip-down:#F9E7E5; --chip-flat:#EEEFE9;
+  }
+  body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.55;}
+  .wrap{max-width:880px;margin:0 auto;padding:28px 20px 56px;display:flex;flex-direction:column;gap:24px;}
+  .masthead{border-bottom:3px double var(--accent);padding-bottom:14px;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;}
+  .masthead h1{font-family:ui-serif,Georgia,"Times New Roman",serif;font-size:1.7rem;font-weight:700;letter-spacing:.01em;text-wrap:balance;margin:0;}
+  .masthead h1 span{color:var(--accent);}
+  .stamp{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;}
+  .tile .lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
+  .tile .val{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;font-size:1.25rem;font-weight:600;}
+  .tile .sub{font-size:.8rem;}
+  .neg{color:var(--down);} .pos{color:var(--up);} .muted{color:var(--muted);}
+  section{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:20px 22px;}
+  section h2{font-family:ui-serif,Georgia,serif;font-size:1.15rem;margin:0 0 4px;color:var(--accent);}
+  section h3{font-size:.95rem;margin:18px 0 6px;}
+  section .when{font-size:.75rem;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em;}
+  p{margin:.5em 0;max-width:68ch;}
+  .tbl{overflow-x:auto;}
+  table{border-collapse:collapse;width:100%;font-size:.88rem;}
+  th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding:6px 10px;border-bottom:1px solid var(--line);}
+  td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  td.num{font-family:ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  tr:last-child td{border-bottom:none;}
+  .chip{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.75rem;font-weight:600;font-variant-numeric:tabular-nums;}
+  .chip.up{background:var(--chip-up);color:var(--up);} .chip.down{background:var(--chip-down);color:var(--down);} .chip.flat{background:var(--chip-flat);color:var(--muted);}
+  ul{margin:.4em 0;padding-left:1.2em;} li{margin:.3em 0;max-width:66ch;}
+  .action{border-left:4px solid var(--accent);}
+  .note{font-size:.8rem;color:var(--muted);}
+  .src{font-size:.78rem;color:var(--muted);} .src a{color:inherit;}
+  a{color:var(--accent);} a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+</style>
+<div class="wrap">
+  <header class="masthead">
+    <h1>Bản tin <span>Đầu tư</span> — Chứng khoán · Vàng · Lãi suất</h1>
+    <div class="stamp">Bản tin sáng · Thứ Bảy 18/07/2026, 08:15 (giờ VN) · TTCK nghỉ cuối tuần — mở lại thứ Hai 20/07</div>
+  </header>
+
+  <div class="tiles">
+    <div class="tile"><span class="lbl">VN-Index (17/07)</span><span class="val">1.787,45</span><span class="sub neg">▼ 16,79 (−0,93%)</span></div>
+    <div class="tile"><span class="lbl">Vàng SJC (bán ra)</span><span class="val">146,6 tr/lượng</span><span class="sub neg">▼ 1,6 triệu</span></div>
+    <div class="tile"><span class="lbl">Vàng thế giới</span><span class="val">4.017 $/oz</span><span class="sub pos">▲ 0,75%/24h — lấy lại mốc 4.000</span></div>
+    <div class="tile"><span class="lbl">Lãi suất cao nhất &lt;1 tỷ</span><span class="val">7,4%/năm</span><span class="sub muted">Cake by VPBank · 12T online</span></div>
+  </div>
+
+  <section>
+    <h2>Chứng khoán Việt Nam</h2>
+    <div class="when">Phiên thứ Sáu 17/07 — thị trường nghỉ cuối tuần, mở lại thứ Hai 20/07</div>
+    <p>VN-Index mất mốc 1.800, đóng cửa <strong>1.787,45 điểm (−0,93%)</strong>; VN30 giảm 0,52% còn 1.931,65. Dòng tiền suy yếu, khối ngoại đảo chiều <strong>bán ròng ~690 tỷ đồng</strong>. Điểm sáng hiếm hoi: PNJ và VNM hút được lực cầu.</p>
+    <h3>Diễn biến nhóm ngành phiên 17/07</h3>
+    <div class="tbl"><table>
+      <tr><th>Nhóm ngành</th><th>Phiên 17/07</th><th>Yếu tố đang chi phối</th></tr>
+      <tr><td>Bán lẻ</td><td><span class="chip up">+0,63%</span></td><td>Kỳ vọng KQKD quý II tích cực; tiêu dùng phục hồi</td></tr>
+      <tr><td>Bảo hiểm</td><td><span class="chip flat">+0,03%</span></td><td>Phòng thủ, hưởng lợi nếu mặt bằng lãi suất nhích lên</td></tr>
+      <tr><td>Ngân hàng</td><td><span class="chip down">−0,47%</span></td><td>Chờ KQKD quý II; kỳ vọng nới tỷ lệ LDR, tín dụng tăng đều — vẫn được xem là lực kéo chính tháng 7</td></tr>
+      <tr><td>Nguyên vật liệu / thép</td><td><span class="chip down">−0,93%</span></td><td>KQKD quý II VLXD dự báo khả quan nhờ đầu tư công</td></tr>
+      <tr><td>Phần mềm / công nghệ</td><td><span class="chip down">−1,32%</span></td><td>Điều chỉnh sau nhịp tăng; câu chuyện dài hạn còn nguyên</td></tr>
+      <tr><td>Bất động sản</td><td><span class="chip down">−1,33%</span></td><td>Thanh khoản yếu, chưa có chất xúc tác mới</td></tr>
+      <tr><td>Chứng khoán</td><td><span class="chip down">−1,44%</span></td><td>Điều chỉnh ngắn hạn nhưng là nhóm hưởng lợi trực tiếp từ câu chuyện <strong>nâng hạng thị trường</strong> nửa cuối 2026</td></tr>
+      <tr><td>Cảng biển / xuất khẩu</td><td><span class="chip flat">—</span></td><td>Kim ngạch XNK quý II tăng mạnh nhờ mùa cao điểm đến sớm</td></tr>
+    </table></div>
+    <p class="note">Chuyên gia đồng thuận 3 chủ đề nửa cuối 2026: (1) nâng hạng thị trường → ưu tiên vốn hóa lớn, còn room ngoại; (2) KQKD quý II — ngân hàng, bán lẻ, VLXD, cao su, thực phẩm – đồ uống dự báo tích cực; (3) đầu tư công tăng tốc.</p>
+  </section>
+
+  <section>
+    <h2>Thị trường Vàng</h2>
+    <div class="when">Chốt ngày 17/07</div>
+    <div class="tbl"><table>
+      <tr><th>Loại</th><th>Mua vào</th><th>Bán ra</th><th>Thay đổi</th></tr>
+      <tr><td>SJC miếng</td><td class="num">143,6 tr</td><td class="num">146,6 tr</td><td><span class="chip down">−1,6 tr</span></td></tr>
+      <tr><td>Nhẫn 9999 (SJC)</td><td class="num">142,1 tr</td><td class="num">145,6 tr</td><td><span class="chip down">−1,2…−1,5 tr</span></td></tr>
+      <tr><td>Nhẫn DOJI Hưng Thịnh Vượng</td><td class="num">142,5 tr</td><td class="num">146,5 tr</td><td><span class="chip down">giảm</span></td></tr>
+      <tr><td>Thế giới (XAU/USD)</td><td class="num" colspan="2">4.017 $/oz — lấy lại mốc 4.000 $</td><td><span class="chip up">+0,75%/24h</span></td></tr>
+    </table></div>
+    <p>Quy đổi theo tỷ giá VCB bán 26.460 đ/USD, vàng thế giới tương đương <strong>≈128 triệu đồng/lượng</strong> → SJC cao hơn thế giới <strong>≈18,4 triệu đồng/lượng</strong> (thu hẹp so với hôm qua nhờ vàng thế giới bật tăng, giá trong nước đứng yên cuối tuần).</p>
+    <ul>
+      <li><strong>Yếu tố đỡ giá (đang mạnh lên):</strong> Mỹ–Iran tái leo thang bạo lực; bán tháo cổ phiếu chip toàn cầu kích hoạt dòng tiền trú ẩn — vàng bật lại trên 4.000 $ trong 24h qua.</li>
+      <li><strong>Yếu tố ghìm giá:</strong> USD còn mạnh; Fed nhiều khả năng giữ 3,50–3,75% cuối tháng 7 (~66% theo CME) nhưng rủi ro <em>tăng</em> lãi suất tháng 9 vẫn treo trên đầu tài sản không sinh lãi.</li>
+      <li><strong>Trump:</strong> cáo buộc Trung Quốc can thiệp bầu cử 2020, đe dọa phá vỡ đình chiến thuế quan Mỹ–Trung — rủi ro TRUNG BÌNH-CAO với kinh tế thế giới: nếu thuế quan tái bùng phát, lạm phát nhập khẩu tăng → Fed diều hâu hơn → xấu cho cả cổ phiếu lẫn vàng ngắn hạn, nhưng dài hạn lại đẩy nhu cầu trú ẩn vào vàng.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Lãi suất tiết kiệm — khoản gửi dưới 1 tỷ đồng</h2>
+    <div class="when">Khảo sát tháng 07/2026</div>
+    <div class="tbl"><table>
+      <tr><th>Ngân hàng</th><th>Kỳ hạn</th><th>Lãi suất</th><th>Ghi chú</th></tr>
+      <tr><td><strong>Cake by VPBank</strong></td><td>12 tháng</td><td class="num"><strong>7,4%</strong></td><td>Online — cao nhất thị trường cho khoản nhỏ</td></tr>
+      <tr><td>HLBank (Hong Leong VN)</td><td>12 tháng</td><td class="num">7,0–7,3%</td><td>Tại quầy</td></tr>
+      <tr><td>OceanBank / MB</td><td>12 tháng+</td><td class="num">7,0%</td><td>Kỳ hạn dài</td></tr>
+      <tr><td>Bắc Á Bank</td><td>12 tháng</td><td class="num">6,9%</td><td></td></tr>
+      <tr><td>Big4 (VCB, BIDV, VietinBank...)</td><td>12 tháng</td><td class="num">≈5,9%</td><td>Ổn định, thấp hơn hẳn</td></tr>
+    </table></div>
+    <p class="note">Lưu ý: các mức 9%+/13 tháng xuất hiện trên báo là lãi suất đặc biệt yêu cầu số dư hàng trăm tỷ đồng — <strong>không áp dụng</strong> cho khoản dưới 1 tỷ. Gửi online thường cao hơn tại quầy 0,2–0,5 điểm %.</p>
+  </section>
+
+  <section>
+    <h2>Xu hướng &amp; Danh mục (VCB · CTD)</h2>
+    <div class="when">Kỳ sáng 18/07 so với chốt phiên 17/07</div>
+    <div class="tbl"><table>
+      <tr><th>Chỉ tiêu</th><th>Kỳ này</th><th>So với kỳ trước</th></tr>
+      <tr><td>VN-Index</td><td class="num">1.787,45</td><td><span class="chip flat">nghỉ cuối tuần</span></td></tr>
+      <tr><td>VCB</td><td class="num">≈57.600 đ</td><td><span class="chip down">−1,52% phiên 17/07</span></td></tr>
+      <tr><td>CTD</td><td class="num">≈73.800 đ</td><td><span class="chip up">+3,9% từ 08/07 (71.000)</span></td></tr>
+      <tr><td>Khối ngoại</td><td class="num">−690 tỷ</td><td><span class="chip down">bán ròng 1 phiên liên tiếp</span></td></tr>
+      <tr><td>Vàng thế giới</td><td class="num">4.017 $</td><td><span class="chip up">+33 $ (+0,84%)</span></td></tr>
+      <tr><td>Chênh lệch vàng VN–TG</td><td class="num">≈18,4 tr/lượng</td><td><span class="chip up">thu hẹp 1,1 tr</span></td></tr>
+    </table></div>
+    <p class="note">Lãi/lỗ danh mục: chưa có giá vốn — gửi giá mua trung bình + số lượng VCB, CTD để bảng này hiển thị lãi/lỗ bằng tiền thật mỗi kỳ.</p>
+  </section>
+
+  <section class="action">
+    <h2>Gợi ý hành động</h2>
+    <ul>
+      <li><strong>VCB:</strong> giảm 1,52% cùng nhịp chỉnh của nhóm ngân hàng, chưa có tin xấu riêng — chờ KQKD quý II (dự kiến cuối tháng 7); vùng 56.000–57.000 là hỗ trợ đáng quan sát để tích lũy thêm nếu thị trường ổn định sau cú sốc chip Mỹ.</li>
+      <li><strong>CTD:</strong> đang mạnh hơn thị trường (+3,9% từ 08/07 trong khi VN-Index đi ngang) — dấu hiệu markup theo Wyckoff; KHÔNG mua đuổi giá cao, canh nhịp chỉnh về 71.000–72.000; thứ Hai chú ý phản ứng với tin bán tháo chip (ít liên quan trực tiếp đến xây dựng).</li>
+      <li><strong>Vàng:</strong> thế giới bật lại trên 4.000 $ nhờ căng thẳng Mỹ–Iran; chênh lệch thu hẹp còn ~18,4 tr nhưng vẫn cao — nếu muốn mua, ưu tiên vàng nhẫn (chênh thấp hơn miếng) và mua rải, không all-in.</li>
+      <li><strong>Tiền gửi:</strong> không đổi — Cake by VPBank 7,4%/12T online vẫn cao nhất cho khoản dưới 1 tỷ; mức 7,6%/13T của HDBank yêu cầu số dư 500 tỷ, không áp dụng.</li>
+    </ul>
+    <p class="note">Đây là thông tin tham khảo tổng hợp từ báo chí, không phải khuyến nghị đầu tư. Kiểm tra lại số liệu trước khi giao dịch.</p>
+  </section>
+
+  <footer class="src">
+    Nguồn: <a href="https://nhandan.vn/chung-khoan-ngay-177-khoi-ngoai-dao-chieu-ban-rong-vn-index-giam-gan-17-diem-post976245.html">Nhân Dân</a> ·
+    <a href="https://thoibaotaichinhvietnam.vn/chung-khoan-ngay-17-7-dong-tien-suy-yeu-vn-index-lai-danh-mat-moc-1-800-diem-200873.html">Thời báo Tài chính</a> ·
+    <a href="https://www.tinnhanhchungkhoan.vn/vn-index-quay-dau-giam-trong-phien-177-hai-ma-pnj-va-vnm-la-diem-sang-hiem-hoi-thu-hut-luc-cau-post394199.html">Tin nhanh Chứng khoán</a> ·
+    <a href="https://vneconomy.vn/chuyen-gia-thi-truong-se-tiep-tuc-phan-hoa-diem-ten-5-nhom-nganh-trien-vong-nhat-6-thang-cuoi-nam-2026.htm">VnEconomy</a> ·
+    <a href="https://cafef.vn/du-lieu/gia-vang-hom-nay/trong-nuoc.chn">CafeF – giá vàng</a> ·
+    <a href="https://tradingeconomics.com/commodity/gold">Trading Economics</a> ·
+    <a href="https://topi.vn/lai-suat-tiet-kiem-ngan-hang-nao-cao-nhat.html">TOPI</a> ·
+    <a href="https://webgia.com/lai-suat/">Webgia</a> ·
+    <a href="https://tygiausd.org/nganhang/vietcombank">Tỷ giá VCB</a>
+  </footer>
+</div>
