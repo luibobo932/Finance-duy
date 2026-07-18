@@ -638,8 +638,955 @@
     "assessed": 0,
     "pending": 0,
     "minimum_assessed": 20,
+    "minimum_assessed_per_asset": 20,
+    "asset_results": {
+      "gold": {
+        "status": "INSUFFICIENT_HISTORY",
+        "assessed": 0,
+        "minimum_assessed": 20,
+        "directional_accuracy_pct": null
+      },
+      "vcb": {
+        "status": "INSUFFICIENT_HISTORY",
+        "assessed": 0,
+        "minimum_assessed": 20,
+        "directional_accuracy_pct": null
+      },
+      "ctd": {
+        "status": "INSUFFICIENT_HISTORY",
+        "assessed": 0,
+        "minimum_assessed": 20,
+        "directional_accuracy_pct": null
+      },
+      "savings": {
+        "status": "NOT_REQUIRED",
+        "assessed": 0,
+        "minimum_assessed": 0,
+        "directional_accuracy_pct": null
+      }
+    },
     "directional_accuracy_pct": null,
     "horizon_periods": 5,
     "outcomes": []
+  },
+  "market_history": {
+    "schema_version": 1,
+    "classification": "AUXILIARY_REFERENCE_ONLY",
+    "decision_unlock": false,
+    "market_date": "2026-07-17",
+    "retrieved_at": "2026-07-18T20:39:04.738195+07:00",
+    "daily": {
+      "VCB": [
+        {
+          "date": "2026-06-22",
+          "open_vnd": 61700,
+          "high_vnd": 61800,
+          "low_vnd": 61200,
+          "close_vnd": 61300,
+          "change_pct": -0.65,
+          "matched_volume": 2686300,
+          "matched_value_billion_vnd": 165.05,
+          "put_through_volume": 90000
+        },
+        {
+          "date": "2026-06-23",
+          "open_vnd": 61700,
+          "high_vnd": 62600,
+          "low_vnd": 61300,
+          "close_vnd": 61300,
+          "change_pct": 0.0,
+          "matched_volume": 5176000,
+          "matched_value_billion_vnd": 320.49,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-06-24",
+          "open_vnd": 61400,
+          "high_vnd": 61600,
+          "low_vnd": 61000,
+          "close_vnd": 61000,
+          "change_pct": -0.49,
+          "matched_volume": 2542500,
+          "matched_value_billion_vnd": 155.57,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-06-25",
+          "open_vnd": 61100,
+          "high_vnd": 61300,
+          "low_vnd": 60800,
+          "close_vnd": 60800,
+          "change_pct": -0.33,
+          "matched_volume": 3093500,
+          "matched_value_billion_vnd": 188.58,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-06-26",
+          "open_vnd": 61000,
+          "high_vnd": 61500,
+          "low_vnd": 60800,
+          "close_vnd": 61400,
+          "change_pct": 0.99,
+          "matched_volume": 3344300,
+          "matched_value_billion_vnd": 204.56,
+          "put_through_volume": 30000
+        },
+        {
+          "date": "2026-06-29",
+          "open_vnd": 61600,
+          "high_vnd": 62200,
+          "low_vnd": 61400,
+          "close_vnd": 62000,
+          "change_pct": 0.98,
+          "matched_volume": 5481600,
+          "matched_value_billion_vnd": 339.86,
+          "put_through_volume": 250000
+        },
+        {
+          "date": "2026-06-30",
+          "open_vnd": 62200,
+          "high_vnd": 62600,
+          "low_vnd": 61900,
+          "close_vnd": 62200,
+          "change_pct": 0.32,
+          "matched_volume": 4622500,
+          "matched_value_billion_vnd": 287.78,
+          "put_through_volume": 176000
+        },
+        {
+          "date": "2026-07-01",
+          "open_vnd": 62400,
+          "high_vnd": 63000,
+          "low_vnd": 62100,
+          "close_vnd": 63000,
+          "change_pct": 1.29,
+          "matched_volume": 4232900,
+          "matched_value_billion_vnd": 265.39,
+          "put_through_volume": 250000
+        },
+        {
+          "date": "2026-07-02",
+          "open_vnd": 63000,
+          "high_vnd": 63100,
+          "low_vnd": 62100,
+          "close_vnd": 62100,
+          "change_pct": -1.43,
+          "matched_volume": 2744500,
+          "matched_value_billion_vnd": 171.69,
+          "put_through_volume": 176000
+        },
+        {
+          "date": "2026-07-03",
+          "open_vnd": 62300,
+          "high_vnd": 62400,
+          "low_vnd": 62000,
+          "close_vnd": 62000,
+          "change_pct": -0.16,
+          "matched_volume": 2601900,
+          "matched_value_billion_vnd": 161.76,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-06",
+          "open_vnd": 62000,
+          "high_vnd": 62500,
+          "low_vnd": 60700,
+          "close_vnd": 61200,
+          "change_pct": -1.29,
+          "matched_volume": 4173100,
+          "matched_value_billion_vnd": 257.2,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-07",
+          "open_vnd": 61200,
+          "high_vnd": 61500,
+          "low_vnd": 60900,
+          "close_vnd": 61300,
+          "change_pct": 0.16,
+          "matched_volume": 2547200,
+          "matched_value_billion_vnd": 155.78,
+          "put_through_volume": 176000
+        },
+        {
+          "date": "2026-07-08",
+          "open_vnd": 61300,
+          "high_vnd": 61800,
+          "low_vnd": 61100,
+          "close_vnd": 61600,
+          "change_pct": 0.49,
+          "matched_volume": 2051000,
+          "matched_value_billion_vnd": 126.16,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-09",
+          "open_vnd": 61300,
+          "high_vnd": 61500,
+          "low_vnd": 61000,
+          "close_vnd": 61100,
+          "change_pct": -0.81,
+          "matched_volume": 2209800,
+          "matched_value_billion_vnd": 135.2,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-10",
+          "open_vnd": 61100,
+          "high_vnd": 61500,
+          "low_vnd": 60500,
+          "close_vnd": 60500,
+          "change_pct": -0.98,
+          "matched_volume": 3016400,
+          "matched_value_billion_vnd": 183.53,
+          "put_through_volume": 835211
+        },
+        {
+          "date": "2026-07-13",
+          "open_vnd": 60500,
+          "high_vnd": 60500,
+          "low_vnd": 58800,
+          "close_vnd": 58900,
+          "change_pct": -2.64,
+          "matched_volume": 6789000,
+          "matched_value_billion_vnd": 403.0,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-14",
+          "open_vnd": 58900,
+          "high_vnd": 59500,
+          "low_vnd": 58600,
+          "close_vnd": 59200,
+          "change_pct": 0.51,
+          "matched_volume": 2829200,
+          "matched_value_billion_vnd": 167.29,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-15",
+          "open_vnd": 59200,
+          "high_vnd": 59400,
+          "low_vnd": 58700,
+          "close_vnd": 59200,
+          "change_pct": 0.0,
+          "matched_volume": 2633300,
+          "matched_value_billion_vnd": 155.36,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-16",
+          "open_vnd": 59100,
+          "high_vnd": 59800,
+          "low_vnd": 58400,
+          "close_vnd": 59400,
+          "change_pct": 0.34,
+          "matched_volume": 3349700,
+          "matched_value_billion_vnd": 197.14,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-17",
+          "open_vnd": 59300,
+          "high_vnd": 59300,
+          "low_vnd": 58500,
+          "close_vnd": 58500,
+          "change_pct": -1.52,
+          "matched_volume": 1990100,
+          "matched_value_billion_vnd": 117.05,
+          "put_through_volume": 0
+        }
+      ],
+      "CTD": [
+        {
+          "date": "2026-06-22",
+          "open_vnd": 72500,
+          "high_vnd": 72500,
+          "low_vnd": 71200,
+          "close_vnd": 72500,
+          "change_pct": 0.0,
+          "matched_volume": 397000,
+          "matched_value_billion_vnd": 28.54,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-06-23",
+          "open_vnd": 72200,
+          "high_vnd": 72200,
+          "low_vnd": 71300,
+          "close_vnd": 71400,
+          "change_pct": -1.52,
+          "matched_volume": 412700,
+          "matched_value_billion_vnd": 29.51,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-06-24",
+          "open_vnd": 71500,
+          "high_vnd": 71500,
+          "low_vnd": 69900,
+          "close_vnd": 70300,
+          "change_pct": -1.54,
+          "matched_volume": 532200,
+          "matched_value_billion_vnd": 37.49,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-06-25",
+          "open_vnd": 70800,
+          "high_vnd": 71600,
+          "low_vnd": 70400,
+          "close_vnd": 71600,
+          "change_pct": 1.85,
+          "matched_volume": 308500,
+          "matched_value_billion_vnd": 21.97,
+          "put_through_volume": 20000
+        },
+        {
+          "date": "2026-06-26",
+          "open_vnd": 71000,
+          "high_vnd": 71600,
+          "low_vnd": 70900,
+          "close_vnd": 71600,
+          "change_pct": 0.0,
+          "matched_volume": 150100,
+          "matched_value_billion_vnd": 10.7,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-06-29",
+          "open_vnd": 71600,
+          "high_vnd": 73800,
+          "low_vnd": 71000,
+          "close_vnd": 72000,
+          "change_pct": 0.56,
+          "matched_volume": 666400,
+          "matched_value_billion_vnd": 48.09,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-06-30",
+          "open_vnd": 72900,
+          "high_vnd": 73200,
+          "low_vnd": 72200,
+          "close_vnd": 72700,
+          "change_pct": 0.97,
+          "matched_volume": 378000,
+          "matched_value_billion_vnd": 27.46,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-01",
+          "open_vnd": 72600,
+          "high_vnd": 72700,
+          "low_vnd": 71700,
+          "close_vnd": 72500,
+          "change_pct": -0.28,
+          "matched_volume": 353800,
+          "matched_value_billion_vnd": 25.49,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-02",
+          "open_vnd": 72000,
+          "high_vnd": 72400,
+          "low_vnd": 71000,
+          "close_vnd": 72000,
+          "change_pct": -0.69,
+          "matched_volume": 888300,
+          "matched_value_billion_vnd": 63.59,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-03",
+          "open_vnd": 72000,
+          "high_vnd": 72300,
+          "low_vnd": 71100,
+          "close_vnd": 72000,
+          "change_pct": 0.0,
+          "matched_volume": 485000,
+          "matched_value_billion_vnd": 34.83,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-06",
+          "open_vnd": 72400,
+          "high_vnd": 72400,
+          "low_vnd": 70000,
+          "close_vnd": 70300,
+          "change_pct": -2.36,
+          "matched_volume": 977200,
+          "matched_value_billion_vnd": 69.47,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-07",
+          "open_vnd": 70300,
+          "high_vnd": 71700,
+          "low_vnd": 68000,
+          "close_vnd": 71700,
+          "change_pct": 1.99,
+          "matched_volume": 804500,
+          "matched_value_billion_vnd": 56.14,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-08",
+          "open_vnd": 71500,
+          "high_vnd": 71500,
+          "low_vnd": 70200,
+          "close_vnd": 71000,
+          "change_pct": -0.98,
+          "matched_volume": 469700,
+          "matched_value_billion_vnd": 33.14,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-09",
+          "open_vnd": 70300,
+          "high_vnd": 70400,
+          "low_vnd": 69400,
+          "close_vnd": 69500,
+          "change_pct": -2.11,
+          "matched_volume": 588300,
+          "matched_value_billion_vnd": 40.97,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-10",
+          "open_vnd": 68600,
+          "high_vnd": 69500,
+          "low_vnd": 68600,
+          "close_vnd": 68800,
+          "change_pct": -1.01,
+          "matched_volume": 540900,
+          "matched_value_billion_vnd": 37.25,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-13",
+          "open_vnd": 68300,
+          "high_vnd": 68300,
+          "low_vnd": 66800,
+          "close_vnd": 67600,
+          "change_pct": -1.74,
+          "matched_volume": 792900,
+          "matched_value_billion_vnd": 53.47,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-14",
+          "open_vnd": 67600,
+          "high_vnd": 67800,
+          "low_vnd": 66400,
+          "close_vnd": 67500,
+          "change_pct": -0.15,
+          "matched_volume": 473900,
+          "matched_value_billion_vnd": 31.73,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-15",
+          "open_vnd": 67500,
+          "high_vnd": 67500,
+          "low_vnd": 66100,
+          "close_vnd": 66100,
+          "change_pct": -2.07,
+          "matched_volume": 259100,
+          "matched_value_billion_vnd": 17.28,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-16",
+          "open_vnd": 66200,
+          "high_vnd": 66500,
+          "low_vnd": 63100,
+          "close_vnd": 66200,
+          "change_pct": 0.15,
+          "matched_volume": 493000,
+          "matched_value_billion_vnd": 32.03,
+          "put_through_volume": 0
+        },
+        {
+          "date": "2026-07-17",
+          "open_vnd": 66000,
+          "high_vnd": 66200,
+          "low_vnd": 63500,
+          "close_vnd": 63500,
+          "change_pct": -4.08,
+          "matched_volume": 426800,
+          "matched_value_billion_vnd": 27.51,
+          "put_through_volume": 0
+        }
+      ]
+    },
+    "intraday": {
+      "VCB": {
+        "market_date": "2026-07-17",
+        "bar_count": 219,
+        "total_volume": 1990100,
+        "morning_volume": 537900,
+        "afternoon_volume": 1452200,
+        "atc_volume": 379500,
+        "uptick_volume": 248600,
+        "downtick_volume": 924000,
+        "flat_volume": 817500,
+        "price_profile": [
+          {
+            "price_thousand_vnd": 58.9,
+            "volume": 415800
+          },
+          {
+            "price_thousand_vnd": 59.0,
+            "volume": 391600
+          },
+          {
+            "price_thousand_vnd": 58.5,
+            "volume": 379500
+          },
+          {
+            "price_thousand_vnd": 58.8,
+            "volume": 295300
+          },
+          {
+            "price_thousand_vnd": 59.1,
+            "volume": 208500
+          },
+          {
+            "price_thousand_vnd": 58.7,
+            "volume": 171800
+          },
+          {
+            "price_thousand_vnd": 58.6,
+            "volume": 97700
+          },
+          {
+            "price_thousand_vnd": 59.2,
+            "volume": 29900
+          }
+        ],
+        "large_bars": [
+          {
+            "time": "14:45",
+            "open_thousand_vnd": 58.5,
+            "high_thousand_vnd": 58.5,
+            "low_thousand_vnd": 58.5,
+            "close_thousand_vnd": 58.5,
+            "volume": 379500
+          },
+          {
+            "time": "14:18",
+            "open_thousand_vnd": 58.8,
+            "high_thousand_vnd": 58.8,
+            "low_thousand_vnd": 58.7,
+            "close_thousand_vnd": 58.7,
+            "volume": 125800
+          },
+          {
+            "time": "14:22",
+            "open_thousand_vnd": 58.8,
+            "high_thousand_vnd": 58.8,
+            "low_thousand_vnd": 58.6,
+            "close_thousand_vnd": 58.6,
+            "volume": 77600
+          },
+          {
+            "time": "14:16",
+            "open_thousand_vnd": 58.9,
+            "high_thousand_vnd": 58.9,
+            "low_thousand_vnd": 58.8,
+            "close_thousand_vnd": 58.8,
+            "volume": 67300
+          },
+          {
+            "time": "14:14",
+            "open_thousand_vnd": 58.9,
+            "high_thousand_vnd": 58.9,
+            "low_thousand_vnd": 58.8,
+            "close_thousand_vnd": 58.9,
+            "volume": 62900
+          },
+          {
+            "time": "14:25",
+            "open_thousand_vnd": 58.7,
+            "high_thousand_vnd": 58.8,
+            "low_thousand_vnd": 58.7,
+            "close_thousand_vnd": 58.8,
+            "volume": 45800
+          },
+          {
+            "time": "13:00",
+            "open_thousand_vnd": 59.0,
+            "high_thousand_vnd": 59.0,
+            "low_thousand_vnd": 58.9,
+            "close_thousand_vnd": 58.9,
+            "volume": 43100
+          },
+          {
+            "time": "14:06",
+            "open_thousand_vnd": 58.8,
+            "high_thousand_vnd": 58.9,
+            "low_thousand_vnd": 58.8,
+            "close_thousand_vnd": 58.8,
+            "volume": 32900
+          },
+          {
+            "time": "10:21",
+            "open_thousand_vnd": 59.1,
+            "high_thousand_vnd": 59.1,
+            "low_thousand_vnd": 59.1,
+            "close_thousand_vnd": 59.1,
+            "volume": 31100
+          },
+          {
+            "time": "14:20",
+            "open_thousand_vnd": 58.7,
+            "high_thousand_vnd": 58.8,
+            "low_thousand_vnd": 58.7,
+            "close_thousand_vnd": 58.8,
+            "volume": 29800
+          }
+        ],
+        "method_note": "Nến 1 phút; tick rule chỉ so giá đóng nến, không phải mua/bán chủ động chính thức.",
+        "reconciled_with_daily": true,
+        "daily_volume": 1990100
+      },
+      "CTD": {
+        "market_date": "2026-07-17",
+        "bar_count": 171,
+        "total_volume": 426800,
+        "morning_volume": 116900,
+        "afternoon_volume": 309900,
+        "atc_volume": 68900,
+        "uptick_volume": 69700,
+        "downtick_volume": 163300,
+        "flat_volume": 193800,
+        "price_profile": [
+          {
+            "price_thousand_vnd": 64.5,
+            "volume": 114600
+          },
+          {
+            "price_thousand_vnd": 63.5,
+            "volume": 68900
+          },
+          {
+            "price_thousand_vnd": 64.7,
+            "volume": 56300
+          },
+          {
+            "price_thousand_vnd": 64.4,
+            "volume": 55300
+          },
+          {
+            "price_thousand_vnd": 64.6,
+            "volume": 43800
+          },
+          {
+            "price_thousand_vnd": 64.2,
+            "volume": 16500
+          },
+          {
+            "price_thousand_vnd": 64.3,
+            "volume": 15800
+          },
+          {
+            "price_thousand_vnd": 65.0,
+            "volume": 9300
+          }
+        ],
+        "large_bars": [
+          {
+            "time": "14:45",
+            "open_thousand_vnd": 63.5,
+            "high_thousand_vnd": 63.5,
+            "low_thousand_vnd": 63.5,
+            "close_thousand_vnd": 63.5,
+            "volume": 68900
+          },
+          {
+            "time": "14:27",
+            "open_thousand_vnd": 64.3,
+            "high_thousand_vnd": 64.3,
+            "low_thousand_vnd": 64.2,
+            "close_thousand_vnd": 64.2,
+            "volume": 13000
+          },
+          {
+            "time": "13:58",
+            "open_thousand_vnd": 64.4,
+            "high_thousand_vnd": 64.5,
+            "low_thousand_vnd": 64.4,
+            "close_thousand_vnd": 64.5,
+            "volume": 12900
+          },
+          {
+            "time": "14:11",
+            "open_thousand_vnd": 64.5,
+            "high_thousand_vnd": 64.5,
+            "low_thousand_vnd": 64.5,
+            "close_thousand_vnd": 64.5,
+            "volume": 12900
+          },
+          {
+            "time": "10:46",
+            "open_thousand_vnd": 64.6,
+            "high_thousand_vnd": 64.6,
+            "low_thousand_vnd": 64.6,
+            "close_thousand_vnd": 64.6,
+            "volume": 12300
+          },
+          {
+            "time": "13:03",
+            "open_thousand_vnd": 64.7,
+            "high_thousand_vnd": 64.7,
+            "low_thousand_vnd": 64.7,
+            "close_thousand_vnd": 64.7,
+            "volume": 9900
+          },
+          {
+            "time": "14:10",
+            "open_thousand_vnd": 64.5,
+            "high_thousand_vnd": 64.5,
+            "low_thousand_vnd": 64.5,
+            "close_thousand_vnd": 64.5,
+            "volume": 9700
+          },
+          {
+            "time": "14:16",
+            "open_thousand_vnd": 64.4,
+            "high_thousand_vnd": 64.4,
+            "low_thousand_vnd": 64.3,
+            "close_thousand_vnd": 64.4,
+            "volume": 9400
+          },
+          {
+            "time": "13:55",
+            "open_thousand_vnd": 64.5,
+            "high_thousand_vnd": 64.6,
+            "low_thousand_vnd": 64.5,
+            "close_thousand_vnd": 64.6,
+            "volume": 6100
+          },
+          {
+            "time": "14:13",
+            "open_thousand_vnd": 64.5,
+            "high_thousand_vnd": 64.5,
+            "low_thousand_vnd": 64.4,
+            "close_thousand_vnd": 64.4,
+            "volume": 6000
+          }
+        ],
+        "method_note": "Nến 1 phút; tick rule chỉ so giá đóng nến, không phải mua/bán chủ động chính thức.",
+        "reconciled_with_daily": true,
+        "daily_volume": 426800
+      }
+    },
+    "warnings": [],
+    "quality": {
+      "status": "RECONCILED",
+      "reconciled_symbols": [
+        "VCB",
+        "CTD"
+      ],
+      "required_symbols": [
+        "VCB",
+        "CTD"
+      ],
+      "validated_at_build": true,
+      "official_hose_crosscheck": {
+        "available": true,
+        "matched": true,
+        "symbols": [
+          {
+            "symbol": "VCB",
+            "available": true,
+            "prior_close_match": true,
+            "close_match": true,
+            "change_pct_match": true,
+            "volume_match": true,
+            "matched": true
+          },
+          {
+            "symbol": "CTD",
+            "available": true,
+            "prior_close_match": true,
+            "close_match": true,
+            "change_pct_match": true,
+            "volume_match": true,
+            "matched": true
+          }
+        ],
+        "note": "Đối chiếu giá tham chiếu, giá đóng cửa, % thay đổi và tổng khối lượng; chuỗi CafeF/DNSE vẫn là nguồn phụ trợ."
+      }
+    },
+    "sources": [
+      {
+        "id": "cafef_history",
+        "name": "CafeF",
+        "url": "https://cafef.vn/du-lieu/Ajax/PageNew/DataHistory/PriceHistory.ashx",
+        "role": "Lịch sử giá/khối lượng ngày",
+        "source_tier": "secondary",
+        "decision_eligible": false,
+        "retrieved_at": "2026-07-18T20:39:04.738195+07:00",
+        "fields": [
+          "daily.VCB",
+          "daily.CTD"
+        ],
+        "request_urls": [
+          "https://cafef.vn/du-lieu/Ajax/PageNew/DataHistory/PriceHistory.ashx?Symbol=VCB&StartDate=&EndDate=&PageIndex=1&PageSize=40",
+          "https://cafef.vn/du-lieu/Ajax/PageNew/DataHistory/PriceHistory.ashx?Symbol=CTD&StartDate=&EndDate=&PageIndex=1&PageSize=40"
+        ],
+        "request_note": "PageSize tối đa 40; symbol VCB và CTD; phản hồi không được lưu thô công khai.",
+        "license_note": "Chỉ dùng tham khảo cá nhân; rà soát điều khoản trước khi phân phối lại."
+      },
+      {
+        "id": "entrade_minute",
+        "name": "DNSE/EnTrade",
+        "url": "https://services.entrade.com.vn/chart-api/v2/ohlcs/stock",
+        "role": "Nến một phút phiên gần nhất",
+        "source_tier": "secondary",
+        "decision_eligible": false,
+        "retrieved_at": "2026-07-18T20:39:04.738195+07:00",
+        "fields": [
+          "intraday.VCB",
+          "intraday.CTD"
+        ],
+        "request_urls": [
+          "https://services.entrade.com.vn/chart-api/v2/ohlcs/stock?from=1784221200&to=1784307600&symbol=VCB&resolution=1",
+          "https://services.entrade.com.vn/chart-api/v2/ohlcs/stock?from=1784221200&to=1784307600&symbol=CTD&resolution=1"
+        ],
+        "request_note": "resolution=1; market_date=2026-07-17; phản hồi không được lưu thô công khai.",
+        "license_note": "Nến phút chỉ để tham khảo cá nhân; không diễn giải thành từng giao dịch."
+      }
+    ]
+  },
+  "source_registry": {
+    "hose_eod": {
+      "id": "hose_eod",
+      "publisher": "Sở Giao dịch Chứng khoán TP.HCM (HOSE)",
+      "asset_classes": [
+        "stock",
+        "index"
+      ],
+      "url": "https://www.hsx.vn/vi/du-lieu-giao-dich/thong-ke/du-lieu-cuoi-ngay",
+      "mode": "official_web_internal_json",
+      "allowed_fields": [
+        "market_date",
+        "vnindex.close",
+        "vnindex.change_pct",
+        "vcb.prior_close",
+        "vcb.close",
+        "vcb.change_pct",
+        "vcb.volume_million_shares",
+        "ctd.prior_close",
+        "ctd.close",
+        "ctd.change_pct",
+        "ctd.volume_million_shares",
+        "foreign_net_ty"
+      ],
+      "stale_after_hours": 30,
+      "fallback": "Báo cáo/PDF giao dịch cuối ngày HOSE",
+      "license_note": "Endpoint nội bộ không có SLA. Rà soát quyền phân phối lại trước khi công khai dữ liệu."
+    },
+    "vietcombank_fx": {
+      "id": "vietcombank_fx",
+      "publisher": "Vietcombank",
+      "asset_classes": [
+        "fx"
+      ],
+      "url": "https://www.vietcombank.com.vn/api/exchangerates",
+      "mode": "official_json_api",
+      "allowed_fields": [
+        "fx_vcb_sell"
+      ],
+      "stale_after_hours": 24
+    },
+    "vietcombank_deposit": {
+      "id": "vietcombank_deposit",
+      "publisher": "Vietcombank",
+      "asset_classes": [
+        "deposit"
+      ],
+      "url": "https://www.vietcombank.com.vn/vi-VN/api/interestrates?accountType=Personal",
+      "mode": "official_json_api",
+      "allowed_fields": [
+        "deposit_top"
+      ],
+      "allowed_banks": [
+        "Vietcombank"
+      ],
+      "stale_after_hours": 48
+    },
+    "sjc_gold": {
+      "id": "sjc_gold",
+      "publisher": "Công ty SJC",
+      "asset_classes": [
+        "gold_domestic"
+      ],
+      "url": "https://www.sjc.com.vn/gia-vang-online",
+      "mode": "official_web_browser_required",
+      "allowed_fields": [
+        "gold.sjc_buy",
+        "gold.sjc_sell",
+        "gold.ring_sell",
+        "gold.observed_at"
+      ],
+      "stale_after_hours": 4,
+      "fallback": "PNJ hoặc DOJI, giữ riêng brand/product/region"
+    },
+    "lbma_gold": {
+      "id": "lbma_gold",
+      "publisher": "LBMA",
+      "asset_classes": [
+        "gold_international"
+      ],
+      "url": "https://www.lbma.org.uk/prices-and-data/lbma-gold-price",
+      "mode": "licensed_benchmark",
+      "allowed_fields": [
+        "gold.xauusd"
+      ],
+      "stale_after_hours": 36,
+      "license_note": "Không phân phối lại dữ liệu nếu chưa có quyền. Có thể dùng CME GC và ghi rõ là proxy."
+    },
+    "deposit_insurance_vn": {
+      "id": "deposit_insurance_vn",
+      "publisher": "Bảo hiểm Tiền gửi Việt Nam",
+      "asset_classes": [
+        "deposit"
+      ],
+      "url": "https://div.gov.vn/tu-ngay-13-7-2026-han-muc-chi-tra-tien-bao-hiem-cua-bao-hiem-tien-gui-viet-nam-la-350-trieu-dong",
+      "mode": "official_policy",
+      "allowed_fields": [],
+      "effective_date": "2026-07-13",
+      "value_vnd": 350000000
+    },
+    "vcb_ir": {
+      "id": "vcb_ir",
+      "publisher": "Vietcombank Quan hệ nhà đầu tư",
+      "asset_classes": [
+        "stock_fundamental"
+      ],
+      "url": "https://www.vietcombank.com.vn/vi-VN/Nha-dau-tu",
+      "mode": "official_ir",
+      "allowed_fields": [
+        "vcb.fundamentals"
+      ],
+      "stale_after_hours": 2880
+    },
+    "ctd_ir": {
+      "id": "ctd_ir",
+      "publisher": "Coteccons Quan hệ nhà đầu tư",
+      "asset_classes": [
+        "stock_fundamental"
+      ],
+      "url": "https://www.coteccons.vn/investor-relations-vn/",
+      "mode": "official_ir",
+      "allowed_fields": [
+        "ctd.fundamentals"
+      ],
+      "stale_after_hours": 2880
+    }
   }
 }

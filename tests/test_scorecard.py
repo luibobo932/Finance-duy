@@ -30,8 +30,27 @@ class ScorecardTests(unittest.TestCase):
         assessed = build_scorecard([entry], [first, current, *future], minimum_assessed=1)
         self.assertEqual(assessed["status"], "READY")
         self.assertEqual(assessed["assessed"], 3)
+        self.assertEqual(assessed["asset_results"]["vcb"]["status"], "READY")
+        self.assertEqual(assessed["asset_results"]["savings"]["status"], "NOT_REQUIRED")
         vcb = next(item for item in assessed["outcomes"] if item["asset_id"] == "vcb")
         self.assertIsNotNone(vcb["excess_vs_savings_pct"])
+
+    def test_global_scorecard_requires_minimum_for_each_risky_asset(self):
+        first = verified_snapshot("2026-07-16", "chieu")
+        current = verified_snapshot("2026-07-17", "chieu")
+        entry = make_entry(build_decision_report([first, current], {}, dict(DEFAULT_PROFILE), today=date(2026, 7, 17)))
+        entry["assets"]["gold"]["status"] = "WAIT_DATA"
+        entry["assets"]["ctd"]["status"] = "WAIT_DATA"
+        future = []
+        for index in range(1, 6):
+            day = (date(2026, 7, 17) + timedelta(days=index)).isoformat()
+            snapshot = verified_snapshot(day, "chieu")
+            snapshot["vcb"]["close"] = current["vcb"]["close"] + index * 100
+            future.append(snapshot)
+        scorecard = build_scorecard([entry], [first, current, *future], minimum_assessed=1)
+        self.assertEqual(scorecard["asset_results"]["vcb"]["status"], "READY")
+        self.assertEqual(scorecard["asset_results"]["gold"]["status"], "INSUFFICIENT_HISTORY")
+        self.assertEqual(scorecard["status"], "INSUFFICIENT_HISTORY")
 
     def test_journal_blocks_duplicate_id(self):
         entry = {"id": "same", "assets": {}, "as_of": {}}

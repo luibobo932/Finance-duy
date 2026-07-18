@@ -9,6 +9,14 @@ Danh sách máy đọc nằm ở `config/sources.json`. Tài liệu này giải 
 - [HOSE — công bố thông tin](https://www.hsx.vn/vi/quy-dinh-hose/cong-bo-thong-tin), [Vietcombank IR](https://www.vietcombank.com.vn/vi-VN/Nha-dau-tu), [Coteccons IR](https://www.coteccons.vn/investor-relations-vn/): báo cáo và sự kiện doanh nghiệp.
 - Endpoint JSON nội bộ HOSE không có SLA và có thể thay đổi. Phải lưu raw, hash và fallback sang báo cáo/PDF chính thức. Không mặc định được phép phân phối lại dữ liệu thị trường.
 
+### Nguồn phụ trợ cho biểu đồ VCB/CTD
+
+- CafeF cung cấp chuỗi giá/khối lượng ngày; DNSE/EnTrade cung cấp nến một phút phiên gần nhất. Hai nguồn này chỉ để quan sát cấu trúc giá và thanh khoản.
+- Payload bắt buộc mang `classification=AUXILIARY_REFERENCE_ONLY` và `decision_unlock=false`. Không thêm hai nguồn này vào allowlist mở khóa của decision engine.
+- Builder tự kiểm ngày, OHLC, số hữu hạn, thứ tự phiên, tổng tick rule và đối chiếu tổng nến phút với tổng ngày. Khi trùng ngày với snapshot HOSE đã duyệt, builder đối chiếu thêm giá tham chiếu, giá đóng cửa, % thay đổi và tổng khối lượng cho từng mã.
+- Nến một phút không phải từng giao dịch. Không được dùng tick rule theo giá đóng nến để kết luận mua/bán chủ động, gom hàng, phân phối hoặc hành vi của tổ chức.
+- Chỉ lưu dữ liệu chuẩn hóa tối thiểu phục vụ dashboard; không commit phản hồi thô. Phải rà soát điều khoản sử dụng trước khi phân phối dữ liệu ra ngoài phạm vi cá nhân.
+
 ## Vàng và tỷ giá
 
 - [SJC — giá vàng trực tuyến](https://www.sjc.com.vn/gia-vang-online): lưu riêng brand, product, region, giá mua, giá bán và đơn vị.

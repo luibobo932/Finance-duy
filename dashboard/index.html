@@ -3,154 +3,206 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Dashboard theo dõi danh mục VCB, CTD, VN-Index, vàng và lãi suất tiết kiệm.">
+  <meta name="description" content="Finance Duy — dashboard hỗ trợ quyết định giữa vàng, VCB, CTD và gửi tiết kiệm với cổng kiểm chứng dữ liệu.">
+  <meta name="theme-color" content="#f5f4ef">
   <link rel="icon" href="data:,">
-  <title>Finance Duy — Bản tin đầu tư</title>
+  <title>Finance Duy — Trung tâm quyết định đầu tư</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <main class="shell">
-    <header class="masthead">
-      <div>
-        <p class="eyebrow">FINANCE DUY</p>
-        <h1>Bản tin đầu tư</h1>
-        <p id="updated" class="muted">Đang tải dữ liệu…</p>
+  <a class="skip-link" href="#main-content">Bỏ qua điều hướng</a>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#overview" aria-label="Finance Duy — về đầu trang">
+        <span class="brand-mark" aria-hidden="true">FD</span>
+        <span><strong>Finance Duy</strong><small>Decision Intelligence</small></span>
+      </a>
+      <nav class="desktop-nav" aria-label="Điều hướng chính">
+        <a href="#overview">Tổng quan</a>
+        <a href="#decision-center">Tài sản</a>
+        <a href="#market-lab">VCB & CTD</a>
+        <a href="#scenario">Phân bổ</a>
+        <a href="#methodology">Nguồn</a>
+      </nav>
+      <button id="theme-toggle" class="icon-button" type="button" aria-label="Đổi giao diện sáng hoặc tối">
+        <span aria-hidden="true">◐</span><span class="button-label">Giao diện</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="main-content" class="shell">
+    <section id="overview" class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">TRUNG TÂM QUYẾT ĐỊNH CÁ NHÂN</p>
+        <h1 id="hero-title">Đầu tư tỉnh táo.<br><span>Chỉ hành động khi dữ liệu đủ tốt.</span></h1>
+        <p class="hero-lead">Một màn hình để so sánh Vàng, VCB, CTD và gửi tiết kiệm — có kiểm chứng nguồn, độ mới và điều kiện làm luận điểm mất hiệu lực.</p>
+        <div class="hero-actions">
+          <a class="primary-button" href="#decision-center">Xem trạng thái tài sản</a>
+          <a class="secondary-button" href="#market-lab">Phân tích VCB & CTD</a>
+        </div>
       </div>
-      <button id="theme-toggle" class="theme-button" type="button" aria-label="Đổi giao diện sáng hoặc tối">◐ Giao diện</button>
-    </header>
+      <aside class="hero-aside" aria-label="Trạng thái cập nhật">
+        <div class="live-dot"><span class="status-dot" aria-hidden="true"></span><span id="runtime-label">ĐANG KIỂM TRA KHI MỞ TRANG</span></div>
+        <p id="updated">Đang tải dữ liệu…</p>
+        <div class="hero-aside-row"><span>Thị trường</span><strong id="market-date">—</strong></div>
+        <div class="hero-aside-row"><span>Dữ liệu giá</span><strong id="market-reconcile">Đang kiểm tra</strong></div>
+        <p class="microcopy">VCB và CTD là hai mã theo dõi, không đại diện toàn bộ thị trường chứng khoán.</p>
+      </aside>
+    </section>
 
     <div id="error" class="error" role="alert" hidden></div>
-    <section id="data-health" class="health" aria-live="polite"></section>
-    <section id="summary" class="metrics" aria-label="Chỉ số mới nhất"></section>
 
-    <div class="layout">
-      <section class="panel panel-wide">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">TRUNG TÂM QUYẾT ĐỊNH</p>
-            <h2>So sánh Vàng · VCB/CTD · Gửi tiết kiệm</h2>
-          </div>
-          <span class="badge">VCB/CTD không đại diện toàn thị trường · không phải dự báo</span>
-        </div>
-        <div id="asset-decisions" class="decision-grid"></div>
-        <h3 class="subheading">Cổ phiếu đang theo dõi</h3>
-        <div id="stock-decisions" class="stock-grid"></div>
-        <div class="decision-meta-grid">
-          <div>
-            <h3 class="subheading">Nguyên tắc an toàn</h3>
-            <ul id="guardrails" class="compact-list"></ul>
-          </div>
-          <div>
-            <h3 class="subheading">Nguồn của kỳ hiện tại</h3>
-            <div id="sources" class="compact-list"></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel panel-wide simulator">
+    <section id="system-gate" class="system-gate" aria-live="polite">
+      <div class="gate-main">
+        <div class="gate-icon" aria-hidden="true">!</div>
         <div>
-          <p class="eyebrow">MÔ PHỎNG PHÂN BỔ</p>
-          <h2>Thử các kịch bản trước khi dùng tiền thật</h2>
-          <p class="muted">Mô hình chỉ dùng để kiểm tra tỷ trọng và thanh khoản. Không tự động đặt lệnh.</p>
+          <p class="eyebrow">CỔNG AN TOÀN</p>
+          <h2 id="gate-title">Đang đánh giá dữ liệu…</h2>
+          <p id="gate-message">Hệ thống kiểm tra nguồn, thời gian và dữ liệu bắt buộc trước khi mở khóa mô phỏng.</p>
         </div>
-        <form id="scenario-form" class="scenario-form">
-          <label>Số vốn mô phỏng (đ)
-            <input id="capital" type="number" min="0" step="1000000" value="500000000">
-          </label>
-          <label>Quỹ dự phòng giữ riêng (đ)
-            <input id="reserve" type="number" min="0" step="1000000" value="100000000">
-          </label>
-          <label>Mục tiêu
-            <select id="goal">
-              <option value="conservative">Bảo toàn vốn</option>
-              <option value="balanced" selected>Cân bằng</option>
-              <option value="growth">Tăng trưởng</option>
-            </select>
-          </label>
-          <label>Thời gian dự kiến
-            <select id="horizon">
-              <option value="6">Dưới 1 năm</option>
-              <option value="24" selected>1–3 năm</option>
-              <option value="60">Trên 3 năm</option>
-            </select>
-          </label>
-          <label>Nhu cầu rút tiền
-            <select id="liquidity">
-              <option value="high">Cao</option>
-              <option value="medium" selected>Trung bình</option>
-              <option value="low">Thấp</option>
-            </select>
-          </label>
-          <button type="submit">Tính kịch bản</button>
-        </form>
-        <div id="allocation" class="allocation-grid"></div>
-        <p id="allocation-note" class="note"></p>
-      </section>
+      </div>
+      <div class="quality-meter" aria-label="Điểm chất lượng dữ liệu">
+        <div id="quality-ring" class="quality-ring"><span id="quality-score">—</span></div>
+        <div><strong id="quality-grade">Đang tải</strong><small>Chất lượng dữ liệu</small></div>
+      </div>
+    </section>
 
-      <section class="panel panel-wide">
-        <p class="eyebrow">KIỂM CHỨNG QUYẾT ĐỊNH</p>
-        <h2>Scorecard sau mỗi 5 phiên</h2>
-        <div id="scorecard" class="scorecard-grid"></div>
-        <p class="note">Hệ thống chỉ hiển thị độ chính xác sau khi có tối thiểu 20 kết quả được đánh giá, tránh kết luận từ mẫu quá nhỏ.</p>
-      </section>
+    <section id="data-health" class="health-grid" aria-label="Kiểm tra sức khỏe dữ liệu"></section>
 
-      <section class="panel panel-wide">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">SO SÁNH</p>
-            <h2>Kỳ mới nhất và kỳ trước</h2>
-          </div>
-          <span id="period-badge" class="badge"></span>
+    <section id="decision-center" class="section-block" aria-labelledby="decision-title">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">MA TRẬN TÀI SẢN</p>
+          <h2 id="decision-title">Trạng thái dữ liệu, kiểm chứng và điểm phải dừng</h2>
+          <p>Không hiện điểm hay hành động nếu dữ liệu hoặc scorecard mô hình chưa đạt cổng an toàn.</p>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Chỉ tiêu</th><th>Kỳ này</th><th>Kỳ trước</th><th>Thay đổi</th></tr></thead>
-            <tbody id="comparison"></tbody>
-          </table>
-        </div>
-      </section>
+        <span class="pill pill-neutral">Không dùng đòn bẩy</span>
+      </div>
+      <div id="asset-decisions" class="decision-grid"></div>
+      <div class="section-title subsection-title">
+        <div><p class="eyebrow">CHI TIẾT CỔ PHIẾU</p><h3>Hai mã đang theo dõi</h3></div>
+      </div>
+      <div id="stock-decisions" class="stock-grid"></div>
+    </section>
 
-      <section class="panel">
-        <p class="eyebrow">DANH MỤC</p>
-        <h2>VCB · CTD</h2>
+    <section class="section-block" aria-labelledby="snapshot-title">
+      <div class="section-title compact-title">
+        <div><p class="eyebrow">ẢNH CHỤP MỚI NHẤT</p><h2 id="snapshot-title">Thị trường trong 30 giây</h2></div>
+        <span id="period-badge" class="pill">—</span>
+      </div>
+      <div id="summary" class="metrics" aria-label="Chỉ số mới nhất"></div>
+    </section>
+
+    <section id="market-lab" class="section-block" aria-labelledby="market-title">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">PHÒNG PHÂN TÍCH THỊ TRƯỜNG</p>
+          <h2 id="market-title">VCB & CTD — xu hướng giá và chất lượng thanh khoản</h2>
+          <p>20 phiên giá ngày và cấu trúc nến một phút của phiên gần nhất. CafeF/DNSE là nguồn phụ trợ, không phải từng lệnh đơn và không mở khóa quyết định.</p>
+        </div>
+        <div class="legend" aria-label="Chú giải biểu đồ"><span><i class="legend-price"></i>Giá đóng cửa</span><span><i class="legend-volume"></i>Khối lượng</span></div>
+      </div>
+      <p class="mobile-chart-hint">Trên điện thoại, vuốt ngang để chuyển giữa VCB và CTD.</p>
+      <div id="stock-labs" class="stock-labs"></div>
+      <div id="market-comparison" class="panel market-comparison"></div>
+    </section>
+
+    <section id="scenario" class="section-block scenario-section" aria-labelledby="scenario-title">
+      <div class="scenario-intro">
+        <p class="eyebrow">PHÒNG MÔ PHỎNG</p>
+        <h2 id="scenario-title">Thử tỷ trọng trước khi dùng tiền thật</h2>
+        <p>Hệ thống khóa số tiền cụ thể nếu bất kỳ nhóm tài sản nào thiếu dữ liệu bắt buộc.</p>
+      </div>
+      <form id="scenario-form" class="scenario-form">
+        <label>Số vốn mô phỏng
+          <span class="input-wrap"><input id="capital" type="number" min="0" step="1000000" value="500000000"><b>đ</b></span>
+        </label>
+        <label>Quỹ dự phòng giữ riêng
+          <span class="input-wrap"><input id="reserve" type="number" min="0" step="1000000" value="100000000"><b>đ</b></span>
+        </label>
+        <label>Mục tiêu
+          <select id="goal"><option value="conservative">Bảo toàn vốn</option><option value="balanced" selected>Cân bằng</option><option value="growth">Tăng trưởng</option></select>
+        </label>
+        <label>Thời gian
+          <select id="horizon"><option value="6">Dưới 1 năm</option><option value="24" selected>1–3 năm</option><option value="60">Trên 3 năm</option></select>
+        </label>
+        <label>Nhu cầu rút tiền
+          <select id="liquidity"><option value="high">Cao</option><option value="medium" selected>Trung bình</option><option value="low">Thấp</option></select>
+        </label>
+        <button type="submit">Cập nhật kịch bản</button>
+      </form>
+      <div id="allocation" class="allocation-grid"></div>
+      <p id="allocation-note" class="scenario-note"></p>
+    </section>
+
+    <section class="section-block two-column" aria-label="Danh mục và kiểm chứng">
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">DANH MỤC RIÊNG TƯ</p><h2>Giá vốn VCB · CTD</h2></div><span class="privacy-chip">Chỉ trong tab</span></div>
         <div id="portfolio" class="stack"></div>
-      </section>
+      </article>
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">KIỂM CHỨNG</p><h2>Scorecard quyết định</h2></div></div>
+        <div id="scorecard" class="scorecard-grid"></div>
+        <p class="note">Chỉ mở mô phỏng sau tối thiểu 20 kết quả độc lập cho từng nhóm Vàng, VCB và CTD.</p>
+      </article>
+    </section>
 
-      <section class="panel">
-        <p class="eyebrow">DÒNG TIỀN</p>
-        <h2>Tín hiệu định lượng</h2>
-        <div id="signals" class="stack"></div>
-      </section>
-
-      <section class="panel panel-wide">
-        <p class="eyebrow">LỊCH SỬ</p>
-        <h2>Các kỳ bản tin</h2>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Ngày / kỳ</th><th>VN-Index</th><th>VCB</th><th>CTD</th><th>XAU/USD</th><th>Khối ngoại</th></tr></thead>
-            <tbody id="history"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="panel">
-        <p class="eyebrow">LÃI SUẤT</p>
-        <h2>Mức lãi suất đang thu thập</h2>
+    <section class="section-block two-column" aria-label="Vàng, tiết kiệm và rủi ro">
+      <article class="panel">
+        <p class="eyebrow">TIẾT KIỆM</p><h2>Sản phẩm đủ điều kiện</h2>
         <div id="rates" class="stack"></div>
-      </section>
-
-      <section class="panel risk-panel">
-        <p class="eyebrow">CẢNH BÁO</p>
-        <h2>Rủi ro đang theo dõi</h2>
+        <div id="insurance-note" class="info-callout"></div>
+      </article>
+      <article class="panel risk-panel">
+        <p class="eyebrow">RỦI RO VĨ MÔ</p><h2>Tín hiệu có nguồn kiểm chứng</h2>
         <div id="risks" class="stack"></div>
-      </section>
-    </div>
+      </article>
+    </section>
+
+    <section class="section-block panel" aria-labelledby="history-title">
+      <div class="panel-heading">
+        <div><p class="eyebrow">DỮ LIỆU ĐÃ DUYỆT</p><h2 id="history-title">Lịch sử snapshot</h2></div>
+        <span class="pill pill-neutral">Tối đa 30 kỳ</span>
+      </div>
+      <p id="history-scroll-note" class="scroll-hint">Trên điện thoại, vuốt ngang để xem đủ các cột.</p>
+      <div class="table-wrap" role="region" aria-labelledby="history-title" aria-describedby="history-scroll-note" tabindex="0">
+        <table>
+          <caption class="sr-only">Lịch sử tối đa 30 snapshot dữ liệu đã duyệt</caption>
+          <thead><tr><th scope="col">Ngày / kỳ</th><th scope="col">VN-Index</th><th scope="col">VCB</th><th scope="col">CTD</th><th scope="col">XAU/USD</th><th scope="col">Khối ngoại</th></tr></thead>
+          <tbody id="history"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="methodology" class="section-block methodology" aria-labelledby="method-title">
+      <div class="section-title">
+        <div><p class="eyebrow">MINH BẠCH PHƯƠNG PHÁP</p><h2 id="method-title">Vì sao một tín hiệu được phép xuất hiện?</h2></div>
+      </div>
+      <div class="method-grid">
+        <article><span>01</span><h3>Đúng nguồn</h3><p>Chỉ trường dữ liệu nằm trong registry và gắn URL HTTPS mới tăng độ tin cậy.</p></article>
+        <article><span>02</span><h3>Đúng thời điểm</h3><p>Dữ liệu quá hạn hoặc ở tương lai sẽ khóa tài sản liên quan.</p></article>
+        <article><span>03</span><h3>Đúng đơn vị</h3><p>Giá, khối lượng và tỷ lệ được chuẩn hóa trước khi so sánh.</p></article>
+        <article><span>04</span><h3>Đủ điều kiện</h3><p>Thiếu dữ liệu cơ bản, mức chênh lệch vàng hoặc điều kiện tiền gửi sẽ không mở khóa.</p></article>
+      </div>
+      <div class="method-detail-grid">
+        <div><h3>Nguyên tắc an toàn</h3><ul id="guardrails" class="compact-list"></ul></div>
+        <div><h3>Nguồn kỳ hiện tại</h3><div id="sources" class="source-list"></div></div>
+      </div>
+    </section>
 
     <footer>
-      <p>Dữ liệu tham khảo, không phải khuyến nghị đầu tư. Luôn kiểm tra lại nguồn trước khi giao dịch.</p>
-      <p><a href="./ban-tin-dau-tu.html">Xem bản tin phân tích lưu trữ ngày 18/07/2026</a></p>
+      <div><strong>Finance Duy</strong><p>Công cụ hỗ trợ kỷ luật ra quyết định — không phải tư vấn đầu tư cá nhân hay cam kết lợi nhuận.</p></div>
+      <div class="footer-links"><a href="./ban-tin-dau-tu.html">Bản tin lưu trữ</a><a href="https://github.com/luibobo932/Finance-duy" target="_blank" rel="noopener noreferrer">Mã nguồn GitHub</a></div>
     </footer>
   </main>
+  <nav class="mobile-nav" aria-label="Điều hướng nhanh trên điện thoại">
+    <a href="#overview"><span aria-hidden="true">⌂</span>Tổng quan</a>
+    <a href="#decision-center"><span aria-hidden="true">✓</span>Quyết định</a>
+    <a href="#market-lab"><span aria-hidden="true">⌁</span>Phân tích</a>
+    <a href="#scenario"><span aria-hidden="true">◇</span>Phân bổ</a>
+    <a href="#methodology"><span aria-hidden="true">i</span>Nguồn</a>
+  </nav>
   <script src="./app.js" defer></script>
 </body>
 </html>

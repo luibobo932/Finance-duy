@@ -172,15 +172,39 @@ def build_scorecard(journal, history, horizon=5, minimum_assessed=20):
     for entry in journal:
         outcomes.extend(evaluate_entry(entry, history, horizon))
     assessed = [item for item in outcomes if item["status"] == "ASSESSED"]
+    tracked_assets = ("gold", "vcb", "ctd")
+    asset_results = {}
+    for asset_id in tracked_assets:
+        asset_assessed = [item for item in assessed if item.get("asset_id") == asset_id]
+        asset_directional = [item for item in asset_assessed if item.get("direction_correct") is not None]
+        asset_ready = len(asset_assessed) >= minimum_assessed
+        asset_correct = sum(bool(item["direction_correct"]) for item in asset_directional)
+        asset_results[asset_id] = {
+            "status": "READY" if asset_ready else "INSUFFICIENT_HISTORY",
+            "assessed": len(asset_assessed),
+            "minimum_assessed": minimum_assessed,
+            "directional_accuracy_pct": (
+                round(asset_correct / len(asset_directional) * 100, 2)
+                if asset_ready and asset_directional else None
+            ),
+        }
+    asset_results["savings"] = {
+        "status": "NOT_REQUIRED",
+        "assessed": 0,
+        "minimum_assessed": 0,
+        "directional_accuracy_pct": None,
+    }
+    status = "READY" if all(asset_results[asset_id]["status"] == "READY" for asset_id in tracked_assets) else "INSUFFICIENT_HISTORY"
     directional = [item for item in assessed if item["direction_correct"] is not None]
     correct = sum(bool(item["direction_correct"]) for item in directional)
-    status = "READY" if len(assessed) >= minimum_assessed else "INSUFFICIENT_HISTORY"
     return {
         "status": status,
         "journal_entries": len(journal),
         "assessed": len(assessed),
         "pending": sum(item["status"] == "PENDING" for item in outcomes),
         "minimum_assessed": minimum_assessed,
+        "minimum_assessed_per_asset": minimum_assessed,
+        "asset_results": asset_results,
         "directional_accuracy_pct": round(correct / len(directional) * 100, 2) if status == "READY" and directional else None,
         "horizon_periods": horizon,
         "outcomes": outcomes[-30:],

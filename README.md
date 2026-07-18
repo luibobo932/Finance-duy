@@ -4,27 +4,31 @@
 
 ## Trạng thái an toàn hiện tại
 
-- Dashboard mới nằm tại `dashboard/index.html`.
+- Dashboard mới nằm tại `dashboard/index.html`, ưu tiên trạng thái quyết định trước biểu đồ và có giao diện sáng/tối, desktop/mobile.
 - Snapshot lịch sử ban đầu còn thiếu nguồn cho vàng, lãi suất và dữ liệu cơ bản doanh nghiệp, vì vậy kết quả hiện tại chủ động là **CHỜ DỮ LIỆU**.
 - Giá đóng cửa VCB/CTD ngày thị trường 17/07/2026 đã được đối chiếu lại từ HOSE; các con số legacy không có nguồn không được dùng để ra quyết định.
-- Workflow GitHub Pages chỉ build lại dashboard và làm trạng thái chuyển sang quá hạn. Nó **chưa tự thu thập rồi duyệt snapshot mới**.
+- Biểu đồ 20 phiên và nến một phút VCB/CTD dùng CafeF/DNSE ở cấp **nguồn phụ trợ**; chúng được đối chiếu với HOSE nhưng không bao giờ mở khóa quyết định.
+- GitHub Pages cập nhật biểu đồ phụ trợ lúc 18:15 giờ Việt Nam. Workflow **không tự duyệt/promote snapshot chính thức**, nên cổng tiền thật vẫn khóa khi HOSE, vàng, lãi suất hoặc báo cáo doanh nghiệp quá hạn.
 
 ## Những gì đã có
 
 - Decision engine cho Vàng, VCB, CTD và tiết kiệm: điểm sàng lọc, confidence, blocker cứng, rủi ro và điều kiện làm luận điểm mất hiệu lực.
 - Registry nguồn chính thức tại `config/sources.json`; URL đúng nhưng khai sai field vẫn không được tính.
+- KPI VCB/CTD đầu trang chỉ lấy snapshot HOSE đã duyệt; nguồn phụ chỉ xuất hiện trong phòng phân tích và luôn có nhãn cảnh báo.
+- Đối chiếu ba lớp cho VCB/CTD: tổng nến phút DNSE ↔ khối lượng ngày CafeF ↔ giá tham chiếu, giá đóng cửa, % thay đổi và tổng khối lượng HOSE.
 - Kiểm tra độ mới theo `collected_at`, `market_date`, `gold.observed_at`, `retrieved_at` và ngày báo cáo cơ bản.
 - Hợp đồng đơn vị rõ: giá cổ phiếu bằng VND; thanh khoản dùng duy nhất `volume_million_shares`.
 - Premium vàng được đối chiếu lại từ SJC, XAU/USD và tỷ giá bán VCB.
 - Lãi suất được kiểm tra theo từng sản phẩm: ngân hàng, nguồn, ngày lấy, kỳ hạn, kênh, min/max, điều kiện, cách trả lãi và ngày hiệu lực.
-- Bộ mô phỏng khóa toàn bộ số tiền nếu một trong ba nhóm chưa READY hoặc khoản gửi nằm ngoài dải tiền của sản phẩm đã xác minh.
-- Scorecard chỉ đánh giá sau đủ kỳ quan sát khác nhau; không công bố tỷ lệ đúng trước 20 kết quả.
+- Bộ mô phỏng khóa toàn bộ điểm, tỷ trọng và số tiền nếu dữ liệu chưa READY hoặc scorecard chưa đủ mẫu; VCB và CTD được tính riêng với trần 20% phần vốn sau dự phòng cho mỗi mã.
+- Scorecard kiểm từng tài sản Vàng, VCB và CTD riêng; không mở mô phỏng trước 20 kết quả độc lập cho **mỗi** tài sản.
 - Danh mục cá nhân trên web chỉ nằm trong bộ nhớ tab. File local và raw data đều bị Git bỏ qua.
 - CI chạy toàn bộ test trên Windows và Ubuntu, kiểm tra JavaScript và khả năng tạo dashboard.
 
 ## Chạy trên máy
 
 ```powershell
+python -X utf8 scripts\collect_market_history.py
 python -X utf8 scripts\build_dashboard.py
 python -X utf8 -m http.server 8000 --directory dashboard
 ```
@@ -45,6 +49,14 @@ Collector chỉ lưu bản thô trong `data/raw/`; không tự đưa dữ liệu
 python -X utf8 scripts\collect_hose.py 2026-07-17 VCB CTD
 python -X utf8 scripts\collect_vietcombank.py all
 ```
+
+Collector biểu đồ phụ trợ chạy riêng và không đi vào luồng mở khóa:
+
+```powershell
+python -X utf8 scripts\collect_market_history.py
+```
+
+Nếu CafeF/DNSE thiếu phiên, sai OHLC, lệch timestamp hoặc tổng khối lượng không khớp, payload bị đánh dấu `PARTIAL`/từ chối ở bước build. Dù hoàn tất, payload luôn có `decision_unlock=false`.
 
 Quy trình duyệt một snapshot:
 
@@ -97,6 +109,7 @@ Mỗi ứng viên có checksum SHA-256. Nếu dữ liệu bị sửa sau khi t�
 | `scripts/finance_data.py` | Schema, đơn vị và kiểm tra thời gian |
 | `scripts/collect_hose.py` | Thu thập EOD VCB/CTD từ HOSE |
 | `scripts/collect_vietcombank.py` | Thu thập tỷ giá/lãi suất VCB |
+| `scripts/collect_market_history.py` | Chuỗi 20 phiên và cấu trúc nến phút VCB/CTD ở cấp phụ trợ |
 | `scripts/scorecard.py` | Nhật ký và đánh giá kết quả |
 | `config/sources.json` | Registry nguồn/field/độ trễ |
 | `data/history.jsonl` | Snapshot công khai đã duyệt |
@@ -108,8 +121,8 @@ Mỗi ứng viên có checksum SHA-256. Nếu dữ liệu bị sửa sau khi t�
 
 1. Viết bộ thu thập SJC/XAU và báo cáo IR có kiểm soát giấy phép.
 2. Kết nối collector vào luồng **candidate → review → promote** hiện có, không tự động promote.
-3. Backfill ít nhất 20 phiên để dùng volume ratio; hướng tới 500 phiên trước khi backtest nghiêm túc.
-4. Chỉ sau khi pipeline ổn định mới bật lịch tự thu thập; không tự động công khai raw dữ liệu có điều kiện bản quyền.
-5. Bổ sung kiểm thử trình duyệt vào CI và giám sát lỗi collector.
+3. Backfill dữ liệu HOSE chính thức đủ chiều sâu; hướng tới 500 phiên trước khi backtest nghiêm túc.
+4. Bổ sung scorecard thực tế theo nhật ký quyết định, tối thiểu 20 kết quả cho từng Vàng, VCB và CTD.
+5. Bổ sung giám sát lỗi collector và rà soát quyền phân phối lại dữ liệu nguồn phụ trước khi mở rộng công khai.
 
 > Đây là công cụ hỗ trợ kỷ luật ra quyết định, không phải tư vấn đầu tư cá nhân hay cam kết lợi nhuận.
