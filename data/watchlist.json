@@ -1,0 +1,17 @@
+{
+  "_comment": "Danh mục giả lập Buffett-list — theo dõi hiệu suất so với ngày lập. base_price = giá tham chiếu lúc đưa vào (nghìn đồng). Cập nhật last_price định kỳ để đo hiệu suất.",
+  "base_date": "2026-07-18",
+  "stocks": [
+    {"ticker": "FPT", "group": "A", "base_price": null, "last_price": null, "moat": "Độc tôn CNTT VN"},
+    {"ticker": "VNM", "group": "A", "base_price": null, "last_price": null, "moat": "Thương hiệu sữa số 1"},
+    {"ticker": "VCB", "group": "A", "base_price": 58.5, "last_price": 58.5, "moat": "Chi phí vốn rẻ nhất hệ thống"},
+    {"ticker": "GAS", "group": "A", "base_price": null, "last_price": null, "moat": "Độc quyền trung nguồn khí"},
+    {"ticker": "ACB", "group": "A", "base_price": null, "last_price": null, "moat": "Ngân hàng bán lẻ thận trọng"},
+    {"ticker": "HPG", "group": "B", "base_price": null, "last_price": null, "moat": "Dẫn đầu chi phí thép"},
+    {"ticker": "MWG", "group": "B", "base_price": null, "last_price": null, "moat": "Chuỗi bán lẻ số 1"},
+    {"ticker": "PNJ", "group": "B", "base_price": null, "last_price": null, "moat": "Thương hiệu trang sức số 1"},
+    {"ticker": "REE", "group": "B", "base_price": null, "last_price": null, "moat": "Điện + nước, dòng tiền đều; P/B đáy 2 năm"},
+    {"ticker": "BSR", "group": "B", "base_price": null, "last_price": null, "moat": "Lọc dầu quy mô"},
+    {"ticker": "CTD", "group": "B", "base_price": 63.5, "last_price": 63.5, "moat": "Tổng thầu, backlog kỷ lục"}
+  ]
+}

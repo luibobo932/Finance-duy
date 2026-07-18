@@ -37,6 +37,20 @@ Hệ thống tổng hợp tin tức đầu tư 2 lần/ngày (8h sáng & 6h chi�
   - `report` — so sánh với kỳ trước: biến động VN-Index/VCB/CTD/vàng, chuỗi mua/bán ròng khối ngoại (chỉ tính kỳ chiều để không đếm trùng phiên), **KLGD từng mã vs bình quân 20 phiên (cảnh báo ⚠️ khi ≥1,5× — dấu hiệu cần soi thỏa thuận/giao dịch nội bộ)**, chênh lệch vàng nới/thu hẹp, ngân hàng thay đổi lãi suất, lãi/lỗ danh mục
 - Mỗi routine tự commit + push `data/` sau khi ghi để lịch sử bền vững qua các container.
 
+## Công cụ phân tích & quản lý (scripts/)
+
+| Script | Chức năng |
+|---|---|
+| `trend.py` | Lịch sử snapshot + so sánh xu hướng + lãi/lỗ danh mục |
+| `tick.py` | Phát hiện gom hàng qua lệnh lớn tròn số lặp lại (cần dữ liệu khớp lệnh) |
+| `indicators.py` | RSI(14), MACD, SMA/EMA 20/50/200, Bollinger từ `data/eod/<MÃ>.csv` |
+| `backtest.py` | Backtest quy tắc (MA cross…) trên dữ liệu EOD |
+| `alerts.py` + `data/alerts.json` | Cảnh báo ngưỡng giá VCB/CTD/vàng bị chạm |
+| `journal.py` + `data/journal.jsonl` | Nhật ký giao dịch cá nhân: win-rate, đối chiếu khuyến nghị |
+| `watchlist.py` + `data/watchlist.json` | Theo dõi hiệu suất danh mục giả lập Buffett-list |
+
+Xem `docs/ROADMAP.md` cho trạng thái toàn bộ 12 hạng mục phát triển và việc cần người dùng cung cấp.
+
 ## Khung phân tích
 
 `docs/phuong-phap-phan-tich.md` — khung bắt buộc mọi bản tin phải áp dụng cho VCB/CTD:

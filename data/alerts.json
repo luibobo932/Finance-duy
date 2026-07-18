@@ -1,0 +1,11 @@
+{
+  "_comment": "Ngưỡng cảnh báo. type: below=thủng xuống, above=vượt lên. Đơn vị giá cổ phiếu: nghìn đồng; vàng: USD/oz. Bản tin/routine giữa phiên quét và cảnh báo khi chạm.",
+  "alerts": [
+    {"id": "vcb-sup", "asset": "VCB", "type": "below", "level": 58.0, "note": "Thủng hỗ trợ 58.0 — cảnh giác về vùng 56-57"},
+    {"id": "vcb-res", "asset": "VCB", "type": "above", "level": 59.3, "note": "Vượt kháng cự 59.3 (đỉnh 17/7) — tín hiệu mạnh nếu kèm volume"},
+    {"id": "ctd-sup", "asset": "CTD", "type": "below", "level": 63.0, "note": "Thủng hỗ trợ sống còn 63.0 — rủi ro về 61.5-62.5"},
+    {"id": "ctd-res", "asset": "CTD", "type": "above", "level": 64.5, "note": "Lấy lại 64.5 kèm volume — tín hiệu đảo chiều thật"},
+    {"id": "gold-sup", "asset": "XAUUSD", "type": "below", "level": 3960, "note": "Thủng hỗ trợ sống còn 3.960$ — mở đường về 3.800$"},
+    {"id": "gold-res", "asset": "XAUUSD", "type": "above", "level": 4060, "note": "Vượt 4.060$ — mở đường lên 4.114$ rồi 4.300$"}
+  ]
+}
