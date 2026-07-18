@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "profile_name": "Khung cân bằng mặc định",
+  "risk_tolerance": "balanced",
+  "investment_horizon_months": 24,
+  "liquidity_need": "medium",
+  "max_single_stock_pct": 20,
+  "gold_premium_caution_trieu": 15,
+  "volume_spike_ratio": 1.5,
+  "stale_after_days": 3,
+  "minimum_emergency_fund_months": 6,
+  "deposit_insurance_limit_vnd": 350000000,
+  "deposit_insurance_effective_date": "2026-07-13",
+  "stock_round_trip_cost_pct": 0.35,
+  "fundamentals_stale_after_days": 200,
+  "gold_stale_after_days": 1
+}

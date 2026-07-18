@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "policy": "Chỉ dùng dữ liệu có URL, thời điểm lấy và đơn vị. Nguồn nội bộ không có SLA phải có fallback.",
+  "sources": [
+    {
+      "id": "hose_eod",
+      "publisher": "Sở Giao dịch Chứng khoán TP.HCM (HOSE)",
+      "asset_classes": ["stock", "index"],
+      "url": "https://www.hsx.vn/vi/du-lieu-giao-dich/thong-ke/du-lieu-cuoi-ngay",
+      "mode": "official_web_internal_json",
+      "allowed_fields": ["market_date", "vnindex.close", "vnindex.change_pct", "vcb.prior_close", "vcb.close", "vcb.change_pct", "vcb.volume_million_shares", "ctd.prior_close", "ctd.close", "ctd.change_pct", "ctd.volume_million_shares", "foreign_net_ty"],
+      "stale_after_hours": 30,
+      "fallback": "Báo cáo/PDF giao dịch cuối ngày HOSE",
+      "license_note": "Endpoint nội bộ không có SLA. Rà soát quyền phân phối lại trước khi công khai dữ liệu."
+    },
+    {
+      "id": "vietcombank_fx",
+      "publisher": "Vietcombank",
+      "asset_classes": ["fx"],
+      "url": "https://www.vietcombank.com.vn/api/exchangerates",
+      "mode": "official_json_api",
+      "allowed_fields": ["fx_vcb_sell"],
+      "stale_after_hours": 24
+    },
+    {
+      "id": "vietcombank_deposit",
+      "publisher": "Vietcombank",
+      "asset_classes": ["deposit"],
+      "url": "https://www.vietcombank.com.vn/vi-VN/api/interestrates?accountType=Personal",
+      "mode": "official_json_api",
+      "allowed_fields": ["deposit_top"],
+      "allowed_banks": ["Vietcombank"],
+      "stale_after_hours": 48
+    },
+    {
+      "id": "sjc_gold",
+      "publisher": "Công ty SJC",
+      "asset_classes": ["gold_domestic"],
+      "url": "https://www.sjc.com.vn/gia-vang-online",
+      "mode": "official_web_browser_required",
+      "allowed_fields": ["gold.sjc_buy", "gold.sjc_sell", "gold.ring_sell", "gold.observed_at"],
+      "stale_after_hours": 4,
+      "fallback": "PNJ hoặc DOJI, giữ riêng brand/product/region"
+    },
+    {
+      "id": "lbma_gold",
+      "publisher": "LBMA",
+      "asset_classes": ["gold_international"],
+      "url": "https://www.lbma.org.uk/prices-and-data/lbma-gold-price",
+      "mode": "licensed_benchmark",
+      "allowed_fields": ["gold.xauusd"],
+      "stale_after_hours": 36,
+      "license_note": "Không phân phối lại dữ liệu nếu chưa có quyền. Có thể dùng CME GC và ghi rõ là proxy."
+    },
+    {
+      "id": "deposit_insurance_vn",
+      "publisher": "Bảo hiểm Tiền gửi Việt Nam",
+      "asset_classes": ["deposit"],
+      "url": "https://div.gov.vn/tu-ngay-13-7-2026-han-muc-chi-tra-tien-bao-hiem-cua-bao-hiem-tien-gui-viet-nam-la-350-trieu-dong",
+      "mode": "official_policy",
+      "allowed_fields": [],
+      "effective_date": "2026-07-13",
+      "value_vnd": 350000000
+    },
+    {
+      "id": "vcb_ir",
+      "publisher": "Vietcombank Quan hệ nhà đầu tư",
+      "asset_classes": ["stock_fundamental"],
+      "url": "https://www.vietcombank.com.vn/vi-VN/Nha-dau-tu",
+      "mode": "official_ir",
+      "allowed_fields": ["vcb.fundamentals"],
+      "stale_after_hours": 2880
+    },
+    {
+      "id": "ctd_ir",
+      "publisher": "Coteccons Quan hệ nhà đầu tư",
+      "asset_classes": ["stock_fundamental"],
+      "url": "https://www.coteccons.vn/investor-relations-vn/",
+      "mode": "official_ir",
+      "allowed_fields": ["ctd.fundamentals"],
+      "stale_after_hours": 2880
+    }
+  ]
+}

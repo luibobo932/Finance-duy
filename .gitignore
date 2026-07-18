@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.playwright-cli/
+.DS_Store
+data/portfolio.local.json
+data/raw/
+data/candidates/

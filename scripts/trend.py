@@ -9,17 +9,19 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .finance_data import DataValidationError, load_history as read_history, load_portfolio, safe_print, validate_snapshot
+    from .decision_engine import source_fields, verified_risk_flags
+except ImportError:  # Chạy trực tiếp: python scripts/trend.py
+    from finance_data import DataValidationError, load_history as read_history, load_portfolio, safe_print, validate_snapshot
+    from decision_engine import source_fields, verified_risk_flags
+
 ROOT = Path(__file__).resolve().parent.parent
 HIST = ROOT / "data" / "history.jsonl"
-PORT = ROOT / "data" / "portfolio.json"
-
-REQUIRED = ["date", "ky", "vnindex", "gold"]
-
+PORT = ROOT / "data" / "portfolio.local.json"
 
 def load_history():
-    if not HIST.exists():
-        return []
-    return [json.loads(line) for line in HIST.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return read_history(HIST)
 
 
 def fmt(x, nd=2):
@@ -33,19 +35,18 @@ def fmt(x, nd=2):
 
 def cmd_append(arg):
     raw = arg if arg else sys.stdin.read()
-    snap = json.loads(raw)
-    missing = [k for k in REQUIRED if k not in snap]
-    if missing:
-        sys.exit(f"LỖI: snapshot thiếu trường bắt buộc: {missing}")
-    if snap["ky"] not in ("sang", "chieu"):
-        sys.exit("LỖI: 'ky' phải là 'sang' hoặc 'chieu'")
+    if not raw.strip():
+        raise DataValidationError("không nhận được JSON snapshot")
+    snap = validate_snapshot(json.loads(raw))
     hist = load_history()
-    if any(h["date"] == snap["date"] and h["ky"] == snap["ky"] for h in hist):
-        sys.exit(f"LỖI: đã có snapshot {snap['date']} kỳ {snap['ky']} — không ghi trùng")
+    if any(h.get("date") == snap["date"] and h.get("ky") == snap["ky"] for h in hist):
+        raise DataValidationError(
+            f"đã có snapshot {snap['date']} kỳ {snap['ky']} — không ghi trùng"
+        )
     HIST.parent.mkdir(parents=True, exist_ok=True)
     with HIST.open("a", encoding="utf-8") as f:
         f.write(json.dumps(snap, ensure_ascii=False) + "\n")
-    print(f"Đã ghi snapshot {snap['date']} ({snap['ky']}) — tổng {len(hist) + 1} bản ghi")
+    safe_print(f"Đã ghi snapshot {snap['date']} ({snap['ky']}) — tổng {len(hist) + 1} bản ghi")
 
 
 def delta_line(name, cur, prev, unit=""):
@@ -77,21 +78,43 @@ def cmd_report():
     print(f"=== XU HƯỚNG (kỳ hiện tại: {cur['date']} {cur['ky']}, {len(hist)} bản ghi) ===\n")
 
     print("## So với bản tin trước")
-    for name, path, unit in [
-        ("VN-Index", ("vnindex", "close"), ""),
-        ("VCB", ("vcb", "close"), " đ"),
-        ("CTD", ("ctd", "close"), " đ"),
-        ("Vàng SJC bán ra", ("gold", "sjc_sell"), " tr"),
-        ("Vàng thế giới", ("gold", "xauusd"), " $"),
-        ("Chênh lệch vàng VN–TG", ("gold", "premium_trieu"), " tr"),
+    market_comparable = bool(
+        prev
+        and cur.get("market_date")
+        and prev.get("market_date")
+        and cur["market_date"] != prev["market_date"]
+        and "market_date" in source_fields(cur)
+        and "market_date" in source_fields(prev)
+    )
+    for name, path, unit, market_metric in [
+        ("VN-Index", ("vnindex", "close"), "", True),
+        ("VCB", ("vcb", "close"), " đ", True),
+        ("CTD", ("ctd", "close"), " đ", True),
+        ("Vàng SJC bán ra", ("gold", "sjc_sell"), " tr", False),
+        ("Vàng thế giới", ("gold", "xauusd"), " $", False),
+        ("Chênh lệch vàng VN–TG", ("gold", "premium_trieu"), " tr", False),
     ]:
-        print(delta_line(name, get(cur, *path), get(prev, *path) if prev else None, unit))
+        field = ".".join(path)
+        history_verified = prev and field in source_fields(cur) and field in source_fields(prev)
+        if market_metric and not market_comparable:
+            print(f"- {name}: {fmt(get(cur, *path))}{unit} (không so kỳ trước: thiếu/không đổi market_date)")
+        elif not history_verified:
+            print(f"- {name}: {fmt(get(cur, *path))}{unit} (không so kỳ trước: thiếu nguồn theo field)")
+        else:
+            print(delta_line(name, get(cur, *path), get(prev, *path) if prev else None, unit))
 
     # Khối lượng đột biến: so KLGD kỳ này với bình quân các phiên chiều trước đó (tối đa 20)
     for ticker in ("vcb", "ctd"):
-        vol = get(cur, ticker, "volume")
-        past = [get(h, ticker, "volume") for h in hist[:-1] if h["ky"] == "chieu"]
-        past = [v for v in past if v is not None][-20:]
+        vol = get(cur, ticker, "volume_million_shares")
+        if cur.get("ky") != "chieu" or not cur.get("market_date") or f"{ticker}.volume_million_shares" not in source_fields(cur):
+            print(f"- KLGD {ticker.upper()}: không tính ratio ở kỳ sáng hoặc khi thiếu market_date")
+            continue
+        by_market_date = {}
+        for item in hist[:-1]:
+            value = get(item, ticker, "volume_million_shares")
+            if item.get("ky") == "chieu" and item.get("market_date") and value is not None and f"{ticker}.volume_million_shares" in source_fields(item) and "market_date" in source_fields(item):
+                by_market_date[item["market_date"]] = value
+        past = list(by_market_date.values())[-20:]
         if vol is None:
             continue
         if not past:
@@ -104,7 +127,11 @@ def cmd_report():
 
     # Chuỗi khối ngoại: chỉ tính trên các kỳ "chieu" (số chốt phiên) để không đếm trùng
     flows = [(h["date"], h.get("foreign_net_ty")) for h in hist
-             if h["ky"] == "chieu" and h.get("foreign_net_ty") is not None]
+             if h["ky"] == "chieu" and h.get("foreign_net_ty") is not None and "foreign_net_ty" in source_fields(h)]
+    if flows:
+        if flows[-1][1] == 0:
+            print("- Khối ngoại: cân bằng trong phiên gần nhất")
+            flows = []
     if flows:
         sign = 1 if flows[-1][1] > 0 else -1
         streak = 0
@@ -119,31 +146,28 @@ def cmd_report():
         print(f"- Khối ngoại: {kind} {streak} phiên liên tiếp, lũy kế {fmt(abs(total), 0)} tỷ đồng")
 
     # Thay đổi lãi suất so với kỳ trước
-    if prev:
-        prev_rates = {(d["bank"], d["term_months"]): d["rate_pct"] for d in prev.get("deposit_top", [])}
-        changes = []
-        for d in cur.get("deposit_top", []):
-            key = (d["bank"], d["term_months"])
-            if key in prev_rates and prev_rates[key] != d["rate_pct"]:
-                changes.append(f"{d['bank']} ({d['term_months']}T): {prev_rates[key]}% → {d['rate_pct']}%")
-            elif key not in prev_rates:
-                changes.append(f"{d['bank']} ({d['term_months']}T): mới vào top với {d['rate_pct']}%")
-        print("- Lãi suất thay đổi: " + ("; ".join(changes) if changes else "không đổi so với kỳ trước"))
+    print("- Lãi suất thay đổi: xem decision_engine; trend không so các dòng raw chưa qua cổng sản phẩm")
 
     # Lãi/lỗ danh mục
     print("\n## Lãi/lỗ danh mục")
     if PORT.exists():
-        port = json.loads(PORT.read_text(encoding="utf-8"))
+        port = load_portfolio(PORT)
         total_pnl = 0.0
         have_any = False
         for ticker, pos in port.items():
             cost, qty = pos.get("avg_cost"), pos.get("quantity")
             price = get(cur, ticker.lower(), "close")
+            if f"{ticker.lower()}.close" not in source_fields(cur):
+                print(f"- {ticker}: giá kỳ này chưa có nguồn đúng field để tính")
+                continue
             if cost is None or qty is None:
-                print(f"- {ticker}: chưa có giá vốn/số lượng trong data/portfolio.json")
+                print(f"- {ticker}: chưa có giá vốn/số lượng trong data/portfolio.local.json")
                 continue
             if price is None:
                 print(f"- {ticker}: chưa có giá kỳ này để tính")
+                continue
+            if cost <= 0 or qty <= 0:
+                print(f"- {ticker}: giá vốn và số lượng phải lớn hơn 0")
                 continue
             pnl = (price - cost) * qty
             total_pnl += pnl
@@ -153,21 +177,24 @@ def cmd_report():
         if have_any:
             print(f"- TỔNG: {'LÃI' if total_pnl >= 0 else 'LỖ'} {fmt(abs(total_pnl), 0)} đ")
     else:
-        print("- Chưa có data/portfolio.json")
+        print("- Chưa có data/portfolio.local.json")
 
     # Cờ rủi ro kỳ này
-    flags = cur.get("risk_flags", {})
+    flags = verified_risk_flags(cur)
     if flags.get("arrest"):
         print(f"\n⚠️ CẢNH BÁO: {flags['arrest']}")
 
 
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] not in ("append", "report"):
-        sys.exit(__doc__)
-    if sys.argv[1] == "append":
-        cmd_append(sys.argv[2] if len(sys.argv) > 2 else None)
-    else:
-        cmd_report()
+    try:
+        if len(sys.argv) < 2 or sys.argv[1] not in ("append", "report"):
+            sys.exit(__doc__)
+        if sys.argv[1] == "append":
+            cmd_append(sys.argv[2] if len(sys.argv) > 2 else None)
+        else:
+            cmd_report()
+    except (DataValidationError, json.JSONDecodeError, OSError) as exc:
+        sys.exit(f"LỖI: {exc}")
 
 
 if __name__ == "__main__":

@@ -1,63 +1,115 @@
-# Finance-duy — Bản tin Đầu tư tự động
+# Finance-duy — Hệ thống hỗ trợ quyết định đầu tư có kiểm chứng
 
-Hệ thống tổng hợp tin tức đầu tư 2 lần/ngày (8h sáng & 6h chiều giờ Việt Nam) chạy bằng Claude Code Routines, phục vụ ra quyết định đầu tư.
+Ứng dụng cá nhân để so sánh **Vàng, hai cổ phiếu đang theo dõi VCB/CTD và gửi tiết kiệm**. VCB/CTD không đại diện toàn thị trường chứng khoán. Hệ thống không dự báo chắc chắn và không phát lệnh mua/bán; nó chỉ mở khóa phân tích khi dữ liệu đủ mới, đúng đơn vị, có nguồn chính thức và vượt các kiểm tra nhất quán.
 
-## Nội dung mỗi bản tin
+## Trạng thái an toàn hiện tại
 
-1. **Chứng khoán Việt Nam**
-   - Diễn biến VN-Index / VN30 / HNX, thanh khoản, khối ngoại mua/bán ròng
-   - Phân tích từng nhóm ngành (ngân hàng, BĐS, thép, chứng khoán, bán lẻ, dầu khí, công nghệ, cảng biển/xuất khẩu…) và **yếu tố đang khiến từng nhóm hưởng lợi hay bất lợi**
-   - Bản sáng: tin qua đêm (Mỹ, thế giới) ảnh hưởng phiên hôm nay
-   - Bản chiều: kết quả phiên vừa đóng cửa + tin doanh nghiệp trong ngày
+- Dashboard mới nằm tại `dashboard/index.html`.
+- Snapshot lịch sử ban đầu còn thiếu nguồn cho vàng, lãi suất và dữ liệu cơ bản doanh nghiệp, vì vậy kết quả hiện tại chủ động là **CHỜ DỮ LIỆU**.
+- Giá đóng cửa VCB/CTD ngày thị trường 17/07/2026 đã được đối chiếu lại từ HOSE; các con số legacy không có nguồn không được dùng để ra quyết định.
+- Workflow GitHub Pages chỉ build lại dashboard và làm trạng thái chuyển sang quá hạn. Nó **chưa tự thu thập rồi duyệt snapshot mới**.
 
-2. **Vàng**
-   - Giá SJC miếng, vàng nhẫn 9999 (SJC, DOJI, BTMC)
-   - Giá vàng thế giới XAU/USD, chênh lệch trong nước – thế giới (quy đổi theo tỷ giá VCB)
-   - Yếu tố tác động: Fed, DXY, địa chính trị, chính sách NHNN
+## Những gì đã có
 
-3. **Lãi suất tiết kiệm**
-   - Ngân hàng có lãi suất cao nhất cho khoản gửi **dưới 1 tỷ đồng**, theo kỳ hạn 6 / 12 / 13+ tháng
-   - Loại trừ các mức lãi suất đặc biệt yêu cầu số dư lớn
+- Decision engine cho Vàng, VCB, CTD và tiết kiệm: điểm sàng lọc, confidence, blocker cứng, rủi ro và điều kiện làm luận điểm mất hiệu lực.
+- Registry nguồn chính thức tại `config/sources.json`; URL đúng nhưng khai sai field vẫn không được tính.
+- Kiểm tra độ mới theo `collected_at`, `market_date`, `gold.observed_at`, `retrieved_at` và ngày báo cáo cơ bản.
+- Hợp đồng đơn vị rõ: giá cổ phiếu bằng VND; thanh khoản dùng duy nhất `volume_million_shares`.
+- Premium vàng được đối chiếu lại từ SJC, XAU/USD và tỷ giá bán VCB.
+- Lãi suất được kiểm tra theo từng sản phẩm: ngân hàng, nguồn, ngày lấy, kỳ hạn, kênh, min/max, điều kiện, cách trả lãi và ngày hiệu lực.
+- Bộ mô phỏng khóa toàn bộ số tiền nếu một trong ba nhóm chưa READY hoặc khoản gửi nằm ngoài dải tiền của sản phẩm đã xác minh.
+- Scorecard chỉ đánh giá sau đủ kỳ quan sát khác nhau; không công bố tỷ lệ đúng trước 20 kết quả.
+- Danh mục cá nhân trên web chỉ nằm trong bộ nhớ tab. File local và raw data đều bị Git bỏ qua.
+- CI chạy toàn bộ test trên Windows và Ubuntu, kiểm tra JavaScript và khả năng tạo dashboard.
 
-4. **Gợi ý hành động** — định hướng ngắn gọn cho nhà đầu tư (tham khảo, không phải khuyến nghị đầu tư)
+## Chạy trên máy
 
-## Lịch chạy (Routines)
+```powershell
+python -X utf8 scripts\build_dashboard.py
+python -X utf8 -m http.server 8000 --directory dashboard
+```
 
-| Routine | Cron (UTC) | Giờ VN | Trigger ID |
-|---|---|---|---|
-| Bản tin đầu tư sáng 8h | `0 1 * * *` | ~08:08 | `trig_01WXaoTuCY38ZTunJqR2JDMe` |
-| Bản tin đầu tư chiều 6h | `0 11 * * *` | ~18:00 | `trig_01Nfm3YyDJ87cKK5yiC6yCWv` |
+Mở `http://localhost:8000`.
 
-## Lịch sử số liệu & xu hướng
+```powershell
+python -X utf8 -m unittest discover -s tests -v
+python -X utf8 scripts\decision_engine.py report
+python -X utf8 scripts\scorecard.py review
+```
 
-- `data/history.jsonl` — mỗi bản tin append 1 dòng JSON snapshot (VN-Index, VCB, CTD, khối ngoại, vàng, tỷ giá, top lãi suất, cờ rủi ro). Xem dòng đầu file làm schema mẫu.
-- `data/portfolio.json` — giá vốn + số lượng VCB/CTD để tính lãi/lỗ thực tế (null = chưa cung cấp).
-- `scripts/trend.py`:
-  - `append '<json>'` — validate và ghi snapshot mới (chặn ghi trùng ngày+kỳ)
-  - `report` — so sánh với kỳ trước: biến động VN-Index/VCB/CTD/vàng, chuỗi mua/bán ròng khối ngoại (chỉ tính kỳ chiều để không đếm trùng phiên), **KLGD từng mã vs bình quân 20 phiên (cảnh báo ⚠️ khi ≥1,5× — dấu hiệu cần soi thỏa thuận/giao dịch nội bộ)**, chênh lệch vàng nới/thu hẹp, ngân hàng thay đổi lãi suất, lãi/lỗ danh mục
-- Mỗi routine tự commit + push `data/` sau khi ghi để lịch sử bền vững qua các container.
+## Thu thập dữ liệu chính thức
 
-## Khung phân tích
+Collector chỉ lưu bản thô trong `data/raw/`; không tự đưa dữ liệu vào lịch sử để tránh một lỗi nguồn làm mở khóa quyết định.
 
-`docs/phuong-phap-phan-tich.md` — khung bắt buộc mọi bản tin phải áp dụng cho VCB/CTD:
-- **Phát hiện giao dịch bất thường/nội bộ**: KLGD vs BQ20, giao dịch thỏa thuận, Wyckoff effort-vs-result, và quét công bố giao dịch người nội bộ trên HOSE (kênh hợp pháp — dữ liệu tick từng lệnh không truy cập được qua web)
-- **Wyckoff**: 3 quy luật, 4 pha, tín hiệu spring/upthrust/SOS/SOW
-- **Nến Nhật**: các mẫu đảo chiều/do dự + nguyên tắc volume xác nhận
-- **Buffett**: moat, ROE, định giá có biên an toàn
-- **Philip Fisher**: 15 điểm rút gọn + scuttlebutt, quy tắc khi nào bán
+```powershell
+python -X utf8 scripts\collect_hose.py 2026-07-17 VCB CTD
+python -X utf8 scripts\collect_vietcombank.py all
+```
 
-Cả hai routine bắn vào phiên Claude Code gốc (session `session_013t34M5Yh9yPtmNDBRg4UYx`), dùng WebSearch lấy số liệu mới nhất kèm nguồn.
+Quy trình duyệt một snapshot:
 
-## Kênh xuất bản
+1. Thu thập raw từ nguồn trong `config/sources.json`.
+2. Chuẩn hóa theo `data/snapshot.example.json`.
+3. Điền nguồn theo từng field và từng sản phẩm; không suy diễn nguồn.
+4. Tạo ứng viên bằng `python -X utf8 scripts\candidate_pipeline.py stage data\snapshot-moi.json`.
+5. Mở file trong `data/candidates/`, đối chiếu từng số với nguồn rồi ký nhận bằng lệnh `review`.
+6. Chỉ sau khi đã rà soát mới chạy lệnh `promote` để đưa snapshot vào lịch sử.
+7. Chạy test, decision report và build dashboard.
+8. Chỉ ghi scorecard khi quyết định tương ứng thực sự ở trạng thái READY.
 
-- **Chat**: bản tin đầy đủ bằng tiếng Việt trong phiên Claude Code
-- **Dashboard**: artifact cập nhật cùng URL mỗi kỳ — https://claude.ai/code/artifact/6f0a817e-7841-4b94-8e92-8c2393d0b551
+Ví dụ đầy đủ:
 
-## Cấu hình theo dõi hiện tại
+```powershell
+python -X utf8 scripts\candidate_pipeline.py stage data\snapshot-moi.json
+python -X utf8 scripts\candidate_pipeline.py review data\candidates\2026-07-18-chieu.candidate.json --reviewer "Duy" --note "Đã đối chiếu nguồn chính thức"
+python -X utf8 scripts\candidate_pipeline.py promote data\candidates\2026-07-18-chieu.candidate.json
+python -X utf8 scripts\build_dashboard.py
+```
 
-- **Danh mục cá nhân: VCB (Vietcombank) và CTD (Coteccons)** — theo sát giá, tin tức, KQKD, giao dịch khối ngoại từng mã
-- Thị trường chung: toàn bộ nhóm ngành + động thái **quỹ đầu tư lớn và khối ngoại** (mua/bán ròng, ETF, dòng vốn trước nâng hạng)
-- **Cảnh báo rủi ro doanh nghiệp**: tin lãnh đạo/chủ tịch tập đoàn bị bắt/khởi tố → đánh giá lan tỏa + cách phòng ngừa
-- Vàng: trong nước + thế giới, kèm phân tích **địa chính trị/chiến tranh**, **động thái Trump** (đánh giá rủi ro với kinh tế thế giới) và **quyết định/tín hiệu Fed**
-- Tiền gửi: khoản dưới 1 tỷ đồng, ưu tiên so sánh online vs tại quầy
-- Phân tích: dùng plugin Finance (chuẩn CFA) khi khả dụng trong phiên
+Mỗi ứng viên có checksum SHA-256. Nếu dữ liệu bị sửa sau khi tạo, bước rà soát hoặc promote sẽ bị từ chối. Thư mục `data/candidates/` là dữ liệu làm việc local và không được đưa lên GitHub.
+
+## Cổng quyết định bắt buộc
+
+### Chứng khoán
+
+- Cần giá tham chiếu, giá đóng cửa, `%` thay đổi, `volume_million_shares`, VN-Index và `market_date` từ HOSE.
+- `%` thay đổi phải khớp giá tham chiếu/đóng cửa.
+- Cần lịch sử phiên chiều để xác minh thanh khoản.
+- Dữ liệu cơ bản phải có ngày cuối kỳ, tăng trưởng lợi nhuận, ROE, P/E và nguồn IR đúng doanh nghiệp.
+
+### Vàng
+
+- Cần giá mua/bán SJC, XAU/USD, tỷ giá bán VCB, premium và thời điểm quan sát.
+- Premium tự khai phải khớp phép quy đổi; giá quá hạn hoặc thời điểm tương lai bị khóa.
+
+### Gửi tiết kiệm
+
+- Mỗi dòng phải gắn đúng nguồn/ngân hàng và có đủ điều kiện sản phẩm.
+- Mức quảng cáo thiếu min/max hoặc không áp dụng cho khoản dưới 1 tỷ bị loại.
+- Hạn mức bảo hiểm tiền gửi cấu hình là 350 triệu đồng/người/tổ chức tham gia, hiệu lực 13/07/2026; luôn kiểm tra lại chính sách trước khi gửi.
+
+## Cấu trúc chính
+
+| Đường dẫn | Vai trò |
+|---|---|
+| `dashboard/` | Giao diện web và dữ liệu build |
+| `scripts/decision_engine.py` | Cổng an toàn và điểm sàng lọc |
+| `scripts/finance_data.py` | Schema, đơn vị và kiểm tra thời gian |
+| `scripts/collect_hose.py` | Thu thập EOD VCB/CTD từ HOSE |
+| `scripts/collect_vietcombank.py` | Thu thập tỷ giá/lãi suất VCB |
+| `scripts/scorecard.py` | Nhật ký và đánh giá kết quả |
+| `config/sources.json` | Registry nguồn/field/độ trễ |
+| `data/history.jsonl` | Snapshot công khai đã duyệt |
+| `data/raw/` | Bản thô private, không commit |
+| `docs/nguon-du-lieu.md` | Chính sách nguồn và giấy phép |
+| `docs/kiem-tra-du-lieu-legacy.md` | Kết quả rà dữ liệu ban đầu |
+
+## Việc cần làm tiếp
+
+1. Viết bộ thu thập SJC/XAU và báo cáo IR có kiểm soát giấy phép.
+2. Kết nối collector vào luồng **candidate → review → promote** hiện có, không tự động promote.
+3. Backfill ít nhất 20 phiên để dùng volume ratio; hướng tới 500 phiên trước khi backtest nghiêm túc.
+4. Chỉ sau khi pipeline ổn định mới bật lịch tự thu thập; không tự động công khai raw dữ liệu có điều kiện bản quyền.
+5. Bổ sung kiểm thử trình duyệt vào CI và giám sát lỗi collector.
+
+> Đây là công cụ hỗ trợ kỷ luật ra quyết định, không phải tư vấn đầu tư cá nhân hay cam kết lợi nhuận.
