@@ -10,10 +10,28 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from datacontract.schema import DataPoint  # noqa: E402
+from datacontract.validators import is_abnormal  # noqa: E402
+
 HIST = ROOT / "data" / "history.jsonl"
 PORT = ROOT / "data" / "portfolio.json"
 
 REQUIRED = ["date", "ky", "vnindex", "gold"]
+
+# Trường giá phải > 0 nếu có mặt (path trong snapshot, nhãn hiển thị lỗi)
+PRICE_FIELDS = [
+    (("vnindex", "close"), "vnindex.close"),
+    (("vcb", "close"), "vcb.close"),
+    (("ctd", "close"), "ctd.close"),
+    (("gold", "xauusd"), "gold.xauusd"),
+    (("gold", "sjc_sell"), "gold.sjc_sell"),
+    (("gold", "sjc_buy"), "gold.sjc_buy"),
+    (("gold", "ring_sell"), "gold.ring_sell"),
+    (("fx_vcb_sell",), "fx_vcb_sell"),
+]
 
 
 def load_history():
@@ -31,6 +49,25 @@ def fmt(x, nd=2):
     return s
 
 
+def validate_snapshot(snap: dict) -> list[str]:
+    """Trả về danh sách lỗi dữ liệu bất thường (rỗng = hợp lệ).
+
+    Chỉ kiểm tra các trường GIÁ (phải > 0 nếu có mặt) — các trường có thể
+    hợp lệ bằng 0 hoặc âm (VD foreign_net_ty, change_pct) không bị chặn ở
+    đây. Đây là tuyến phòng thủ đầu tiên theo data contract: không cho số
+    liệu rõ ràng sai (âm/bằng 0) lọt vào lịch sử — xem datacontract/.
+    """
+    errors = []
+    for path, label in PRICE_FIELDS:
+        v = get(snap, *path)
+        if v is None:
+            continue
+        dp = DataPoint(name=label, value=v, unit="", source="snapshot_input")
+        if is_abnormal(dp):
+            errors.append(f"{label} = {v} bất thường (giá phải > 0)")
+    return errors
+
+
 def cmd_append(arg):
     raw = arg if arg else sys.stdin.read()
     snap = json.loads(raw)
@@ -39,6 +76,14 @@ def cmd_append(arg):
         sys.exit(f"LỖI: snapshot thiếu trường bắt buộc: {missing}")
     if snap["ky"] not in ("sang", "chieu"):
         sys.exit("LỖI: 'ky' phải là 'sang' hoặc 'chieu'")
+    errors = validate_snapshot(snap)
+    if errors:
+        from common import get_logger
+
+        logger = get_logger("trend")
+        for e in errors:
+            logger.error(e)
+        sys.exit("LỖI: dữ liệu bất thường, từ chối ghi:\n" + "\n".join(f"  - {e}" for e in errors))
     hist = load_history()
     if any(h["date"] == snap["date"] and h["ky"] == snap["ky"] for h in hist):
         sys.exit(f"LỖI: đã có snapshot {snap['date']} kỳ {snap['ky']} — không ghi trùng")

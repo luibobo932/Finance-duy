@@ -55,6 +55,17 @@ Routine chiều thứ Sáu tự thêm mục **Tổng kết tuần**. Cả hai ro
 
 Xem `docs/ROADMAP.md` cho trạng thái toàn bộ 12 hạng mục phát triển và việc cần người dùng cung cấp.
 
+## Data contract & kiểm thử (Phase 2)
+
+Dự án đang được nâng cấp theo `docs/IMPLEMENTATION_PLAN.md` (10 phase, xem `docs/AUDIT_REPORT.md` cho hiện trạng đầy đủ).
+
+- `datacontract/` — `DataPoint` chuẩn (value/unit/source/as_of/fetched_at/confidence/status...), validators (`is_stale`, `is_missing`, `is_abnormal`, `compare_sources`, `pick_with_fallback`, `requires_no_decision`), `sources.py` (thứ tự ưu tiên nguồn, đánh dấu domain bị chặn mạng)
+- `common/logsetup.py` — logging có cấu trúc (JSON Lines vào `logs/`, KHÔNG thay thế phần in báo cáo ra stdout)
+- `scripts/trend.py` giờ **từ chối ghi** snapshot có giá âm/bằng 0 bất thường trước khi vào `data/history.jsonl` (dùng `datacontract`)
+- `tests/` — chạy bằng `pytest` (`pip install pytest` nếu chưa có): `python3 -m pytest tests/ -v`
+
+Nguyên tắc: nếu dữ liệu thiếu, hệ thống phải báo rõ "chưa có dữ liệu" — không được vá bằng số 0.
+
 ## Khung phân tích
 
 `docs/phuong-phap-phan-tich.md` — khung bắt buộc mọi bản tin phải áp dụng cho VCB/CTD:
