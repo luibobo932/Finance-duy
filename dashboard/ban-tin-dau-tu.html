@@ -75,32 +75,35 @@
 <div class="wrap">
   <header class="masthead">
     <h1>Bản tin <span>Đầu tư</span> — Chứng khoán · Vàng · Lãi suất</h1>
-    <div class="stamp">Bản tin sáng · Chủ Nhật 19/07/2026 · TTCK &amp; vàng nghỉ cuối tuần — số liệu HOSE chốt phiên 17/07 · Phiên kế tiếp: Thứ Hai 20/07</div>
+    <div class="stamp">Bản tin chiều · Chủ Nhật 19/07/2026, 18h05 · TTCK &amp; vàng nghỉ cuối tuần — số liệu HOSE chốt phiên 17/07 · Phiên kế tiếp: Thứ Hai 20/07</div>
   </header>
 
   <section>
     <h2>Tài sản của bạn — phân bổ &amp; rủi ro</h2>
-    <div class="when">Cập nhật 19/07 · vàng NHẪN định giá 127,5 tr/lượng (giá tiệm Xuân Triệu mua lại, 18/7) · đã bán hết cổ phiếu</div>
+    <div class="when">Cập nhật 19/07 chiều · vàng NHẪN định giá 127,63 tr/lượng (mô hình động theo XAU real-time, hiệu chuẩn tiệm Xuân Triệu 18/7) · đã bán hết cổ phiếu · tính bằng <code>scripts/networth.py</code></div>
     <div class="verdicts" style="grid-template-columns:1fr 1fr;">
       <figure style="margin:0;">
-        <figcaption>Phân bổ tài sản (tổng ≈ 1,11 tỷ đồng)</figcaption>
+        <figcaption>Phân bổ tài sản (tổng ≈ 1,111 tỷ đồng)</figcaption>
         <div class="chart">
-          <div class="brow"><span class="lab">Vàng nhẫn</span><span class="track"><span class="bar" style="width:100%;background:var(--accent)"></span></span><span class="val">829 tr · 75%</span></div>
-          <div class="brow"><span class="lab">Tiết kiệm</span><span class="track"><span class="bar" style="width:30%;background:var(--up)"></span></span><span class="val">246 tr · 22%</span></div>
-          <div class="brow"><span class="lab">Tiền mặt</span><span class="track"><span class="bar ref" style="width:4%"></span></span><span class="val">35 tr · 3%</span></div>
+          <div class="brow"><span class="lab">Vàng nhẫn</span><span class="track"><span class="bar" style="width:100%;background:var(--accent)"></span></span><span class="val">829,6 tr · 74,7%</span></div>
+          <div class="brow"><span class="lab">Tiết kiệm</span><span class="track"><span class="bar" style="width:30%;background:var(--up)"></span></span><span class="val">246 tr · 22,2%</span></div>
+          <div class="brow"><span class="lab">Tiền mặt</span><span class="track"><span class="bar ref" style="width:4%"></span></span><span class="val">35 tr · 3,2%</span></div>
         </div>
-        <p class="note">6,5 cây vàng nhẫn × 127,5 tr · 246 tr gửi ngân hàng · 35 tr mặt · 0 đ cổ phiếu.</p>
-        <p class="note">🔗 <strong>Tự động:</strong> giá vàng nhẫn = giá thế giới quy đổi × hệ số tiệm (0,995 mua / 1,014 bán, hiệu chuẩn từ tiệm Xuân Triệu 18/7). Mỗi bản tin lấy XAU/USD real-time → tự tính lại giá tiệm & tài sản, <em>không cần chụp ảnh</em>. Gửi ảnh mới chỉ khi tiệm đổi biên độ.</p>
+        <p class="note">6,5 cây vàng nhẫn × 127,63 tr · 246 tr gửi ngân hàng · 35 tr mặt · 0 đ cổ phiếu.</p>
+        <p class="note">🔗 <strong>Tự động (Phase 4-8 backend):</strong> giá vàng nhẫn = giá thế giới quy đổi (hằng số chính xác 37,5/31,1034768) × hệ số tiệm hiệu chuẩn. Mỗi bản tin lấy XAU/USD + tỷ giá real-time → <code>gold/xuan_trieu_model.py</code> tự tính lại giá tiệm &amp; tài sản, <em>không cần chụp ảnh</em>. Độ tin cậy hiện <strong>LOW</strong> (mới 1 mẫu hiệu chuẩn) — gửi ảnh mới định kỳ để nâng độ tin cậy.</p>
       </figure>
       <div class="vcard" style="border-color:var(--down);">
-        <div class="head"><span class="name">⚠️ Rủi ro tập trung</span><span class="verdict wait">VÀNG 75%</span></div>
+        <div class="head"><span class="name">⚠️ Rủi ro tập trung</span><span class="verdict wait">VÀNG 74,7% — VƯỢT NGƯỠNG CRITICAL</span></div>
         <ul>
-          <li>Bỏ hết trứng vào một giỏ: vàng chiếm <strong>75%</strong> — nếu vàng chỉnh 10% bạn mất ~83 tr, bằng gần <strong>4,5 năm tiền lãi</strong> của khoản tiết kiệm 246 tr.</li>
-          <li>Nhẫn tiệm mua 127,5 tr ≈ sát giá thế giới quy đổi (~128 tr) → gần như <strong>KHÔNG có premium</strong>: thanh khoản tốt, nhưng giá bám sát thế giới nên chỉnh là chịu trọn.</li>
-          <li>Nguyên tắc phân bổ: không để 1 tài sản vượt 50–60%.</li>
+          <li>Theo <code>config/risk_limits.yaml</code>: ngưỡng cảnh báo 60%, ngưỡng nghiêm trọng 70% — vàng của bạn đang <strong>74,7%, đã vượt cả hai</strong>. Risk Officer tự động <strong>chặn mọi đề xuất mua thêm vàng</strong> ở mức này.</li>
+          <li>Nếu vàng chỉnh 10% bạn mất ~83 tr, bằng gần <strong>4,5 năm tiền lãi</strong> của khoản tiết kiệm 246 tr.</li>
+          <li>Nhẫn tiệm mua 127,63 tr ≈ sát giá thế giới quy đổi (128,28 tr) → gần như <strong>KHÔNG có premium</strong>: thanh khoản tốt, nhưng giá bám sát thế giới nên chỉnh là chịu trọn.</li>
         </ul>
         <div class="cond"><strong>Gợi ý:</strong> cân nhắc chốt <strong>1,5–2,5 cây</strong> (đưa vàng về ~55–60%), chuyển sang gửi tiết kiệm 7,4%/năm — vừa giảm rủi ro, vừa sinh lãi chắc chắn trong lúc chờ cơ hội.</div>
       </div>
+    </div>
+    <div class="warnbox" style="margin-top:14px;border-left-color:var(--accent);background:var(--chip-flat);">
+      <strong>🤖 Decision Engine (mới, tự động):</strong> hệ thống rule-based vừa xây xong tính ra khuyến nghị <strong>"GIỮ"</strong> cho vàng — vì xu hướng giá KỸ THUẬT thuần túy hiện TRUNG TÍNH (lịch sử giá vàng mới có 1-2 điểm, chưa đủ để có tín hiệu rõ). Đây KHÁC với khuyến nghị "CHỐT BỚT" bên dưới — hai góc nhìn không mâu thuẫn: "GIỮ" là kết luận nếu bạn không có ý định mua thêm; "CHỐT BỚT" là khuyến nghị quản trị rủi ro riêng vì tỷ trọng đã vượt ngưỡng nghiêm trọng, độc lập với xu hướng giá ngắn hạn. Nếu bạn từng đề xuất <em>mua thêm</em> vàng lúc này, hệ thống sẽ tự động từ chối (đã kiểm chứng bằng test).
     </div>
   </section>
 
@@ -111,7 +114,7 @@
       <div class="vcard" style="border-color:var(--accent);">
         <div class="head"><span class="name">Vàng nhẫn (bạn đang giữ 6,5 cây)</span><span class="verdict wait">✂️ CHỐT BỚT 1,5–2,5 cây</span></div>
         <ul>
-          <li>Không phải bán tháo — chỉ <strong>giảm tập trung</strong> từ 76% về ~55–60%; vàng đang gần đỉnh, chốt bớt để khóa lời một phần.</li>
+          <li>Không phải bán tháo — chỉ <strong>giảm tập trung</strong> từ 74,7% (đã vượt ngưỡng critical 70% theo cấu hình rủi ro) về ~55–60%; vàng đang gần đỉnh, chốt bớt để khóa lời một phần.</li>
           <li>Nhẫn premium so thế giới chỉ ~6–7 tr (thấp hơn SJC nhiều) → thanh khoản tốt, nhưng cũng nghĩa là ăn theo sát giá thế giới — rủi ro nếu thế giới chỉnh.</li>
           <li>Giữ phần lớn để phòng địa chính trị (Mỹ–Iran); tiền bán chuyển tiết kiệm 7,4%.</li>
         </ul>
@@ -131,9 +134,13 @@
         <ul>
           <li>Bán hết đúng lúc thị trường yếu (khối ngoại bán ròng 13 quý liên tiếp) — không có gì phải tiếc.</li>
           <li>Danh sách canh mua lại khi định giá rẻ: nhóm ngân hàng (VCB, ACB), chứng khoán (đón nâng hạng FTSE tháng 9), REE (P/B đáy 2 năm).</li>
+          <li><strong>Coteccons (CTD):</strong> vừa duyệt phát hành ~5,3 triệu cổ phiếu thưởng (tỷ lệ 20:1, ~53,3 tỷ đồng từ quỹ đầu tư phát triển) — pha loãng nhẹ, không phải tín hiệu xấu về tài chính; KQKD nửa đầu niên độ vẫn rất mạnh (DT +49,9%, LN ròng gấp 2,6 lần).</li>
         </ul>
         <div class="cond"><strong>Chỉ quay lại khi:</strong> VN-Index giữ vững vùng 1.780–1.800 + KQKD quý II xác nhận, hoặc có nhịp chỉnh sâu về vùng định giá hấp dẫn.</div>
       </div>
+    </div>
+    <div class="warnbox" style="margin-top:14px;background:var(--chip-up);border-left-color:var(--up);">
+      <strong>🛡️ Quét rủi ro doanh nghiệp (equity/governance.py):</strong> Có loạt lãnh đạo doanh nghiệp niêm yết bị khởi tố trong năm 2026 (Bamboo Capital — ông Nguyễn Hồ Nam; Hóa chất Đức Giang/DGC — ông Đào Hữu Huyền, bị bắt tạm giam; PC1 — chủ tịch + dàn lãnh đạo; VPG — chủ tịch + TGĐ tội đưa hối lộ) — <strong>KHÔNG mã nào trong watchlist (VCB, CTD) hay danh sách Buffett-list</strong> của bạn. Không cần hành động phòng ngừa hôm nay, nhưng đây là lời nhắc: nhóm hóa chất/xây dựng/năng lượng đang có rủi ro quản trị tăng cao trên diện rộng — cân nhắc kỹ nếu định mua mới ngoài watchlist.
     </div>
     <p class="note">Đây là nhận định tổng hợp từ dữ liệu công khai, không phải cam kết lợi nhuận. Quyết định cuối cùng thuộc về bạn.</p>
   </section>
@@ -306,10 +313,10 @@
       <tr><th>Sự kiện</th><th>Tác động đến thứ Hai</th></tr>
       <tr><td>VN-Index chốt tuần 1.787,45 (−0,93%), khối ngoại bán ròng ~690 tỷ</td><td>Tâm lý thận trọng; theo dõi khối ngoại có bán tiếp không</td></tr>
       <tr><td>Mỹ: bán tháo chip — Nasdaq −1,40%, S&amp;P −1,02%; nhóm bán dẫn sát thị trường gấu</td><td><span class="chip down">Xấu</span> cho FPT, nhóm công nghệ đầu tuần</td></tr>
-      <tr><td><strong>Mỹ không kích Iran nhiều đợt trong tuần; Iran đáp trả căn cứ Mỹ</strong> — leo thang rõ, Trump dọa đánh hạ tầng Iran</td><td><span class="chip up">Tốt</span> dầu khí (GAS, PVS, PVD, BSR) + <span class="chip up">đỡ giá</span> vàng trú ẩn</td></tr>
-      <tr><td>Trump cáo buộc Trung Quốc can thiệp bầu cử 2020 — đe dọa đình chiến thuế quan</td><td><span class="chip down">Rủi ro TB-cao</span>: xuất khẩu, dệt may, cảng biển; lạm phát nhập khẩu → Fed diều hâu hơn</td></tr>
-      <tr><td>Fed: họp cuối tháng 7, xác suất giữ 3,50–3,75% ~66% (CME); rủi ro tăng lãi tháng 9</td><td>Trần định giá cho cổ phiếu + vàng toàn cầu</td></tr>
-      <tr><td>Quét công bố nội bộ VCB/CTD + tin bắt giữ lãnh đạo doanh nghiệp</td><td><span class="chip flat">Không có tin mới</span> trong 24h qua</td></tr>
+      <tr><td><strong>Mỹ tiếp tục tấn công Iran, phong tỏa hàng hải + dọa thu phí qua eo Hormuz</strong>; đàm phán dự kiến thứ Ba nhưng Trump tuyên bố sẽ tiếp tục tấn công tới khi có thỏa thuận</td><td><span class="chip up">Tốt</span> dầu khí (GAS, PVS, PVD, BSR) — dầu thế giới +9% lên đỉnh 1 tháng + <span class="chip up">đỡ giá</span> vàng trú ẩn</td></tr>
+      <tr><td>Fed: tân Chủ tịch Kevin Warsh điều trần Quốc hội; thị trường vàng được nhận định sẽ chịu ảnh hưởng từ phát biểu Fed nhiều hơn diễn biến địa chính trị trong ngắn hạn</td><td>Theo dõi sát phát biểu Warsh — có thể tác động vàng mạnh hơn cả tin Iran</td></tr>
+      <tr><td>OPEC hạ dự báo tăng trưởng nhu cầu dầu 2026 lần thứ 3 liên tiếp do ảnh hưởng xung đột Iran</td><td>Rủi ro giảm tốc kinh tế toàn cầu trung hạn</td></tr>
+      <tr><td>Quét công bố nội bộ VCB/CTD + tin bắt giữ lãnh đạo doanh nghiệp (xem mục Khuyến nghị)</td><td><span class="chip flat">Không có tin mới liên quan watchlist</span> — có làn sóng khởi tố lãnh đạo DN khác (Bamboo Capital, DGC, PC1, VPG)</td></tr>
     </table></div>
   </section>
 
@@ -373,21 +380,28 @@
 
   <section>
     <h2>Xu hướng &amp; Lãi/lỗ danh mục</h2>
-    <div class="when">Kỳ chiều 18/07 so với kỳ trước (script trend.py)</div>
+    <div class="when">Kỳ chiều 19/07 so với kỳ trước (script <code>trend.py report</code> — 5 bản ghi lịch sử)</div>
     <div class="tbl"><table>
       <tr><th>Chỉ tiêu</th><th>Kỳ này</th><th>Diễn biến</th></tr>
-      <tr><td>VN-Index</td><td class="num">1.787,45</td><td><span class="chip flat">nghỉ cuối tuần</span></td></tr>
-      <tr><td>VCB</td><td class="num">58.500 đ</td><td><span class="chip down">−1,52% phiên 17/07 · KL 0,58× BQ20</span></td></tr>
-      <tr><td>CTD</td><td class="num">63.500 đ</td><td><span class="chip down">−4,08% phiên 17/07 · KL 0,82× BQ20</span></td></tr>
-      <tr><td>Khối ngoại</td><td class="num">−690 tỷ</td><td><span class="chip down">bán ròng 1 phiên</span></td></tr>
-      <tr><td>Vàng SJC bán ra</td><td class="num">147,5 tr</td><td><span class="chip up">+0,9 tr chiều nay</span></td></tr>
-      <tr><td>Chênh lệch vàng VN–TG</td><td class="num">≈19,4 tr</td><td><span class="chip down">nới lại +1,0 tr</span></td></tr>
+      <tr><td>VN-Index</td><td class="num">1.787,45</td><td><span class="chip flat">nghỉ cuối tuần, không đổi</span></td></tr>
+      <tr><td>VCB</td><td class="num">58.500 đ</td><td><span class="chip flat">không đổi (chưa có phiên mới)</span></td></tr>
+      <tr><td>CTD</td><td class="num">63.500 đ</td><td><span class="chip flat">không đổi (chưa có phiên mới)</span></td></tr>
+      <tr><td>Khối ngoại</td><td class="num">−690 tỷ</td><td><span class="chip down">bán ròng 1 phiên liên tiếp (chưa có phiên mới để nối chuỗi)</span></td></tr>
+      <tr><td>Vàng thế giới (XAU)</td><td class="num">4.016,6 $</td><td><span class="chip down">−0,4$ so với sáng nay (−0,01%)</span></td></tr>
+      <tr><td>Vàng SJC bán ra</td><td class="num">147,5 tr</td><td><span class="chip flat">đi ngang cuối tuần</span></td></tr>
+      <tr><td>Chênh lệch vàng VN–TG</td><td class="num">≈19,4 tr</td><td><span class="chip flat">không đổi</span></td></tr>
+      <tr><td>Tài sản ròng</td><td class="num">1.110,6 tr</td><td><span class="chip up">+0,8 tr so với sáng (tỷ giá USD/VND tăng nhẹ 26.460→26.490)</span></td></tr>
     </table></div>
-    <p class="note">💰 Lãi/lỗ danh mục: <strong>chưa kích hoạt</strong> — gửi giá vốn + số lượng VCB, CTD (VD: "VCB 55.000 × 1.000cp") để mỗi bản tin báo lãi/lỗ bằng tiền thật.</p>
+    <p class="note">💰 Lãi/lỗ danh mục: <strong>không áp dụng</strong> — đã bán hết cổ phiếu, không còn vị thế CP để tính lãi/lỗ. Tài sản chính là vàng, xem mục "Tài sản của bạn" phía trên.</p>
   </section>
 
   <footer class="src">
     Nguồn: HOSE EOD (api.hsx.vn) ·
+    <a href="https://vov.vn/thi-truong/gia-vang/gia-vang-hom-nay-197-vang-sjc-di-ngang-cao-hon-the-gioi-hon-19-trieu-dongluong-post1316483.vov">VOV – vàng 19/7</a> ·
+    <a href="https://vn.investing.com/news/economy-news/trump-cho-biet-dam-phan-voi-iran-dien-ra-hom-thu-ba-cac-cuoc-tan-cong-se-tiep-tuc-cho-den-khi-dat-duoc-thoa-thuan-2664069">Investing.com – Trump/Iran</a> ·
+    <a href="https://24hmoney.vn/news/thong-tin-kinh-te-tuan-3-thang-7-chien-su-my-iran-bung-no-tan-chu-tich-fed-kevin-warsh-dieu-tran-truoc-quoc-hoi-c30a2806877.html">24HMoney – Fed Warsh</a> ·
+    <a href="https://cafef.vn/nhin-lai-dan-lanh-dao-doanh-nghiep-bi-khoi-to-tu-dau-nam-2026-den-nay-188260522094053098.chn">CafeF – lãnh đạo DN bị khởi tố 2026</a> ·
+    <a href="https://www.dnse.com.vn/senses/tin-tuc/coteccons-muon-phat-hanh-hon-5-trieu-co-phieu-thuong-de-tang-von-35207614">DNSE – Coteccons phát hành CP thưởng</a> ·
     <a href="https://vietstock.vn/2026/07/gia-vang-hom-nay-1872026-dao-chieu-ngoan-muc-sjc-tang-vot-gan-1-trieuluong-759-1467933.htm">Vietstock – vàng 18/7</a> ·
     <a href="https://baomoi.com/gia-vang-ngay-18-7-trong-nuoc-the-gioi-dong-loat-tang-phien-cuoi-tuan-c55643062.epi">Nhân Dân – vàng 18/7</a> ·
     <a href="https://nhandan.vn/chung-khoan-ngay-177-khoi-ngoai-dao-chieu-ban-rong-vn-index-giam-gan-17-diem-post976245.html">Nhân Dân – phiên 17/7</a> ·
