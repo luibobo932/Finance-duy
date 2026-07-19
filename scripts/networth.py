@@ -30,8 +30,15 @@ def latest_gold_buy():
 
 def compute():
     a = json.loads(ASSETS.read_text(encoding="utf-8"))
-    gold_price = latest_gold_buy()
-    price, pdate = (gold_price if gold_price else (None, None))
+    gb = latest_gold_buy()
+    sjc_buy, pdate = (gb if gb else (None, None))
+    # Ưu tiên giá tiệm trả rõ ràng; nếu null, lấy SJC mua vào trừ mức chiết khấu nhẫn
+    if a.get("gold_buy_price_trieu"):
+        price = a["gold_buy_price_trieu"]
+    elif sjc_buy is not None:
+        price = sjc_buy - (a.get("gold_discount_vs_sjc_trieu", 0) if a.get("gold_type") == "nhan" else 0)
+    else:
+        price = None
     gold_val = (a["gold_luong"] * price) if price else None
     bank = a.get("bank_vnd_trieu", 0)
     cash = a.get("cash_vnd_trieu", 0)
@@ -51,7 +58,8 @@ def main():
         return
     print(f"=== TÀI SẢN RÒNG (cập nhật assets {a['updated']}) ===")
     if price:
-        print(f"Vàng: {a['gold_luong']} cây × {price:,.1f} tr (giá mua vào {a['gold_type']}, {pdate})")
+        src = "giá tiệm trả" if a.get("gold_buy_price_trieu") else f"SJC mua vào −{a.get('gold_discount_vs_sjc_trieu',0)}tr nhẫn"
+        print(f"Vàng: {a['gold_luong']} cây {a['gold_type']} × {price:,.1f} tr ({src}, {pdate})")
     for name, val in parts.items():
         if val:
             print(f"  {name:<22}{val:>12,.1f} tr   {val/total*100:>5.1f}%")

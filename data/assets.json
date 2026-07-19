@@ -1,8 +1,10 @@
 {
-  "_comment": "Tài sản thực tế của chủ danh mục. gold_luong: số lượng vàng (cây/lượng). gold_type: SJC|nhan (để định giá theo giá MUA VÀO tương ứng — số tiền nhận được nếu bán). Tiền đơn vị triệu đồng. Cập nhật khi có thay đổi.",
+  "_comment": "Tài sản thực tế của chủ danh mục. gold_luong: số lượng vàng (cây/lượng). gold_type: nhan|SJC. gold_buy_price_trieu: giá tiệm TRẢ khi bạn bán 1 lượng (nếu để null, networth.py lấy giá SJC mua vào trừ gold_discount_vs_sjc_trieu). Tiền đơn vị triệu đồng.",
   "updated": "2026-07-19",
   "gold_luong": 6.5,
-  "gold_type": "SJC",
+  "gold_type": "nhan",
+  "gold_buy_price_trieu": null,
+  "gold_discount_vs_sjc_trieu": 10,
   "bank_vnd_trieu": 246,
   "cash_vnd_trieu": 35,
   "stocks": {}
