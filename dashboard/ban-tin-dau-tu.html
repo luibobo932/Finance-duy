@@ -1,412 +1,294 @@
-<title>Bản tin Đầu tư — Chứng khoán · Vàng · Lãi suất</title>
+<title>Bản tin đầu tư — Duy</title>
 <style>
-  :root{
-    --bg:#F2F4F1; --surface:#FFFFFF; --ink:#1C2723; --muted:#5C6B64;
-    --accent:#A87B22; --up:#0B7A4B; --down:#C2372F; --line:#DDE3DE;
-    --chip-up:#E3F2EA; --chip-down:#F9E7E5; --chip-flat:#EEEFE9; --bar-ref:#C9D2CC;
+  .viz-root {
+    color-scheme: light;
+    --page:        #f9f9f7;
+    --surface-1:   #fcfcfb;
+    --text-primary:#0b0b0b;
+    --text-secondary:#52514e;
+    --text-muted:  #898781;
+    --grid:        #e1e0d9;
+    --axis:        #c3c2b7;
+    --border:      rgba(11,11,11,0.10);
+    --good-text:   #006300;
+
+    --s-blue:   #2a78d6;
+    --s-green:  #008300;
+    --s-magenta:#e87ba4;
+    --s-yellow: #eda100;
+    --s-aqua:   #1baf7a;
+    --s-orange: #eb6834;
+    --s-violet: #4a3aa7;
+    --s-red:    #e34948;
+
+    --st-good:    #0ca30c;
+    --st-warning: #fab219;
+    --st-serious: #ec835a;
+    --st-critical:#d03b3b;
+    --st-warning-text: #a06400;
+
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page);
+    color: var(--text-primary);
   }
-  @media (prefers-color-scheme: dark){
-    :root{--bg:#0F1513; --surface:#161E1B; --ink:#E6EBE8; --muted:#93A29B;
-      --accent:#D4A94C; --up:#3FBF87; --down:#E5685F; --line:#25302B;
-      --chip-up:#173328; --chip-down:#3A211E; --chip-flat:#222A26; --bar-ref:#33403A;}
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --page:        #0d0d0d;
+      --surface-1:   #1a1a19;
+      --text-primary:#ffffff;
+      --text-secondary:#c3c2b7;
+      --text-muted:  #898781;
+      --grid:        #2c2c2a;
+      --axis:        #383835;
+      --border:      rgba(255,255,255,0.10);
+      --good-text:   #0ca30c;
+      --s-blue:#3987e5; --s-green:#008300; --s-magenta:#d55181; --s-yellow:#c98500;
+      --s-aqua:#199e70; --s-orange:#d95926; --s-violet:#9085e9; --s-red:#e66767;
+      --st-warning-text: #fab219;
+    }
   }
-  :root[data-theme="dark"]{--bg:#0F1513; --surface:#161E1B; --ink:#E6EBE8; --muted:#93A29B;
-    --accent:#D4A94C; --up:#3FBF87; --down:#E5685F; --line:#25302B;
-    --chip-up:#173328; --chip-down:#3A211E; --chip-flat:#222A26; --bar-ref:#33403A;}
-  :root[data-theme="light"]{--bg:#F2F4F1; --surface:#FFFFFF; --ink:#1C2723; --muted:#5C6B64;
-    --accent:#A87B22; --up:#0B7A4B; --down:#C2372F; --line:#DDE3DE;
-    --chip-up:#E3F2EA; --chip-down:#F9E7E5; --chip-flat:#EEEFE9; --bar-ref:#C9D2CC;}
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --page:        #0d0d0d;
+    --surface-1:   #1a1a19;
+    --text-primary:#ffffff;
+    --text-secondary:#c3c2b7;
+    --text-muted:  #898781;
+    --grid:        #2c2c2a;
+    --axis:        #383835;
+    --border:      rgba(255,255,255,0.10);
+    --good-text:   #0ca30c;
+    --s-blue:#3987e5; --s-green:#008300; --s-magenta:#d55181; --s-yellow:#c98500;
+    --s-aqua:#199e70; --s-orange:#d95926; --s-violet:#9085e9; --s-red:#e66767;
+    --st-warning-text: #fab219;
+  }
 
-  body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.55;}
-  .wrap{max-width:880px;margin:0 auto;padding:24px 16px 56px;display:flex;flex-direction:column;gap:18px;}
-  .masthead{border-bottom:3px double var(--accent);padding-bottom:12px;}
-  .masthead h1{font-family:ui-serif,Georgia,"Times New Roman",serif;font-size:1.55rem;font-weight:700;text-wrap:balance;margin:0;}
-  .masthead h1 span{color:var(--accent);}
-  .stamp{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:4px;}
-  section{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 18px;}
-  section h2{font-family:ui-serif,Georgia,serif;font-size:1.12rem;margin:0 0 2px;color:var(--accent);}
-  section .when{font-size:.73rem;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em;}
-  h3{font-size:.95rem;margin:14px 0 6px;}
-  p{margin:.5em 0;max-width:70ch;} ul{margin:.4em 0;padding-left:1.15em;} li{margin:.3em 0;max-width:68ch;}
-  .num,td.num{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;}
-  .note{font-size:.8rem;color:var(--muted);}
-  .muted{color:var(--muted);} .neg{color:var(--down);} .pos{color:var(--up);}
-  .tbl{overflow-x:auto;}
-  table{border-collapse:collapse;width:100%;font-size:.87rem;}
-  th{text-align:left;font-size:.71rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding:6px 9px;border-bottom:1px solid var(--line);}
-  td{padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top;}
-  tr:last-child td{border-bottom:none;}
-  .chip{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.74rem;font-weight:600;font-variant-numeric:tabular-nums;}
-  .chip.up{background:var(--chip-up);color:var(--up);} .chip.down{background:var(--chip-down);color:var(--down);} .chip.flat{background:var(--chip-flat);color:var(--muted);}
-  a{color:var(--accent);} a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .viz-root { min-height: 100%; padding: 24px 16px 48px; }
+  .wrap { max-width: 960px; margin: 0 auto; }
 
-  /* Thẻ khuyến nghị */
-  .verdicts{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;}
-  .vcard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
-  .vcard .head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
-  .vcard .name{font-weight:700;font-size:1rem;}
-  .verdict{padding:3px 12px;border-radius:999px;font-size:.8rem;font-weight:700;letter-spacing:.03em;}
-  .verdict.wait{background:var(--chip-down);color:var(--down);}
-  .verdict.hold{background:var(--chip-flat);color:var(--ink);border:1px solid var(--line);}
-  .verdict.go{background:var(--chip-up);color:var(--up);}
-  .vcard ul{font-size:.85rem;margin:0;padding-left:1.1em;}
-  .vcard .cond{font-size:.8rem;border-top:1px dashed var(--line);padding-top:8px;color:var(--muted);}
-  .vcard .cond strong{color:var(--ink);}
+  header.top { margin-bottom: 24px; }
+  header.top h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  header.top .sub { color: var(--text-secondary); font-size: 0.9rem; }
 
-  /* Biểu đồ thanh HTML */
-  .chart{display:flex;flex-direction:column;gap:6px;margin:10px 0 4px;}
-  .brow{display:grid;grid-template-columns:82px 1fr 92px;align-items:center;gap:8px;font-size:.82rem;}
-  .brow .lab{color:var(--muted);text-align:right;}
-  .brow .val{font-family:ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;}
-  .track{background:none;height:14px;display:flex;align-items:center;}
-  .bar{height:14px;border-radius:0 4px 4px 0;background:var(--accent);min-width:2px;}
-  .bar.ref{background:var(--bar-ref);}
-  .bar.down{background:var(--down);} .bar.up{background:var(--up);}
-  .legend{display:flex;gap:14px;font-size:.76rem;color:var(--muted);margin-top:6px;flex-wrap:wrap;}
-  .legend .key{display:inline-flex;align-items:center;gap:5px;}
-  .legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block;}
-  .charts2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;}
-  figure{margin:0;} figcaption{font-size:.8rem;font-weight:600;margin-bottom:6px;}
-  .candlebox{display:flex;gap:18px;align-items:flex-end;}
-  .candlebox svg{overflow:visible;}
-  .warnbox{border-left:4px solid var(--down);background:var(--chip-down);border-radius:6px;padding:10px 12px;font-size:.85rem;}
-  .src{font-size:.77rem;color:var(--muted);} .src a{color:inherit;}
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .grid-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .tile .label { color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 6px; }
+  .tile .value { font-size: 1.6rem; font-weight: 600; }
+  .tile .delta { font-size: 0.8rem; margin-top: 4px; color: var(--text-muted); }
+  .tile .delta.flag { color: var(--st-warning-text); font-weight: 600; }
+
+  section { margin-bottom: 16px; }
+  h2.card-title { font-size: 1rem; margin: 0 0 4px; }
+  .card-note { color: var(--text-muted); font-size: 0.78rem; margin: 0 0 14px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.8rem; color: var(--text-secondary); margin-top: 10px; }
+  .legend .item { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+
+  .two-col { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+
+  svg text { fill: var(--text-secondary); font-size: 11px; }
+  svg .muted { fill: var(--text-muted); }
+  svg .axis-line { stroke: var(--axis); stroke-width: 1; }
+  svg .grid-line { stroke: var(--grid); stroke-width: 1; }
+
+  .status-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .status-card { border-left: 3px solid var(--st-warning); padding-left: 12px; }
+  .status-card.critical { border-color: var(--st-critical); }
+  .status-card.warning { border-color: var(--st-warning); }
+  .status-card.good { border-color: var(--st-good); }
+  .status-card .tag { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 6px; }
+  .status-card.critical .tag { color: var(--st-critical); }
+  .status-card.warning .tag { color: var(--st-warning-text); }
+  .status-card.good .tag { color: var(--good-text); }
+  .status-card .body { font-size: 0.86rem; color: var(--text-primary); line-height: 1.5; }
+  .status-card .body .k { color: var(--text-secondary); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  thead th { text-align: left; color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.02em; padding: 6px 10px; border-bottom: 1px solid var(--grid); }
+  tbody td { padding: 8px 10px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+  tbody tr:last-child td { border-bottom: none; }
+  .tk { font-weight: 600; font-variant-numeric: normal; }
+  .chg-flat { color: var(--text-muted); }
+  .na { color: var(--text-muted); font-style: italic; }
+
+  footer.foot { margin-top: 24px; color: var(--text-muted); font-size: 0.78rem; line-height: 1.6; }
 </style>
+
+<div class="viz-root">
 <div class="wrap">
-  <header class="masthead">
-    <h1>Bản tin <span>Đầu tư</span> — Chứng khoán · Vàng · Lãi suất</h1>
-    <div class="stamp">Bản tin chiều · Chủ Nhật 19/07/2026, 18h05 · TTCK &amp; vàng nghỉ cuối tuần — số liệu HOSE chốt phiên 17/07 · Phiên kế tiếp: Thứ Hai 20/07</div>
+
+  <header class="top">
+    <h1>Bản tin đầu tư — Duy</h1>
+    <div class="sub">Cập nhật: 19/07/2026 (Chủ Nhật), bản tin chiều · Vàng nhẫn · Tiết kiệm · VN-Index · VCB/CTD watchlist</div>
   </header>
 
-  <section>
-    <h2>Tài sản của bạn — phân bổ &amp; rủi ro</h2>
-    <div class="when">Cập nhật 19/07 chiều · vàng NHẪN định giá 127,63 tr/lượng (mô hình động theo XAU real-time, hiệu chuẩn tiệm Xuân Triệu 18/7) · đã bán hết cổ phiếu · tính bằng <code>scripts/networth.py</code></div>
-    <div class="verdicts" style="grid-template-columns:1fr 1fr;">
-      <figure style="margin:0;">
-        <figcaption>Phân bổ tài sản (tổng ≈ 1,111 tỷ đồng)</figcaption>
-        <div class="chart">
-          <div class="brow"><span class="lab">Vàng nhẫn</span><span class="track"><span class="bar" style="width:100%;background:var(--accent)"></span></span><span class="val">829,6 tr · 74,7%</span></div>
-          <div class="brow"><span class="lab">Tiết kiệm</span><span class="track"><span class="bar" style="width:30%;background:var(--up)"></span></span><span class="val">246 tr · 22,2%</span></div>
-          <div class="brow"><span class="lab">Tiền mặt</span><span class="track"><span class="bar ref" style="width:4%"></span></span><span class="val">35 tr · 3,2%</span></div>
-        </div>
-        <p class="note">6,5 cây vàng nhẫn × 127,63 tr · 246 tr gửi ngân hàng · 35 tr mặt · 0 đ cổ phiếu.</p>
-        <p class="note">🔗 <strong>Tự động (Phase 4-8 backend):</strong> giá vàng nhẫn = giá thế giới quy đổi (hằng số chính xác 37,5/31,1034768) × hệ số tiệm hiệu chuẩn. Mỗi bản tin lấy XAU/USD + tỷ giá real-time → <code>gold/xuan_trieu_model.py</code> tự tính lại giá tiệm &amp; tài sản, <em>không cần chụp ảnh</em>. Độ tin cậy hiện <strong>LOW</strong> (mới 1 mẫu hiệu chuẩn) — gửi ảnh mới định kỳ để nâng độ tin cậy.</p>
-      </figure>
-      <div class="vcard" style="border-color:var(--down);">
-        <div class="head"><span class="name">⚠️ Rủi ro tập trung</span><span class="verdict wait">VÀNG 74,7% — VƯỢT NGƯỠNG CRITICAL</span></div>
-        <ul>
-          <li>Theo <code>config/risk_limits.yaml</code>: ngưỡng cảnh báo 60%, ngưỡng nghiêm trọng 70% — vàng của bạn đang <strong>74,7%, đã vượt cả hai</strong>. Risk Officer tự động <strong>chặn mọi đề xuất mua thêm vàng</strong> ở mức này.</li>
-          <li>Nếu vàng chỉnh 10% bạn mất ~83 tr, bằng gần <strong>4,5 năm tiền lãi</strong> của khoản tiết kiệm 246 tr.</li>
-          <li>Nhẫn tiệm mua 127,63 tr ≈ sát giá thế giới quy đổi (128,28 tr) → gần như <strong>KHÔNG có premium</strong>: thanh khoản tốt, nhưng giá bám sát thế giới nên chỉnh là chịu trọn.</li>
-        </ul>
-        <div class="cond"><strong>Gợi ý:</strong> cân nhắc chốt <strong>1,5–2,5 cây</strong> (đưa vàng về ~55–60%), chuyển sang gửi tiết kiệm 7,4%/năm — vừa giảm rủi ro, vừa sinh lãi chắc chắn trong lúc chờ cơ hội.</div>
-      </div>
+  <section class="grid-tiles">
+    <div class="card tile">
+      <div class="label">Tổng tài sản (ước tính)</div>
+      <div class="value">≈ 1.110 triệu</div>
+      <div class="delta">6,5 lượng vàng nhẫn + 246tr tiết kiệm + 35tr mặt</div>
     </div>
-    <div class="warnbox" style="margin-top:14px;border-left-color:var(--accent);background:var(--chip-flat);">
-      <strong>🤖 Decision Engine (mới, tự động):</strong> hệ thống rule-based vừa xây xong tính ra khuyến nghị <strong>"GIỮ"</strong> cho vàng — vì xu hướng giá KỸ THUẬT thuần túy hiện TRUNG TÍNH (lịch sử giá vàng mới có 1-2 điểm, chưa đủ để có tín hiệu rõ). Đây KHÁC với khuyến nghị "CHỐT BỚT" bên dưới — hai góc nhìn không mâu thuẫn: "GIỮ" là kết luận nếu bạn không có ý định mua thêm; "CHỐT BỚT" là khuyến nghị quản trị rủi ro riêng vì tỷ trọng đã vượt ngưỡng nghiêm trọng, độc lập với xu hướng giá ngắn hạn. Nếu bạn từng đề xuất <em>mua thêm</em> vàng lúc này, hệ thống sẽ tự động từ chối (đã kiểm chứng bằng test).
+    <div class="card tile">
+      <div class="label">Vàng nhẫn — 6,5 lượng</div>
+      <div class="value">828,75 triệu</div>
+      <div class="delta flag">74,7% tổng tài sản — tỷ trọng rất cao</div>
+    </div>
+    <div class="card tile">
+      <div class="label">Tiết kiệm</div>
+      <div class="value">246 triệu</div>
+      <div class="delta">22,2% tổng tài sản</div>
+    </div>
+    <div class="card tile">
+      <div class="label">Tiền mặt</div>
+      <div class="value">35 triệu</div>
+      <div class="delta">3,2% tổng tài sản</div>
     </div>
   </section>
 
-  <section>
-    <h2>Khuyến nghị hôm nay</h2>
-    <div class="when">Kết luận dứt khoát theo khung Wyckoff · Buffett · Fisher — kèm điều kiện thay đổi quyết định</div>
-    <div class="verdicts">
-      <div class="vcard" style="border-color:var(--accent);">
-        <div class="head"><span class="name">Vàng nhẫn (bạn đang giữ 6,5 cây)</span><span class="verdict wait">✂️ CHỐT BỚT 1,5–2,5 cây</span></div>
-        <ul>
-          <li>Không phải bán tháo — chỉ <strong>giảm tập trung</strong> từ 74,7% (đã vượt ngưỡng critical 70% theo cấu hình rủi ro) về ~55–60%; vàng đang gần đỉnh, chốt bớt để khóa lời một phần.</li>
-          <li>Nhẫn premium so thế giới chỉ ~6–7 tr (thấp hơn SJC nhiều) → thanh khoản tốt, nhưng cũng nghĩa là ăn theo sát giá thế giới — rủi ro nếu thế giới chỉnh.</li>
-          <li>Giữ phần lớn để phòng địa chính trị (Mỹ–Iran); tiền bán chuyển tiết kiệm 7,4%.</li>
-        </ul>
-        <div class="cond"><strong>Bán khi:</strong> giá thế giới chạm kháng cự 4.060$ mà không vượt. <strong>Giữ nguyên nếu:</strong> chiến sự Trung Đông bùng lớn (vàng có thể vượt 4.300$).</div>
-      </div>
-      <div class="vcard" style="border-color:var(--up);">
-        <div class="head"><span class="name">Tiền gửi (bạn có 246 tr + tiền bán vàng)</span><span class="verdict go">✅ GỬI KỲ HẠN 12T</span></div>
-        <ul>
-          <li><strong>Cake by VPBank 7,4%/năm</strong> online cao nhất cho khoản &lt;1 tỷ; HLBank 7,3%/12T quầy.</li>
-          <li>246 tr gửi 12T @7,4% = <strong>~18,2 tr tiền lãi/năm</strong>; nếu thêm ~200 tr từ chốt vàng → ~33 tr lãi/năm.</li>
-          <li>Chia 2–3 sổ để linh hoạt rút một phần khi cần.</li>
-        </ul>
-        <div class="cond"><strong>Giữ 35 tr mặt</strong> làm quỹ khẩn cấp — không cần gửi hết.</div>
-      </div>
-      <div class="vcard">
-        <div class="head"><span class="name">Cổ phiếu (đã bán hết)</span><span class="verdict hold">👀 ĐỨNG NGOÀI QUAN SÁT</span></div>
-        <ul>
-          <li>Bán hết đúng lúc thị trường yếu (khối ngoại bán ròng 13 quý liên tiếp) — không có gì phải tiếc.</li>
-          <li>Danh sách canh mua lại khi định giá rẻ: nhóm ngân hàng (VCB, ACB), chứng khoán (đón nâng hạng FTSE tháng 9), REE (P/B đáy 2 năm).</li>
-          <li><strong>Coteccons (CTD):</strong> vừa duyệt phát hành ~5,3 triệu cổ phiếu thưởng (tỷ lệ 20:1, ~53,3 tỷ đồng từ quỹ đầu tư phát triển) — pha loãng nhẹ, không phải tín hiệu xấu về tài chính; KQKD nửa đầu niên độ vẫn rất mạnh (DT +49,9%, LN ròng gấp 2,6 lần).</li>
-        </ul>
-        <div class="cond"><strong>Chỉ quay lại khi:</strong> VN-Index giữ vững vùng 1.780–1.800 + KQKD quý II xác nhận, hoặc có nhịp chỉnh sâu về vùng định giá hấp dẫn.</div>
-      </div>
-    </div>
-    <div class="warnbox" style="margin-top:14px;background:var(--chip-up);border-left-color:var(--up);">
-      <strong>🛡️ Quét rủi ro doanh nghiệp (equity/governance.py):</strong> Có loạt lãnh đạo doanh nghiệp niêm yết bị khởi tố trong năm 2026 (Bamboo Capital — ông Nguyễn Hồ Nam; Hóa chất Đức Giang/DGC — ông Đào Hữu Huyền, bị bắt tạm giam; PC1 — chủ tịch + dàn lãnh đạo; VPG — chủ tịch + TGĐ tội đưa hối lộ) — <strong>KHÔNG mã nào trong watchlist (VCB, CTD) hay danh sách Buffett-list</strong> của bạn. Không cần hành động phòng ngừa hôm nay, nhưng đây là lời nhắc: nhóm hóa chất/xây dựng/năng lượng đang có rủi ro quản trị tăng cao trên diện rộng — cân nhắc kỹ nếu định mua mới ngoài watchlist.
-    </div>
-    <p class="note">Đây là nhận định tổng hợp từ dữ liệu công khai, không phải cam kết lợi nhuận. Quyết định cuối cùng thuộc về bạn.</p>
-  </section>
-
-  <section>
-    <h2>Danh mục dưới kính hiển vi — phiên 17/07 (dữ liệu HOSE)</h2>
-    <div class="when">Nến ngày · khối lượng vs bình quân · vùng giá hút volume</div>
-
-    <div class="charts2">
-      <figure>
-        <figcaption>Nến ngày 17/07 (giá ×1.000 đ)</figcaption>
-        <div class="candlebox">
-          <svg width="120" height="150" viewBox="0 0 120 150" role="img" aria-label="Nến CTD: mở 66.0, cao 66.2, thấp 63.5, đóng 63.5">
-            <line x1="35" y1="10" x2="35" y2="140" stroke="var(--down)" stroke-width="2"/>
-            <rect x="22" y="18" width="26" height="120" rx="3" fill="var(--down)"/>
-            <text x="60" y="16" font-size="11" fill="var(--muted)">66.2 cao</text>
-            <text x="60" y="30" font-size="11" fill="var(--muted)">66.0 mở</text>
-            <text x="60" y="138" font-size="11" fill="var(--muted)">63.5 đóng = thấp</text>
-            <text x="22" y="150" font-size="12" font-weight="700" fill="var(--ink)">CTD −4,08%</text>
-          </svg>
-          <svg width="120" height="150" viewBox="0 0 120 150" role="img" aria-label="Nến VCB: mở 59.3, cao 59.3, thấp 58.5, đóng 58.5">
-            <line x1="35" y1="55" x2="35" y2="140" stroke="var(--down)" stroke-width="2"/>
-            <rect x="22" y="55" width="26" height="85" rx="3" fill="var(--down)"/>
-            <text x="60" y="60" font-size="11" fill="var(--muted)">59.3 mở = cao</text>
-            <text x="60" y="138" font-size="11" fill="var(--muted)">58.5 đóng = thấp</text>
-            <text x="22" y="150" font-size="12" font-weight="700" fill="var(--ink)">VCB −1,52%</text>
-          </svg>
-        </div>
-        <p class="note">Cả hai nến đều đóng sát đáy ngày — áp lực cung cuối phiên; CTD nặng hơn hẳn.</p>
-      </figure>
-
-      <figure>
-        <figcaption>Khối lượng phiên 17/07 so với bình quân 20 phiên</figcaption>
-        <div class="chart">
-          <div class="brow"><span class="lab">CTD 17/07</span><span class="track"><span class="bar down" style="width:82%"></span></span><span class="val">426,8 k</span></div>
-          <div class="brow"><span class="lab">CTD BQ20</span><span class="track"><span class="bar ref" style="width:100%"></span></span><span class="val">519,9 k</span></div>
-          <div class="brow"><span class="lab">VCB 17/07</span><span class="track"><span class="bar down" style="width:58%"></span></span><span class="val">1.990 k</span></div>
-          <div class="brow"><span class="lab">VCB BQ20</span><span class="track"><span class="bar ref" style="width:100%"></span></span><span class="val">3.406 k</span></div>
-        </div>
-        <div class="legend">
-          <span class="key"><span class="sw" style="background:var(--down)"></span>Phiên giảm 17/07</span>
-          <span class="key"><span class="sw" style="background:var(--bar-ref)"></span>Bình quân 20 phiên (chuẩn 100%)</span>
-        </div>
-        <p class="note">Cả hai giảm giá với volume DƯỚI trung bình → chưa phải bán tháo, nhưng cũng chưa có cầu bắt đáy.</p>
-      </figure>
-    </div>
-
-    <figure style="margin-top:16px;">
-      <figcaption>CTD — vùng giá hút khối lượng nhất phiên 17/07 (nghìn cp)</figcaption>
-      <div class="chart">
-        <div class="brow"><span class="lab num">64.700</span><span class="track"><span class="bar" style="width:49%"></span></span><span class="val">56,3 k</span></div>
-        <div class="brow"><span class="lab num">64.600</span><span class="track"><span class="bar" style="width:38%"></span></span><span class="val">43,8 k</span></div>
-        <div class="brow"><span class="lab num">64.500</span><span class="track"><span class="bar" style="width:100%"></span></span><span class="val">114,6 k ← đỉnh volume</span></div>
-        <div class="brow"><span class="lab num">64.400</span><span class="track"><span class="bar" style="width:48%"></span></span><span class="val">55,3 k</span></div>
-        <div class="brow"><span class="lab num">63.500</span><span class="track"><span class="bar down" style="width:60%"></span></span><span class="val">68,9 k (ATC)</span></div>
-      </div>
-      <p class="note">Volume dồn quanh 64.400–64.700 rồi giá vẫn rơi về 63.500 → theo Wyckoff (effort vs result): nỗ lực đỡ giá tại 64.5 đã thất bại trong phiên — vùng 64.500 trở thành kháng cự gần. Cụm phút đáng chú ý: 14:45 (68,9k cp @63.500 — ATC), 14:27 (13k @64.200), 13:58 &amp; 14:11 (12,9k @64.500). <strong>Lưu ý trung thực:</strong> đây là nến phút, KHÔNG phải từng lệnh — chưa đủ bằng chứng kết luận "gom/xả nội bộ"; cần dữ liệu tick thật để soi lệnh tròn số.</p>
-    </figure>
-
-    <div class="warnbox" style="margin-top:14px;">
-      <strong>📌 Đính chính số liệu:</strong> bản tin sáng 18/7 ghi CTD ≈73.800 đ và "+3,9%, mạnh hơn thị trường" theo nguồn Simplize — <strong>SAI</strong>. Số đúng theo HOSE: CTD đóng cửa 17/7 tại <strong>63.500 đ (−4,08%)</strong>. Lịch sử dữ liệu đã được sửa lại; xin lỗi vì sai sót và từ nay số liệu giá sẽ ưu tiên nguồn HOSE EOD.
+  <section class="card">
+    <h2 class="card-title">Phân bổ tài sản</h2>
+    <p class="card-note">Vàng chiếm gần 3/4 danh mục — Risk Officer khuyến nghị KHÔNG mua thêm vàng ở tỷ trọng này.</p>
+    <svg viewBox="0 0 620 56" width="100%" height="56" role="img" aria-label="Phân bổ tài sản: vàng 74,7%, tiết kiệm 22,2%, tiền mặt 3,2%">
+      <rect x="0" y="16" width="463" height="24" rx="4" fill="var(--s-yellow)"/>
+      <rect x="467" y="16" width="135" height="24" rx="4" fill="var(--s-blue)"/>
+      <rect x="606" y="16" width="14" height="24" rx="4" fill="var(--s-aqua)"/>
+    </svg>
+    <div class="legend">
+      <span class="item"><span class="swatch" style="background:var(--s-yellow)"></span>Vàng nhẫn — 74,7%</span>
+      <span class="item"><span class="swatch" style="background:var(--s-blue)"></span>Tiết kiệm — 22,2%</span>
+      <span class="item"><span class="swatch" style="background:var(--s-aqua)"></span>Tiền mặt — 3,2%</span>
     </div>
   </section>
 
-  <section>
-    <h2>Phân tích kỹ thuật chuyên sâu &amp; dự đoán xu hướng</h2>
-    <div class="when">Cập nhật 18/07 tối · dữ liệu HOSE + các mức kỹ thuật công bố (RoboForex, FXStreet, LiteFinance) · vòng lặp /loop tự cập nhật</div>
+  <section class="two-col">
+    <div class="card">
+      <h2 class="card-title">Giá vàng — 5 kỳ bản tin gần nhất</h2>
+      <p class="card-note">Triệu đồng/lượng, giá niêm yết SJC (mua/bán) và nhẫn (bán) — nguồn <code>data/history.jsonl</code></p>
+      <svg viewBox="0 0 660 240" width="100%" height="240" role="img" aria-label="Xu hướng giá vàng 5 kỳ gần nhất">
+        <line class="grid-line" x1="40" y1="50" x2="620" y2="50"/>
+        <line class="grid-line" x1="40" y1="110" x2="620" y2="110"/>
+        <line class="grid-line" x1="40" y1="170" x2="620" y2="170"/>
+        <line class="axis-line" x1="40" y1="230" x2="620" y2="230"/>
+        <text class="muted" x="34" y="53" text-anchor="end">148</text>
+        <text class="muted" x="34" y="113" text-anchor="end">146</text>
+        <text class="muted" x="34" y="173" text-anchor="end">144</text>
+        <text class="muted" x="34" y="233" text-anchor="end">142</text>
 
-    <div class="charts2">
-      <figure>
-        <figcaption>Vàng thế giới — bản đồ mức giá (USD/oz)</figcaption>
-        <svg width="100%" height="210" viewBox="0 0 320 210" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Bản đồ mức giá vàng: giá 4.017 nằm giữa hỗ trợ 3.960 và kháng cự 4.060">
-          <line x1="10" y1="30" x2="310" y2="30" stroke="var(--down)" stroke-width="1.5" stroke-dasharray="5 3"/>
-          <text x="14" y="24" font-size="10.5" fill="var(--muted)">4.114 — kháng cự 2 (đỉnh biên tuần)</text>
-          <line x1="10" y1="62" x2="310" y2="62" stroke="var(--down)" stroke-width="1.5" stroke-dasharray="5 3"/>
-          <text x="14" y="56" font-size="10.5" fill="var(--muted)">4.060 — kháng cự 1 (trần hợp nhất tuần tới)</text>
-          <line x1="10" y1="94" x2="310" y2="94" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="2 3"/>
-          <text x="14" y="88" font-size="10.5" fill="var(--muted)">≈4.003 — SMA 50 ngày (trục xoay then chốt)</text>
-          <line x1="10" y1="146" x2="310" y2="146" stroke="var(--up)" stroke-width="1.5" stroke-dasharray="5 3"/>
-          <text x="14" y="160" font-size="10.5" fill="var(--muted)">3.960 — hỗ trợ SỐNG CÒN (mất là về 3.800)</text>
-          <polyline points="200,42 240,120 285,80" fill="none" stroke="var(--ink)" stroke-width="2"/>
-          <circle cx="200" cy="42" r="4" fill="var(--ink)"/>
-          <circle cx="240" cy="120" r="4" fill="var(--ink)"/>
-          <circle cx="285" cy="80" r="6" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
-          <text x="150" y="40" font-size="10" fill="var(--muted)">13/7: 4.070</text>
-          <text x="196" y="136" font-size="10" fill="var(--muted)">17/7: 3.984</text>
-          <text x="240" y="72" font-size="11" font-weight="700" fill="var(--ink)">18/7: 4.017</text>
-          <text x="14" y="196" font-size="10.5" fill="var(--muted)">RSI ≈40 · MACD chớm dương · dưới SMA200 (~4.586) = xu hướng lớn vẫn GIẢM</text>
-        </svg>
-      </figure>
+        <text class="muted" x="40" y="248" text-anchor="middle">17/7 c.</text>
+        <text class="muted" x="185" y="248" text-anchor="middle">18/7 s.</text>
+        <text class="muted" x="330" y="248" text-anchor="middle">18/7 c.</text>
+        <text class="muted" x="475" y="248" text-anchor="middle">19/7 s.</text>
+        <text class="muted" x="620" y="248" text-anchor="middle">19/7 c.</text>
 
-      <figure>
-        <figcaption>Dự đoán xu hướng vàng (1–2 tuần)</figcaption>
-        <div class="chart">
-          <div class="brow"><span class="lab">Đi ngang</span><span class="track"><span class="bar" style="width:55%"></span></span><span class="val">~55%</span></div>
-          <div class="brow"><span class="lab">Tăng</span><span class="track"><span class="bar up" style="width:25%"></span></span><span class="val">~25%</span></div>
-          <div class="brow"><span class="lab">Giảm</span><span class="track"><span class="bar down" style="width:20%"></span></span><span class="val">~20%</span></div>
-        </div>
-        <ul style="font-size:.83rem;">
-          <li><strong>Đi ngang 3.960–4.060 (chính):</strong> giằng co giữa lực mua trú ẩn (Mỹ–Iran) và sức ép Fed/USD; giá đang kẹp giữa SMA50 và kháng cự.</li>
-          <li><strong>Tăng:</strong> đóng tuần vượt 4.060 → mở đường 4.114, xa hơn 4.300 nếu chiến sự leo thang mạnh.</li>
-          <li><strong>Giảm:</strong> thủng 3.960 → 3.800 rất nhanh; kịch bản kích hoạt nếu Fed phát tín hiệu diều hâu cuộc họp cuối tháng 7.</li>
-        </ul>
-      </figure>
-    </div>
+        <polyline points="40,92 185,92 330,65 475,65 620,65" fill="none" stroke="var(--s-red)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <polyline points="40,122 185,122 330,95 475,95 620,95" fill="none" stroke="var(--s-orange)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <polyline points="40,182 185,182 330,155 475,155 620,155" fill="none" stroke="var(--s-blue)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 
-    <div class="charts2" style="margin-top:16px;">
-      <figure>
-        <figcaption>VCB — bản đồ mức giá (×1.000 đ)</figcaption>
-        <svg width="100%" height="190" viewBox="0 0 320 190" preserveAspectRatio="xMidYMid meet" role="img" aria-label="VCB 58.5: hỗ trợ 58.0 và 56-57, kháng cự 59.3 và 60.5">
-          <line x1="10" y1="28" x2="310" y2="28" stroke="var(--down)" stroke-width="1.5" stroke-dasharray="5 3"/>
-          <text x="14" y="22" font-size="10.5" fill="var(--muted)">60.5 — kháng cự 2</text>
-          <line x1="10" y1="58" x2="310" y2="58" stroke="var(--down)" stroke-width="1.5" stroke-dasharray="5 3"/>
-          <text x="14" y="52" font-size="10.5" fill="var(--muted)">59.3 — kháng cự 1 (đỉnh 17/7)</text>
-          <circle cx="285" cy="78" r="6" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
-          <text x="228" y="82" font-size="11" font-weight="700" fill="var(--ink)">58.5 hiện tại</text>
-          <line x1="10" y1="98" x2="310" y2="98" stroke="var(--up)" stroke-width="1.5" stroke-dasharray="5 3"/>
-          <text x="14" y="112" font-size="10.5" fill="var(--muted)">58.0 — hỗ trợ 1</text>
-          <rect x="10" y="128" width="300" height="30" fill="var(--chip-up)" rx="4"/>
-          <text x="14" y="147" font-size="10.5" fill="var(--up)">56.0–57.0 — vùng tích lũy thêm nếu volume cạn</text>
-          <text x="14" y="180" font-size="10.5" fill="var(--muted)">Nến 17/7 đóng đáy nhưng KL chỉ 0,58× BQ20 → trôi theo ngành, không bị xả</text>
-        </svg>
-      </figure>
-
-      <figure>
-        <figcaption>CTD — bản đồ mức giá (×1.000 đ)</figcaption>
-        <svg width="100%" height="190" viewBox="0 0 320 190" preserveAspectRatio="xMidYMid meet" role="img" aria-label="CTD 63.5: hỗ trợ then chốt 63.0, vùng spring 61.5-62.5, kháng cự 64.5 và 66.0">
-          <line x1="10" y1="28" x2="310" y2="28" stroke="var(--down)" stroke-width="1.5" stroke-dasharray="5 3"/>
-          <text x="14" y="22" font-size="10.5" fill="var(--muted)">66.0 — kháng cự 2 (giá mở 17/7, gap giảm)</text>
-          <line x1="10" y1="58" x2="310" y2="58" stroke="var(--down)" stroke-width="1.5" stroke-dasharray="5 3"/>
-          <text x="14" y="52" font-size="10.5" fill="var(--muted)">64.5 — kháng cự 1 (kệ volume 114,6k cp thất thủ)</text>
-          <circle cx="285" cy="82" r="6" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
-          <text x="228" y="86" font-size="11" font-weight="700" fill="var(--ink)">63.5 hiện tại</text>
-          <line x1="10" y1="100" x2="310" y2="100" stroke="var(--up)" stroke-width="2"/>
-          <text x="14" y="114" font-size="10.5" fill="var(--muted)">63.0 — hỗ trợ SỐNG CÒN (đáy tháng 6)</text>
-          <rect x="10" y="126" width="300" height="30" fill="var(--chip-up)" rx="4"/>
-          <text x="14" y="145" font-size="10.5" fill="var(--up)">61.5–62.5 — vùng chờ "spring" Wyckoff (rũ rồi bật = điểm mua đẹp)</text>
-          <text x="14" y="180" font-size="10.5" fill="var(--muted)">Nến 17/7 thân dài đóng đáy −4,08% · KL 0,82× BQ20 → chưa có cao trào bán</text>
-        </svg>
-      </figure>
-    </div>
-
-    <div class="charts2" style="margin-top:16px;">
-      <figure>
-        <figcaption>Dự đoán VCB (1–2 tuần)</figcaption>
-        <div class="chart">
-          <div class="brow"><span class="lab">Đi ngang</span><span class="track"><span class="bar" style="width:50%"></span></span><span class="val">~50%</span></div>
-          <div class="brow"><span class="lab">Tăng</span><span class="track"><span class="bar up" style="width:30%"></span></span><span class="val">~30%</span></div>
-          <div class="brow"><span class="lab">Giảm</span><span class="track"><span class="bar down" style="width:20%"></span></span><span class="val">~20%</span></div>
-        </div>
-        <p class="note">Đi ngang 58.0–59.3 chờ KQKD Q2 (chất xúc tác quyết định, cuối tháng 7). KQKD tốt + vượt 59.3 kèm volume → 60.5+. Thị trường xấu (chip Mỹ, thuế quan) thủng 58.0 → 56–57 là vùng mua, không phải vùng hoảng.</p>
-      </figure>
-      <figure>
-        <figcaption>Dự đoán CTD (1–2 tuần)</figcaption>
-        <div class="chart">
-          <div class="brow"><span class="lab">Kiểm định 63.0</span><span class="track"><span class="bar" style="width:45%"></span></span><span class="val">~45%</span></div>
-          <div class="brow"><span class="lab">Giảm sâu</span><span class="track"><span class="bar down" style="width:35%"></span></span><span class="val">~35%</span></div>
-          <div class="brow"><span class="lab">Hồi phục</span><span class="track"><span class="bar up" style="width:20%"></span></span><span class="val">~20%</span></div>
-        </div>
-        <p class="note">Quán tính giảm còn (đóng đúng đáy, chưa có cầu bắt). Kịch bản chính: kiểm định 63.0, hồi kỹ thuật yếu về 64.5. Thủng 63.0 volume lớn → 61.5–62.5 (vùng chờ spring). Chỉ đảo chiều thật khi lấy lại 64.5 kèm volume trên BQ20.</p>
-      </figure>
-    </div>
-    <p class="note">Xác suất là đánh giá chủ quan từ cấu trúc kỹ thuật hiện tại, không phải cam kết. Sẽ tự cập nhật qua vòng lặp /loop và các bản tin 8h/18h.</p>
-  </section>
-
-  <section>
-    <h2>Thị trường &amp; tin vĩ mô cuối tuần</h2>
-    <div class="when">Ảnh hưởng trực tiếp đến phiên thứ Hai 20/07</div>
-    <div class="tbl"><table>
-      <tr><th>Sự kiện</th><th>Tác động đến thứ Hai</th></tr>
-      <tr><td>VN-Index chốt tuần 1.787,45 (−0,93%), khối ngoại bán ròng ~690 tỷ</td><td>Tâm lý thận trọng; theo dõi khối ngoại có bán tiếp không</td></tr>
-      <tr><td>Mỹ: bán tháo chip — Nasdaq −1,40%, S&amp;P −1,02%; nhóm bán dẫn sát thị trường gấu</td><td><span class="chip down">Xấu</span> cho FPT, nhóm công nghệ đầu tuần</td></tr>
-      <tr><td><strong>Mỹ tiếp tục tấn công Iran, phong tỏa hàng hải + dọa thu phí qua eo Hormuz</strong>; đàm phán dự kiến thứ Ba nhưng Trump tuyên bố sẽ tiếp tục tấn công tới khi có thỏa thuận</td><td><span class="chip up">Tốt</span> dầu khí (GAS, PVS, PVD, BSR) — dầu thế giới +9% lên đỉnh 1 tháng + <span class="chip up">đỡ giá</span> vàng trú ẩn</td></tr>
-      <tr><td>Fed: tân Chủ tịch Kevin Warsh điều trần Quốc hội; thị trường vàng được nhận định sẽ chịu ảnh hưởng từ phát biểu Fed nhiều hơn diễn biến địa chính trị trong ngắn hạn</td><td>Theo dõi sát phát biểu Warsh — có thể tác động vàng mạnh hơn cả tin Iran</td></tr>
-      <tr><td>OPEC hạ dự báo tăng trưởng nhu cầu dầu 2026 lần thứ 3 liên tiếp do ảnh hưởng xung đột Iran</td><td>Rủi ro giảm tốc kinh tế toàn cầu trung hạn</td></tr>
-      <tr><td>Quét công bố nội bộ VCB/CTD + tin bắt giữ lãnh đạo doanh nghiệp (xem mục Khuyến nghị)</td><td><span class="chip flat">Không có tin mới liên quan watchlist</span> — có làn sóng khởi tố lãnh đạo DN khác (Bamboo Capital, DGC, PC1, VPG)</td></tr>
-    </table></div>
-  </section>
-
-  <section>
-    <h2>Vàng — chiều 18/07</h2>
-    <div class="when">SJC bật tăng 900k cuối tuần · thế giới giữ 4.017 $</div>
-    <div class="charts2">
-      <figure>
-        <figcaption>Giá bán ra hôm nay (triệu đồng/lượng)</figcaption>
-        <div class="chart">
-          <div class="brow"><span class="lab">SJC miếng</span><span class="track"><span class="bar" style="width:100%"></span></span><span class="val">147,5 (+0,9)</span></div>
-          <div class="brow"><span class="lab">Nhẫn SJC</span><span class="track"><span class="bar" style="width:99.3%"></span></span><span class="val">146,5 (+0,9)</span></div>
-          <div class="brow"><span class="lab">TG quy đổi</span><span class="track"><span class="bar ref" style="width:86.8%"></span></span><span class="val">≈128,1</span></div>
-        </div>
-        <div class="legend">
-          <span class="key"><span class="sw" style="background:var(--accent)"></span>Giá trong nước</span>
-          <span class="key"><span class="sw" style="background:var(--bar-ref)"></span>Thế giới quy đổi (tỷ giá VCB 26.460)</span>
-        </div>
-        <p class="note">Khoảng trống giữa cột vàng và cột xám = premium ~19,4 tr/lượng bạn phải trả thêm khi mua SJC.</p>
-      </figure>
-      <figure>
-        <figcaption>Chênh lệch VN–thế giới qua 3 kỳ bản tin (tr/lượng)</figcaption>
-        <svg width="100%" height="120" viewBox="0 0 300 120" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Chênh lệch: 19,5 rồi 18,4 rồi 19,4 triệu/lượng">
-          <line x1="20" y1="100" x2="290" y2="100" stroke="var(--line)"/>
-          <polyline points="40,30 155,85 270,35" fill="none" stroke="var(--accent)" stroke-width="2"/>
-          <circle cx="40" cy="30" r="5" fill="var(--accent)"/>
-          <circle cx="155" cy="85" r="5" fill="var(--accent)"/>
-          <circle cx="270" cy="35" r="6" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
-          <text x="30" y="18" font-size="12" fill="var(--ink)" font-weight="600">19,5</text>
-          <text x="145" y="105" font-size="12" fill="var(--ink)" font-weight="600" dy="12">18,4</text>
-          <text x="258" y="23" font-size="12" fill="var(--ink)" font-weight="600">19,4</text>
-          <text x="24" y="115" font-size="10" fill="var(--muted)">17/7 chiều</text>
-          <text x="140" y="115" font-size="10" fill="var(--muted)">18/7 sáng</text>
-          <text x="250" y="115" font-size="10" fill="var(--muted)">18/7 chiều</text>
-        </svg>
-        <p class="note">Premium co lại buổi sáng (thế giới tăng, trong nước đứng yên) rồi nới lại ngay khi SJC tăng 900k — trong nước luôn "đòi" phần chênh cao.</p>
-      </figure>
-    </div>
-    <p><strong>Động lực:</strong> Mỹ–Iran leo thang + dòng tiền rời cổ phiếu chip đẩy vàng thế giới giữ trên 4.000 $. <strong>Lực cản:</strong> USD mạnh, rủi ro Fed tăng lãi suất tháng 9.</p>
-  </section>
-
-  <section>
-    <h2>Lãi suất tiết kiệm — khoản dưới 1 tỷ</h2>
-    <div class="when">Khảo sát 18/07 — không đổi so với kỳ trước</div>
-    <figure>
-      <div class="chart">
-        <div class="brow"><span class="lab">Cake 12T*</span><span class="track"><span class="bar up" style="width:100%"></span></span><span class="val">7,40%</span></div>
-        <div class="brow"><span class="lab">HLBank 12T</span><span class="track"><span class="bar" style="width:98.6%"></span></span><span class="val">7,30%</span></div>
-        <div class="brow"><span class="lab">OceanBank/MB 12T</span><span class="track"><span class="bar" style="width:94.6%"></span></span><span class="val">7,00%</span></div>
-        <div class="brow"><span class="lab">Bắc Á 6T</span><span class="track"><span class="bar" style="width:92.6%"></span></span><span class="val">6,85%</span></div>
-        <div class="brow"><span class="lab">Big4 12T</span><span class="track"><span class="bar ref" style="width:79.7%"></span></span><span class="val">5,90%</span></div>
-      </div>
+        <g>
+          <circle cx="620" cy="65" r="4" fill="var(--s-red)" stroke="var(--surface-1)" stroke-width="2"><title>SJC bán: 147,5 triệu/lượng</title></circle>
+          <circle cx="620" cy="95" r="4" fill="var(--s-orange)" stroke="var(--surface-1)" stroke-width="2"><title>Nhẫn bán: 146,5 triệu/lượng</title></circle>
+          <circle cx="620" cy="155" r="4" fill="var(--s-blue)" stroke="var(--surface-1)" stroke-width="2"><title>SJC mua: 144,5 triệu/lượng</title></circle>
+        </g>
+        <text x="626" y="68" class="muted">147,5</text>
+        <text x="626" y="98" class="muted">146,5</text>
+        <text x="626" y="158" class="muted">144,5</text>
+      </svg>
       <div class="legend">
-        <span class="key"><span class="sw" style="background:var(--up)"></span>Cao nhất (khuyến nghị)</span>
-        <span class="key"><span class="sw" style="background:var(--accent)"></span>Nhóm cạnh tranh</span>
-        <span class="key"><span class="sw" style="background:var(--bar-ref)"></span>Big4 tham chiếu</span>
+        <span class="item"><span class="swatch" style="background:var(--s-red)"></span>SJC bán</span>
+        <span class="item"><span class="swatch" style="background:var(--s-orange)"></span>Nhẫn bán</span>
+        <span class="item"><span class="swatch" style="background:var(--s-blue)"></span>SJC mua</span>
       </div>
-      <p class="note">*Online. Mức 7,6%/13T của HDBank yêu cầu số dư 500 tỷ — không áp dụng cho khoản dưới 1 tỷ.</p>
-    </figure>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Lãi suất tiết kiệm 12 tháng — top ngân hàng</h2>
+      <p class="card-note">%/năm, tiền gửi dưới 1 tỷ · nguồn bản tin 19/7 chiều</p>
+      <svg viewBox="0 0 380 240" width="100%" height="240" role="img" aria-label="Lãi suất tiết kiệm top ngân hàng">
+        <line class="grid-line" x1="30" y1="40" x2="360" y2="40"/>
+        <line class="grid-line" x1="30" y1="90" x2="360" y2="90"/>
+        <line class="grid-line" x1="30" y1="140" x2="360" y2="140"/>
+        <line class="axis-line" x1="30" y1="200" x2="360" y2="200"/>
+
+        <rect x="55" y="52" width="52" height="148" rx="4" fill="var(--s-blue)"/>
+        <text x="81" y="46" text-anchor="middle" style="font-weight:600">7,4%</text>
+        <text class="muted" x="81" y="216" text-anchor="middle">Cake by VPBank</text>
+        <text class="muted" x="81" y="230" text-anchor="middle">kỳ hạn 12 tháng</text>
+
+        <rect x="164" y="54" width="52" height="146" rx="4" fill="var(--s-blue)"/>
+        <text x="190" y="48" text-anchor="middle" style="font-weight:600">7,3%</text>
+        <text class="muted" x="190" y="216" text-anchor="middle">HLBank</text>
+        <text class="muted" x="190" y="230" text-anchor="middle">kỳ hạn 12 tháng</text>
+
+        <rect x="273" y="63" width="52" height="137" rx="4" fill="var(--s-blue)"/>
+        <text x="299" y="57" text-anchor="middle" style="font-weight:600">6,85%</text>
+        <text class="muted" x="299" y="216" text-anchor="middle">Bắc Á Bank</text>
+        <text class="muted" x="299" y="230" text-anchor="middle">kỳ hạn 6 tháng</text>
+      </svg>
+    </div>
   </section>
 
-  <section>
-    <h2>Xu hướng &amp; Lãi/lỗ danh mục</h2>
-    <div class="when">Kỳ chiều 19/07 so với kỳ trước (script <code>trend.py report</code> — 5 bản ghi lịch sử)</div>
-    <div class="tbl"><table>
-      <tr><th>Chỉ tiêu</th><th>Kỳ này</th><th>Diễn biến</th></tr>
-      <tr><td>VN-Index</td><td class="num">1.787,45</td><td><span class="chip flat">nghỉ cuối tuần, không đổi</span></td></tr>
-      <tr><td>VCB</td><td class="num">58.500 đ</td><td><span class="chip flat">không đổi (chưa có phiên mới)</span></td></tr>
-      <tr><td>CTD</td><td class="num">63.500 đ</td><td><span class="chip flat">không đổi (chưa có phiên mới)</span></td></tr>
-      <tr><td>Khối ngoại</td><td class="num">−690 tỷ</td><td><span class="chip down">bán ròng 1 phiên liên tiếp (chưa có phiên mới để nối chuỗi)</span></td></tr>
-      <tr><td>Vàng thế giới (XAU)</td><td class="num">4.016,6 $</td><td><span class="chip down">−0,4$ so với sáng nay (−0,01%)</span></td></tr>
-      <tr><td>Vàng SJC bán ra</td><td class="num">147,5 tr</td><td><span class="chip flat">đi ngang cuối tuần</span></td></tr>
-      <tr><td>Chênh lệch vàng VN–TG</td><td class="num">≈19,4 tr</td><td><span class="chip flat">không đổi</span></td></tr>
-      <tr><td>Tài sản ròng</td><td class="num">1.110,6 tr</td><td><span class="chip up">+0,8 tr so với sáng (tỷ giá USD/VND tăng nhẹ 26.460→26.490)</span></td></tr>
-    </table></div>
-    <p class="note">💰 Lãi/lỗ danh mục: <strong>không áp dụng</strong> — đã bán hết cổ phiếu, không còn vị thế CP để tính lãi/lỗ. Tài sản chính là vàng, xem mục "Tài sản của bạn" phía trên.</p>
+  <section class="card">
+    <h2 class="card-title">Rủi ro cần theo dõi</h2>
+    <p class="card-note">Trạng thái pháp lý dùng đúng thuật ngữ nguồn — không quy kết khi chỉ đang xác minh.</p>
+    <div class="status-cards">
+      <div class="status-card critical">
+        <div class="tag">● Địa chính trị — Mỹ / Iran / Trump</div>
+        <div class="body">Mỹ tiếp tục tấn công Iran, phong tỏa hàng hải và đe dọa thu phí qua eo biển Hormuz. Đàm phán dự kiến thứ Ba nhưng Trump tuyên bố sẽ tiếp tục gây sức ép tới khi có thỏa thuận — <span class="k">rủi ro leo thang ngắn hạn, hỗ trợ giá vàng.</span></div>
+      </div>
+      <div class="status-card warning">
+        <div class="tag">● Fed</div>
+        <div class="body">Chủ tịch mới Kevin Warsh điều trần trước Quốc hội, nhấn mạnh ổn định giá. Thị trường hiện theo dõi phát biểu của Fed nhiều hơn diễn biến địa chính trị trong ngắn hạn — <span class="k">chưa có tín hiệu đổi lãi suất rõ ràng.</span></div>
+      </div>
+      <div class="status-card good">
+        <div class="tag">● Lãnh đạo doanh nghiệp trong danh mục</div>
+        <div class="body">Không có cảnh báo mới với VCB/CTD hay các mã trong Buffett-list. Các vụ khởi tố lãnh đạo Bamboo Capital, DGC, PC1, VPG đầu năm 2026 <span class="k">nằm ngoài danh mục theo dõi, không ảnh hưởng trực tiếp.</span></div>
+      </div>
+    </div>
   </section>
 
-  <footer class="src">
-    Nguồn: HOSE EOD (api.hsx.vn) ·
-    <a href="https://vov.vn/thi-truong/gia-vang/gia-vang-hom-nay-197-vang-sjc-di-ngang-cao-hon-the-gioi-hon-19-trieu-dongluong-post1316483.vov">VOV – vàng 19/7</a> ·
-    <a href="https://vn.investing.com/news/economy-news/trump-cho-biet-dam-phan-voi-iran-dien-ra-hom-thu-ba-cac-cuoc-tan-cong-se-tiep-tuc-cho-den-khi-dat-duoc-thoa-thuan-2664069">Investing.com – Trump/Iran</a> ·
-    <a href="https://24hmoney.vn/news/thong-tin-kinh-te-tuan-3-thang-7-chien-su-my-iran-bung-no-tan-chu-tich-fed-kevin-warsh-dieu-tran-truoc-quoc-hoi-c30a2806877.html">24HMoney – Fed Warsh</a> ·
-    <a href="https://cafef.vn/nhin-lai-dan-lanh-dao-doanh-nghiep-bi-khoi-to-tu-dau-nam-2026-den-nay-188260522094053098.chn">CafeF – lãnh đạo DN bị khởi tố 2026</a> ·
-    <a href="https://www.dnse.com.vn/senses/tin-tuc/coteccons-muon-phat-hanh-hon-5-trieu-co-phieu-thuong-de-tang-von-35207614">DNSE – Coteccons phát hành CP thưởng</a> ·
-    <a href="https://vietstock.vn/2026/07/gia-vang-hom-nay-1872026-dao-chieu-ngoan-muc-sjc-tang-vot-gan-1-trieuluong-759-1467933.htm">Vietstock – vàng 18/7</a> ·
-    <a href="https://baomoi.com/gia-vang-ngay-18-7-trong-nuoc-the-gioi-dong-loat-tang-phien-cuoi-tuan-c55643062.epi">Nhân Dân – vàng 18/7</a> ·
-    <a href="https://nhandan.vn/chung-khoan-ngay-177-khoi-ngoai-dao-chieu-ban-rong-vn-index-giam-gan-17-diem-post976245.html">Nhân Dân – phiên 17/7</a> ·
-    <a href="https://www.fool.com/coverage/stock-market-today/2026/07/17/stock-market-today-july-17-stocks-slide-as-semiconductor-rout-deepens/">Motley Fool – chip rout</a> ·
-    <a href="https://webgia.com/lai-suat/">Webgia – lãi suất</a> ·
-    <a href="https://topi.vn/lai-suat-tiet-kiem-ngan-hang-nao-cao-nhat.html">TOPI – lãi suất</a>
+  <section class="card">
+    <h2 class="card-title">Watchlist cổ phiếu</h2>
+    <p class="card-note">Đã bán hết cổ phiếu thực tế — đây là danh sách theo dõi (Buffett-list giả lập), gốc so sánh 18/07/2026.</p>
+    <table>
+      <thead>
+        <tr><th>Mã</th><th>Nhóm</th><th>Giá gốc</th><th>Giá gần nhất</th><th>Biến động</th><th>Lợi thế cạnh tranh</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="tk">VCB</td><td>A</td><td>58.500</td><td>58.500</td><td class="chg-flat">0,0%</td><td>Chi phí vốn rẻ nhất hệ thống</td></tr>
+        <tr><td class="tk">CTD</td><td>B</td><td>63.500</td><td>63.500</td><td class="chg-flat">0,0%</td><td>Tổng thầu, backlog kỷ lục</td></tr>
+        <tr><td class="tk">FPT</td><td>A</td><td class="na">chưa có dữ liệu</td><td class="na">—</td><td class="na">—</td><td>Độc tôn CNTT VN</td></tr>
+        <tr><td class="tk">VNM</td><td>A</td><td class="na">chưa có dữ liệu</td><td class="na">—</td><td class="na">—</td><td>Thương hiệu sữa số 1</td></tr>
+        <tr><td class="tk">GAS</td><td>A</td><td class="na">chưa có dữ liệu</td><td class="na">—</td><td class="na">—</td><td>Độc quyền trung nguồn khí</td></tr>
+        <tr><td class="tk">ACB</td><td>A</td><td class="na">chưa có dữ liệu</td><td class="na">—</td><td class="na">—</td><td>Ngân hàng bán lẻ thận trọng</td></tr>
+        <tr><td class="tk">HPG</td><td>B</td><td class="na">chưa có dữ liệu</td><td class="na">—</td><td class="na">—</td><td>Dẫn đầu chi phí thép</td></tr>
+        <tr><td class="tk">MWG</td><td>B</td><td class="na">chưa có dữ liệu</td><td class="na">—</td><td class="na">—</td><td>Chuỗi bán lẻ số 1</td></tr>
+        <tr><td class="tk">PNJ</td><td>B</td><td class="na">chưa có dữ liệu</td><td class="na">—</td><td class="na">—</td><td>Thương hiệu trang sức số 1</td></tr>
+        <tr><td class="tk">REE</td><td>B</td><td class="na">chưa có dữ liệu</td><td class="na">—</td><td class="na">—</td><td>Điện + nước, P/B đáy 2 năm</td></tr>
+        <tr><td class="tk">BSR</td><td>B</td><td class="na">chưa có dữ liệu</td><td class="na">—</td><td class="na">—</td><td>Lọc dầu quy mô</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer class="foot">
+    Khối ngoại: bán ròng 690 tỷ phiên gần nhất có số liệu (17/7) — chưa có cập nhật mới hơn tính đến bản tin này.<br>
+    Nguồn dữ liệu: <code>data/history.jsonl</code>, <code>config/portfolio.yaml</code>, <code>data/watchlist.json</code>, <code>data/assets.json</code> trong repo Finance-duy (nhánh claude/investment-news-aggregator-w81l70).<br>
+    Đây là công cụ hỗ trợ theo dõi cá nhân, không phải khuyến nghị đầu tư từ tổ chức được cấp phép.
   </footer>
+
+</div>
 </div>
