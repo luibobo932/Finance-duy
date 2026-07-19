@@ -1,0 +1,9 @@
+{
+  "_comment": "Tài sản thực tế của chủ danh mục. gold_luong: số lượng vàng (cây/lượng). gold_type: SJC|nhan (để định giá theo giá MUA VÀO tương ứng — số tiền nhận được nếu bán). Tiền đơn vị triệu đồng. Cập nhật khi có thay đổi.",
+  "updated": "2026-07-19",
+  "gold_luong": 6.5,
+  "gold_type": "SJC",
+  "bank_vnd_trieu": 246,
+  "cash_vnd_trieu": 35,
+  "stocks": {}
+}
