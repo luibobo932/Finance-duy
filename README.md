@@ -99,6 +99,18 @@ Số lượng tài sản và hạn mức rủi ro **không còn hard-code trong 
 
 Đã test với dữ liệu thật: HDBank 7,6%/13T yêu cầu 500 tỷ bị loại đúng, kỳ hạn 13+ tháng "chưa phân bổ" thay vì gán bừa ngân hàng.
 
+## Module Chứng khoán Việt Nam (Phase 6)
+
+- `equity/governance.py` — **enum trạng thái pháp lý chuẩn** (NONE/RUMOR/UNDER_VERIFICATION/SUMMONED_FOR_QUESTIONING/INVESTIGATION_OPENED/INDICTED/CONVICTED) + phân loại theo từ khóa tường minh. Đã fix 1 lỗi tinh vi trước khi commit: `"khởi tố vụ án"` (mở vụ án, chưa chỉ đích danh) và `"khởi tố bị can"` (khởi tố đích danh 1 người) là 2 mức nghiêm trọng khác nhau — không dùng chung từ khóa `"khởi tố"` trần trụi cho mức INDICTED nữa. **Test trực tiếp yêu cầu gốc**: "đang bị mời làm việc để xác minh" → `SUMMONED_FOR_QUESTIONING`, KHÔNG BAO GIỜ `INDICTED`.
+- `equity/technical.py` — Relative Volume, Volume z-score, pivot hỗ trợ/kháng cự, breakout, trend state — dùng chung `analytics/ta_core.py`
+- `equity/valuation.py` — P/E, P/B, biên an toàn, percentile so lịch sử, 3 kịch bản định giá (thấp/cơ sở/cao)
+- `equity/fundamentals.py` — ROE/ROA/biên LN/đòn bẩy/chất lượng dòng tiền — schema sẵn sàng, **chưa có số liệu BCTC thật cho VCB/CTD** (cần nhập tay, đánh dấu `source="BCTC_manual_entry"`, không bịa số)
+- `equity/market.py` — độ rộng thị trường, dòng vốn khối ngoại/tự doanh/ETF, chuỗi mua/bán ròng liên tiếp
+- `analytics/anomaly_detector.py` — refactor từ `scripts/tick.py`, output chuẩn `{ticker, alert_level, anomaly_type, evidence, conclusion}`, **kết luận luôn là "cần theo dõi, chưa đủ căn cứ"**, không bao giờ khẳng định "giao dịch nội gián"
+- `scripts/tick.py` giờ là CLI mỏng gọi `analytics/anomaly_detector.py`, giữ nguyên 2 lệnh `fetch`/`csv`
+
+⚠️ **Rủi ro dữ liệu lớn nhất của Phase 6** (đã ghi từ Audit): `api.hsx.vn`/`services.entrade.com.vn` vẫn bị chặn mạng — `equity/market.py` và `equity/technical.py` nhận input do caller cung cấp (WebSearch hoặc CSV thủ công), không tự fetch được.
+
 ## Khung phân tích
 
 `docs/phuong-phap-phan-tich.md` — khung bắt buộc mọi bản tin phải áp dụng cho VCB/CTD:
