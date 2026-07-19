@@ -90,6 +90,15 @@ Số lượng tài sản và hạn mức rủi ro **không còn hard-code trong 
 - `scripts/gold_price.py` giờ là CLI mỏng gọi `gold/xuan_trieu_model.py`, giữ nguyên contract JSON cũ (tương thích ngược)
 - `analytics/ta_core.py` — công thức lõi (sma/ema/rsi/macd/bollinger/atr/volatility) dùng chung cho `scripts/indicators.py` và `gold/indicators.py`, tránh 2 bản cài đặt khác nhau
 
+## Module Tiền gửi (Phase 5)
+
+- `deposits/schema.py` — `DepositRate` (bank/term_months/rate_online/rate_counter/min_deposit/conditions/interest_payment/source)
+- `deposits/ranking.py` — loại lãi suất KHÔNG áp dụng cho khoản retail <1 tỷ bằng danh sách từ khóa tường minh (VIP, bancassurance, CCTG, số dư tối thiểu quá lớn), không để AI tự đoán. Đọc `data/normalized/deposit_rates.jsonl` (chỉ lấy bản ghi ngày mới nhất)
+- `deposits/strategy.py` — chia vốn theo trọng số kỳ hạn (6T/12T/13+T = 30/40/30%) sau khi trừ quỹ khẩn cấp (`risk_limits.yaml`), tính lãi dự kiến + thiệt hại rút trước hạn; **không tự bịa lãi suất** khi thiếu ngân hàng phù hợp cho 1 kỳ hạn — báo rõ phần chưa phân bổ
+- `scripts/deposits_report.py` — CLI demo: `python3 scripts/deposits_report.py`
+
+Đã test với dữ liệu thật: HDBank 7,6%/13T yêu cầu 500 tỷ bị loại đúng, kỳ hạn 13+ tháng "chưa phân bổ" thay vì gán bừa ngân hàng.
+
 ## Khung phân tích
 
 `docs/phuong-phap-phan-tich.md` — khung bắt buộc mọi bản tin phải áp dụng cho VCB/CTD:
