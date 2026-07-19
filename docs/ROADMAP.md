@@ -32,7 +32,7 @@ Cập nhật 18/07/2026. ✅ = đã xây & test xong · 🟡 = có công cụ, c
 |---|---|---|---|
 | 10 | Trang lưu trữ bản tin | ⬜ | Dự kiến: mỗi bản tin snapshot vào `dashboard/archive/`. |
 | 11 | Bản tin tổng kết tuần (thứ Sáu) | 🟡 | Đã thêm mục vào prompt routine chiều thứ Sáu (xem README). |
-| 12 | Telegram bot | ⬜ | Cần bạn cung cấp bot token nếu muốn. |
+| 12 | Telegram bot | 🟡 | `notifications/telegram.py` xây xong + test (bot `@Tintucstock_bot`, token đã lưu `.env`). **Bị chặn bởi network policy** (`api.telegram.org` — xác nhận qua log proxy "403 policy denial"). Cần mở domain này trong Network policy của environment trên claude.ai, sau đó chạy `python3 notifications/telegram.py whoami` rồi `send`. |
 
 ## Cần người dùng / admin
 
@@ -40,3 +40,4 @@ Cập nhật 18/07/2026. ✅ = đã xây & test xong · 🟡 = có công cụ, c
 - [ ] **Mở network policy** cho nguồn giá → bật chỉ báo kỹ thuật tự động (mục 1, 3)
 - [ ] **File khớp lệnh CTD** hoặc API key → soi lệnh nội bộ (mục 2)
 - [ ] **Routine có connector** (tạo từ UI claude.ai) → email/calendar tự động (mục 5, 6)
+- [ ] **Mở network policy cho `api.telegram.org`** → bật gửi bản tin qua Telegram bot `@Tintucstock_bot` (mục 12, code đã sẵn sàng)

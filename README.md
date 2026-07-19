@@ -133,6 +133,17 @@ Số lượng tài sản và hạn mức rủi ro **không còn hard-code trong 
 
 Chạy thử: `python3 scripts/trend.py append '<json>' && python3 scripts/run_morning.py` (hoặc `run_evening.py`).
 
+## Gửi bản tin qua Telegram
+
+Bot `@Tintucstock_bot` đã tạo, token lưu trong `.env` (KHÔNG commit — xem `.env.example` để biết cấu trúc).
+
+```
+python3 notifications/telegram.py whoami   # lấy chat_id sau khi bấm /start với bot, lưu vào .env
+python3 notifications/telegram.py send "nội dung bản tin"
+```
+
+⚠️ **Đang bị chặn bởi network policy của environment** (`api.telegram.org` — xác nhận qua `curl $HTTPS_PROXY/__agentproxy/status`: "gateway answered 403... host: api.telegram.org:443"). Cần vào cấu hình Network policy của environment trên claude.ai và thêm domain này vào danh sách cho phép trước khi 2 lệnh trên chạy được. `common/env.py` nạp `.env` bằng parser tối giản (không dependency ngoài).
+
 ## Khung phân tích
 
 `docs/phuong-phap-phan-tich.md` — khung bắt buộc mọi bản tin phải áp dụng cho VCB/CTD:
