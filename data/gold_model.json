@@ -1,0 +1,14 @@
+{
+  "_comment": "Mô hình quy đổi giá vàng thế giới -> giá tiệm vàng của chủ danh mục. Hiệu chuẩn từ 1 ảnh bảng giá tiệm; hệ thống ước tính giá tiệm real-time theo XAU/USD + tỷ giá. Khi giá tiệm lệch nhiều so ước tính, gửi ảnh mới để cập nhật 'calibration'.",
+  "luong_per_oz": 1.205656,
+  "method": "ratio",
+  "calibration": {
+    "date": "2026-07-18",
+    "shop_name": "Xuân Triệu",
+    "xauusd": 4017,
+    "fx_vcb_sell": 26460,
+    "world_per_luong_trieu": 128.15,
+    "shop_buy_trieu": 127.5,
+    "shop_sell_trieu": 130.0
+  }
+}

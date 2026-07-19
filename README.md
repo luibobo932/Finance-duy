@@ -51,6 +51,7 @@ Routine chiều thứ Sáu tự thêm mục **Tổng kết tuần**. Cả hai ro
 | `journal.py` + `data/journal.jsonl` | Nhật ký giao dịch cá nhân: win-rate, đối chiếu khuyến nghị |
 | `watchlist.py` + `data/watchlist.json` | Theo dõi hiệu suất danh mục giả lập Buffett-list |
 | `networth.py` + `data/assets.json` | Tài sản ròng thực tế (vàng/tiết kiệm/mặt/cổ phiếu) + phân bổ + cảnh báo tập trung |
+| `gold_price.py` + `data/gold_model.json` | Ước tính giá vàng nhẫn tại tiệm theo XAU/USD real-time (hiệu chuẩn từ 1 ảnh bảng giá); networth tự dùng để định giá vàng động |
 
 Xem `docs/ROADMAP.md` cho trạng thái toàn bộ 12 hạng mục phát triển và việc cần người dùng cung cấp.
 
