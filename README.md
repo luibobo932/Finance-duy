@@ -25,8 +25,8 @@ Hệ thống tổng hợp tin tức đầu tư 2 lần/ngày (8h sáng & 6h chi�
 
 | Routine | Cron (UTC) | Giờ VN | Trigger ID |
 |---|---|---|---|
-| Bản tin đầu tư sáng 8h | `0 1 * * *` | ~08:04 | `trig_013dMYuUbnB68nc3qh3fKwkE` |
-| Bản tin đầu tư chiều 6h | `0 11 * * *` | ~18:05 | `trig_01NLoYiuCKwPgNn9h5Hhw7DF` |
+| Bản tin đầu tư sáng 8h | `0 1 * * *` | ~08:08 | `trig_01VkDWQ59sqHpXDTyScxmzzV` |
+| Bản tin đầu tư chiều 6h | `0 11 * * *` | ~18:08 | `trig_01B8JjRY5Qm71deb3s69XwCb` |
 
 Routine chiều thứ Sáu tự thêm mục **Tổng kết tuần**. Cả hai routine tự chạy `indicators.py`, `alerts.py`, `trend.py`, `watchlist.py` khi có dữ liệu.
 
