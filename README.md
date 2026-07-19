@@ -123,6 +123,16 @@ Số lượng tài sản và hạn mức rủi ro **không còn hard-code trong 
 
 **Đã verify bằng chính kịch bản thật của chủ dự án**: vàng 74,7% + xu hướng TÍCH CỰC → hệ thống tự động trả về **"KHÔNG MUA THÊM"** (risk_veto=true), đúng yêu cầu gốc "nếu vàng ≥70% thì không cho phép đề xuất mua thêm vàng".
 
+## Bản tin & Dashboard tự sinh (Phase 8)
+
+- `scripts/run_morning.py` / `scripts/run_evening.py` — orchestrator ghép Tài sản ròng + Vàng (qua Decision Engine) + Tiền gửi + Cảnh báo ngưỡng thành 1 bản tin có cấu trúc. **Không tự fetch dữ liệu thị trường** (network vẫn chặn HOSE/entrade) — giả định `scripts/trend.py append` đã ghi snapshot hôm nay trước đó, đúng quy trình routine hiện tại.
+- `reporting/diff_report.py` — mục "THAY ĐỔI SO VỚI BẢN TIN TRƯỚC" bắt buộc trong bản tin chiều; nếu quyết định đổi, **luôn kèm lý do** (không được báo "đã đổi" mà không giải thích)
+- `reporting/render_dashboard.py` — sinh `dashboard/auto_dashboard.html` **tự động từ dữ liệu thật**, có badge trạng thái (OK/DÙNG FALLBACK/DỮ LIỆU ĐÃ CŨ/DỮ LIỆU KHÔNG KHẢ DỤNG/NGUỒN XUNG ĐỘT) cho từng số liệu. File `dashboard/ban-tin-dau-tu.html` (thiết kế tay) **không bị ghi đè** — dashboard tự sinh là file riêng, việc chuyển hẳn sang bản tự động là lựa chọn của người vận hành ở bước sau.
+
+⚠️ **1 lỗi thật phát hiện + sửa khi nối dữ liệu**: `data/alerts.json` ghi ngưỡng VCB/CTD theo đơn vị "nghìn đồng" nhưng `data/history.jsonl` lưu giá cổ phiếu theo VND thô — nếu không quy đổi, mọi giá cổ phiếu thật sẽ luôn bị báo "vượt ngưỡng" sai. Đã sửa trong `scripts/run_morning.py`.
+
+Chạy thử: `python3 scripts/trend.py append '<json>' && python3 scripts/run_morning.py` (hoặc `run_evening.py`).
+
 ## Khung phân tích
 
 `docs/phuong-phap-phan-tich.md` — khung bắt buộc mọi bản tin phải áp dụng cho VCB/CTD:
