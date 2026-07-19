@@ -1,12 +1,8 @@
 {
-  "_comment": "Tài sản thực tế của chủ danh mục. gold_luong: số lượng vàng (cây/lượng). gold_type: nhan|SJC. gold_buy_price_trieu: giá tiệm TRẢ khi bạn bán 1 lượng (nếu để null, networth.py lấy giá SJC mua vào trừ gold_discount_vs_sjc_trieu). Tiền đơn vị triệu đồng.",
+  "_comment": "Metadata ĐỊNH GIÁ vàng — số LƯỢNG tài sản (vàng/tiết kiệm/mặt/cổ phiếu) đã chuyển sang config/portfolio.yaml từ Phase 3, đây không còn là nguồn sự thật cho số lượng. gold_type: nhan|SJC. gold_buy_price_trieu: giá tiệm TRẢ khi bạn bán 1 lượng — dùng làm FALLBACK nếu ước tính động (gold_model.json) không tính được. Tiền đơn vị triệu đồng.",
   "updated": "2026-07-19",
-  "gold_luong": 6.5,
   "gold_type": "nhan",
   "gold_buy_price_trieu": 127.5,
   "gold_price_source": "Tiệm Xuân Triệu, bảng giá 18/7/26, cột MUA hàng đầu (12.750 nghìn/chỉ)",
-  "gold_discount_vs_sjc_trieu": 10,
-  "bank_vnd_trieu": 246,
-  "cash_vnd_trieu": 35,
-  "stocks": {}
+  "gold_discount_vs_sjc_trieu": 10
 }

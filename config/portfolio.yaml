@@ -1,0 +1,26 @@
+# Danh mục tài sản thực tế của chủ dự án — nguồn sự thật duy nhất (KHÔNG
+# hard-code số này trong Python nữa; portfolio/loader.py đọc file này).
+# Cập nhật số liệu tại đây khi tài sản thay đổi.
+currency: VND
+updated: "2026-07-19"
+
+assets:
+  gold_ring:
+    quantity_tael: 6.5
+    # Giá trị (VND/lượng) được TÍNH ĐỘNG từ giá vàng thế giới real-time,
+    # xem gold/xuan_trieu_model.py + data/gold_model.json — không hard-code
+    # giá ở đây. gold_type/nguồn hiệu chuẩn nằm trong data/assets.json.
+
+  savings:
+    principal_vnd: 246000000
+
+  cash:
+    amount_vnd: 35000000
+
+  stocks:
+    positions: []  # đã bán hết cổ phiếu (2026-07-19); mỗi phần tử tương lai:
+                    # {ticker, quantity, avg_cost_vnd, last_price_vnd}
+
+watchlist:
+  - VCB
+  - CTD

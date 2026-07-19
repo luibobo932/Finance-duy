@@ -1,0 +1,34 @@
+# Khung rule cho decision/policy_engine.py + decision/risk_officer.py
+# (Phase 7). Phase 3 chỉ khai báo cấu trúc + rule vàng (đã đủ dữ kiện để
+# code ngay: chủ dự án đang có 74.7% tài sản là vàng). Rule chứng khoán/
+# dữ liệu sẽ điền tiếp ở Phase 6-7.
+
+gold:
+  # Ngưỡng lấy từ risk_limits.yaml qua code, không lặp số ở đây — nhưng ghi
+  # rõ ý nghĩa hành động ứng với từng mức để dễ đọc.
+  above_critical_action: DO_NOT_BUY_MORE      # >= gold_critical (70%)
+  above_warning_action: TAKE_PARTIAL_PROFIT   # >= gold_warning (60%), < critical
+  below_warning_action: HOLD                  # < gold_warning
+
+equity:
+  # Trạng thái quản trị (Phase 6, equity/governance.py) chặn đề xuất mua
+  governance_block_states:
+    - INDICTED
+    - CONVICTED
+    - INVESTIGATION_OPENED
+  # Trạng thái CHỈ cảnh báo, KHÔNG tự động chặn (cần xác minh thêm)
+  governance_watch_states:
+    - RUMOR
+    - UNDER_VERIFICATION
+    - SUMMONED_FOR_QUESTIONING
+
+data_quality:
+  # Risk Officer (Phase 7) veto khi gặp các điều kiện này
+  veto_on_stale_critical_data: true
+  veto_on_conflicting_critical_sources: true
+  veto_on_missing_critical_financial_data: true
+  veto_on_abnormal_price_data: true
+  max_age_seconds:
+    gold_price: 43200        # 12 giờ — vàng biến động nhanh
+    equity_price: 172800     # 48 giờ — chấp nhận rộng hơn vì có cuối tuần
+    deposit_rate: 2592000    # 30 ngày — lãi suất đổi chậm

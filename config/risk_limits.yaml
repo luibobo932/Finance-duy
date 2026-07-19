@@ -1,0 +1,8 @@
+# Giới hạn rủi ro danh mục — decision/risk_officer.py (Phase 7) đọc file
+# này để quyết định veto. Không hard-code ngưỡng trong Python.
+allocation_limits:
+  gold_warning: 0.60          # >= 60% vàng: cảnh báo tập trung
+  gold_critical: 0.70         # >= 70% vàng: VETO mọi đề xuất mua thêm vàng
+  single_stock_max: 0.10      # 1 mã cổ phiếu không vượt 10% tài sản ròng
+  total_stock_max: 0.20       # tổng cổ phiếu không vượt 20% tài sản ròng
+  minimum_cash_buffer_vnd: 30000000  # quỹ khẩn cấp tối thiểu

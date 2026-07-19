@@ -1,0 +1,30 @@
+# Thứ tự ưu tiên nguồn dữ liệu theo loại. datacontract/sources.py đọc file
+# này để override DEFAULT_PRIORITY khi có (Phase 2 dùng bản mặc định trong
+# code khi chưa nạp file này; Phase 3 wire loader vào).
+#
+# blocked_sources: domain hiện KHÔNG khả dụng trong môi trường (network
+# policy chặn) — xác nhận lại 2026-07-19: CONNECT tunnel failed 403.
+blocked_sources:
+  - hose_api
+  - entrade_api
+
+priority:
+  gold_xauusd:
+    - web_search_summary
+  gold_shop_xuan_trieu:
+    - user_photo_calibration
+    - derived_from_xauusd
+  fx_usdvnd:
+    - web_search_summary
+  vn_index:
+    - hose_api
+    - web_search_summary
+  equity_price:
+    - hose_api
+    - web_search_summary
+  deposit_rate:
+    - bank_official_site
+    - web_search_summary
+  corporate_governance_news:
+    - hose_disclosure
+    - web_search_summary

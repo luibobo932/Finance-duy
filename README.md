@@ -66,6 +66,21 @@ Dự án đang được nâng cấp theo `docs/IMPLEMENTATION_PLAN.md` (10 phase
 
 Nguyên tắc: nếu dữ liệu thiếu, hệ thống phải báo rõ "chưa có dữ liệu" — không được vá bằng số 0.
 
+## Cấu hình danh mục & rủi ro (Phase 3)
+
+Số lượng tài sản và hạn mức rủi ro **không còn hard-code trong Python** — sửa ở `config/`:
+
+| File | Nội dung | Sửa khi nào |
+|---|---|---|
+| `config/portfolio.yaml` | Số lượng vàng, tiết kiệm, tiền mặt, vị thế cổ phiếu, watchlist | Tài sản thay đổi |
+| `config/risk_limits.yaml` | Ngưỡng cảnh báo/veto: vàng ≥60% (warning) / ≥70% (critical), tỷ trọng 1 mã tối đa 10%, tổng CP tối đa 20%, quỹ khẩn cấp tối thiểu | Khẩu vị rủi ro thay đổi |
+| `config/source_priority.yaml` | Thứ tự ưu tiên nguồn dữ liệu theo loại + danh sách domain bị chặn mạng | Có nguồn mới/network policy đổi |
+| `config/decision_rules.yaml` | Khung rule cho Decision Engine (Phase 7) — đã có rule vàng cụ thể | Điền dần qua các phase |
+
+`portfolio/loader.py` nạp 4 file trên; `scripts/networth.py` đọc số lượng từ đây (không còn từ `data/assets.json`, file đó giờ chỉ giữ **metadata định giá vàng** — loại vàng, giá tiệm fallback, nguồn hiệu chuẩn).
+
+⚠️ **Phát hiện quan trọng sau khi wire risk_limits.yaml**: vàng của chủ dự án hiện chiếm 74,7% tài sản — đã vượt cả ngưỡng **CRITICAL (70%)**, không chỉ warning (60%) như cảnh báo cũ từng ghi.
+
 ## Khung phân tích
 
 `docs/phuong-phap-phan-tich.md` — khung bắt buộc mọi bản tin phải áp dụng cho VCB/CTD:

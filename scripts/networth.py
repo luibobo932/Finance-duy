@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""Tính tài sản ròng và phân bổ danh mục từ data/assets.json + giá vàng mới nhất.
+"""Tính tài sản ròng và phân bổ danh mục.
 
-Định giá vàng theo GIÁ MUA VÀO (số tiền thực nhận nếu bán) từ snapshot cuối trong history.jsonl.
+Số lượng tài sản (vàng/tiết kiệm/mặt/cổ phiếu) đọc từ config/portfolio.yaml
+(nguồn sự thật duy nhất — sửa ở đó, không sửa số trong file .py này).
+Ngưỡng cảnh báo tập trung đọc từ config/risk_limits.yaml.
+Giá vàng lấy động từ giá thế giới real-time (data/gold_model.json), fallback
+theo thứ tự mô tả trong compute().
 
 Cách dùng:
   python3 scripts/networth.py            # bảng tài sản + phân bổ + cảnh báo tập trung
@@ -12,6 +16,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from portfolio.loader import load_portfolio, load_risk_limits  # noqa: E402
+
 ASSETS = ROOT / "data" / "assets.json"
 HIST = ROOT / "data" / "history.jsonl"
 
@@ -29,13 +38,15 @@ def latest_gold_buy():
 
 
 def compute():
-    a = json.loads(ASSETS.read_text(encoding="utf-8"))
+    port = load_portfolio()
+    limits = load_risk_limits()
+    meta = json.loads(ASSETS.read_text(encoding="utf-8")) if ASSETS.exists() else {}
+
     price = None
-    pdate = None
     src = ""
     # 1) Ưu tiên ước tính ĐỘNG theo giá vàng thế giới real-time (data/gold_model.json)
     model = ROOT / "data" / "gold_model.json"
-    if model.exists() and a.get("gold_type") == "nhan":
+    if model.exists() and meta.get("gold_type") == "nhan":
         try:
             from gold_price import estimate
         except ImportError:
@@ -45,52 +56,61 @@ def compute():
         if est:
             price = est["shop_buy"]
             src = f"ước tính động theo XAU {est['xauusd']}$ (hiệu chuẩn {est['shop']} {est['cal_date']})"
-            pdate = "real-time"
-    # 2) Fallback: giá tiệm trả cố định trong assets.json
-    if price is None and a.get("gold_buy_price_trieu"):
-        price = a["gold_buy_price_trieu"]
-        src = "giá tiệm cố định trong assets.json"
+    # 2) Fallback: giá tiệm trả cố định trong data/assets.json
+    if price is None and meta.get("gold_buy_price_trieu"):
+        price = meta["gold_buy_price_trieu"]
+        src = "giá tiệm cố định trong data/assets.json"
     # 3) Fallback cuối: SJC mua vào trừ chiết khấu nhẫn
     if price is None:
         gb = latest_gold_buy()
-        sjc_buy, pdate = (gb if gb else (None, None))
+        sjc_buy = gb[0] if gb else None
         if sjc_buy is not None:
-            price = sjc_buy - (a.get("gold_discount_vs_sjc_trieu", 0) if a.get("gold_type") == "nhan" else 0)
-            src = f"SJC mua vào −{a.get('gold_discount_vs_sjc_trieu',0)}tr"
-    a["_gold_src"] = src
-    gold_val = (a["gold_luong"] * price) if price else None
-    bank = a.get("bank_vnd_trieu", 0)
-    cash = a.get("cash_vnd_trieu", 0)
-    stock_val = sum((p.get("last_price", 0) or 0) * (p.get("quantity", 0) or 0) / 1000
-                    for p in a.get("stocks", {}).values())
+            discount = meta.get("gold_discount_vs_sjc_trieu", 0) if meta.get("gold_type") == "nhan" else 0
+            price = sjc_buy - discount
+            src = f"SJC mua vào −{discount}tr"
+
+    gold_val = (port.gold_quantity_tael * price) if price else None
+    bank = port.savings_principal_vnd / 1_000_000  # đổi sang triệu đồng
+    cash = port.cash_amount_vnd / 1_000_000
+    stock_val = port.stock_market_value_vnd / 1_000_000
+
     parts = {"Vàng": gold_val, "Tiết kiệm ngân hàng": bank, "Tiền mặt": cash}
     if stock_val:
         parts["Cổ phiếu"] = stock_val
     total = sum(v for v in parts.values() if v)
-    return a, parts, total, price, pdate
+    return port, limits, meta, parts, total, price, src
 
 
 def main():
-    a, parts, total, price, pdate = compute()
+    port, limits, meta, parts, total, price, src = compute()
     if "--json" in sys.argv:
         print(json.dumps({"parts": parts, "total": total, "gold_price": price}, ensure_ascii=False))
         return
-    print(f"=== TÀI SẢN RÒNG (cập nhật assets {a['updated']}) ===")
+    print(f"=== TÀI SẢN RÒNG (config/portfolio.yaml cập nhật {port.updated}) ===")
     if price:
-        print(f"Vàng: {a['gold_luong']} cây {a['gold_type']} × {price:,.1f} tr/lượng ({a.get('_gold_src','')})")
+        print(f"Vàng: {port.gold_quantity_tael} cây {meta.get('gold_type','?')} × {price:,.1f} tr/lượng ({src})")
     for name, val in parts.items():
         if val:
             print(f"  {name:<22}{val:>12,.1f} tr   {val/total*100:>5.1f}%")
     print(f"  {'TỔNG':<22}{total:>12,.1f} tr  (≈ {total/1000:.2f} tỷ)")
-    # Cảnh báo tập trung
-    gold_pct = (parts.get("Vàng") or 0) / total * 100 if total else 0
+
+    gold_pct = (parts.get("Vàng") or 0) / total if total else 0
+    warning = limits.get("gold_warning", 0.60)
+    critical = limits.get("gold_critical", 0.70)
     print()
-    if gold_pct >= 60:
-        print(f"⚠️ TẬP TRUNG CAO: vàng chiếm {gold_pct:.0f}% tài sản — rủi ro lớn nếu vàng điều chỉnh.")
-        print("   Nguyên tắc phân bổ: không nên để 1 loại tài sản >50-60%. Cân nhắc chốt bớt khi giá cao,")
-        print("   đặc biệt khi chênh lệch VN–thế giới đang rộng (bán trong nước được lợi phần premium).")
+    if gold_pct >= critical:
+        print(f"🔴 TẬP TRUNG NGHIÊM TRỌNG: vàng chiếm {gold_pct*100:.0f}% (>= ngưỡng critical {critical*100:.0f}%).")
+        print("   Theo config/risk_limits.yaml: KHÔNG nên mua thêm vàng ở mức tập trung này.")
+    elif gold_pct >= warning:
+        print(f"⚠️ TẬP TRUNG CAO: vàng chiếm {gold_pct*100:.0f}% (>= ngưỡng warning {warning*100:.0f}%).")
+        print("   Nguyên tắc phân bổ: không nên để 1 loại tài sản vượt ngưỡng warning. Cân nhắc chốt bớt khi giá cao.")
+
+    min_buffer = limits.get("minimum_cash_buffer_vnd", 0) / 1_000_000
     liquid = (parts.get("Tiết kiệm ngân hàng") or 0) + (parts.get("Tiền mặt") or 0)
-    print(f"   Thanh khoản (tiết kiệm+mặt): {liquid:,.0f} tr = {liquid/total*100:.0f}% — quỹ dự phòng.")
+    print(f"   Thanh khoản (tiết kiệm+mặt): {liquid:,.0f} tr = {liquid/total*100:.0f}% tổng tài sản"
+          f" (quỹ dự phòng tối thiểu theo cấu hình: {min_buffer:,.0f} tr).")
+    if (parts.get("Tiền mặt") or 0) * 1_000_000 < limits.get("minimum_cash_buffer_vnd", 0):
+        print(f"   ⚠️ Tiền mặt hiện dưới mức tối thiểu cấu hình ({min_buffer:,.0f} tr).")
 
 
 if __name__ == "__main__":

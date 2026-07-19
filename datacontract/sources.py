@@ -29,14 +29,37 @@ DEFAULT_PRIORITY: dict[str, list[str]] = {
 }
 
 
-def priority_for(data_type: str, overrides: Optional[dict[str, list[str]]] = None) -> list[str]:
+def _load_config_overrides() -> tuple[set, dict[str, list[str]]]:
+    """Đọc config/source_priority.yaml (Phase 3) nếu có; fallback về mặc định
+    hard-code trong module này nếu chưa nạp được (VD chưa cài PyYAML, hoặc
+    gọi từ ngữ cảnh không có `portfolio` package trên sys.path)."""
+    try:
+        from portfolio.loader import load_source_priority
+
+        cfg = load_source_priority()
+        blocked = set(cfg.get("blocked_sources") or []) or set(BLOCKED_SOURCES)
+        priority = cfg.get("priority") or DEFAULT_PRIORITY
+        return blocked, priority
+    except Exception:
+        return set(BLOCKED_SOURCES), DEFAULT_PRIORITY
+
+
+def priority_for(
+    data_type: str, overrides: Optional[dict[str, list[str]]] = None, use_config: bool = True
+) -> list[str]:
     """Trả danh sách nguồn ưu tiên cho 1 loại dữ liệu, đã lọc bỏ nguồn bị chặn.
 
-    `overrides` (từ config/source_priority.yaml, Phase 3) thắng danh sách mặc định.
+    Thứ tự ưu tiên: `overrides` truyền tay > `config/source_priority.yaml`
+    (khi `use_config=True`, mặc định) > bảng mặc định hard-code trong module.
     """
-    table = overrides or DEFAULT_PRIORITY
+    if overrides is not None:
+        blocked, table = set(BLOCKED_SOURCES), overrides
+    elif use_config:
+        blocked, table = _load_config_overrides()
+    else:
+        blocked, table = set(BLOCKED_SOURCES), DEFAULT_PRIORITY
     chain = table.get(data_type, DEFAULT_PRIORITY.get(data_type, ["web_search_summary"]))
-    return [s for s in chain if s not in BLOCKED_SOURCES]
+    return [s for s in chain if s not in blocked]
 
 
 def is_blocked(source_name: str) -> bool:
