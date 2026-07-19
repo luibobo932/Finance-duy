@@ -1,6 +1,5 @@
 {
-  "_comment": "Mô hình quy đổi giá vàng thế giới -> giá tiệm vàng của chủ danh mục. Hiệu chuẩn từ 1 ảnh bảng giá tiệm; hệ thống ước tính giá tiệm real-time theo XAU/USD + tỷ giá. Khi giá tiệm lệch nhiều so ước tính, gửi ảnh mới để cập nhật 'calibration'.",
-  "luong_per_oz": 1.205656,
+  "_comment": "Mô hình quy đổi giá vàng thế giới -> giá tiệm vàng của chủ danh mục. Hiệu chuẩn từ 1 ảnh bảng giá tiệm; hệ thống ước tính giá tiệm real-time theo XAU/USD + tỷ giá qua gold/conversion.py (hằng số chính xác GRAMS_PER_TROY_OUNCE=31.1034768, không còn dùng luong_per_oz xấp xỉ ở đây nữa — Phase 4). Khi giá tiệm lệch nhiều so ước tính, gửi ảnh mới để cập nhật 'calibration' và chạy gold.xuan_trieu_model.record_calibration_point() để tích lũy data/normalized/xuan_trieu_gold_history.csv.",
   "method": "ratio",
   "calibration": {
     "date": "2026-07-18",

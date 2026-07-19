@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from gold.xuan_trieu_model import estimate as gold_estimate  # noqa: E402
 from portfolio.loader import load_portfolio, load_risk_limits  # noqa: E402
 
 ASSETS = ROOT / "data" / "assets.json"
@@ -44,18 +45,14 @@ def compute():
 
     price = None
     src = ""
-    # 1) Ưu tiên ước tính ĐỘNG theo giá vàng thế giới real-time (data/gold_model.json)
+    # 1) Ưu tiên ước tính ĐỘNG theo giá vàng thế giới real-time (gold/xuan_trieu_model.py)
     model = ROOT / "data" / "gold_model.json"
     if model.exists() and meta.get("gold_type") == "nhan":
-        try:
-            from gold_price import estimate
-        except ImportError:
-            sys.path.insert(0, str(ROOT / "scripts"))
-            from gold_price import estimate
-        est = estimate()
+        est = gold_estimate()
         if est:
-            price = est["shop_buy"]
-            src = f"ước tính động theo XAU {est['xauusd']}$ (hiệu chuẩn {est['shop']} {est['cal_date']})"
+            price = est.shop_buy_trieu
+            src = (f"ước tính động theo XAU {est.xau_usd}$ (hiệu chuẩn {est.shop_name} "
+                   f"{est.calibration_date}, độ tin cậy {est.confidence}, {est.sample_size} mẫu)")
     # 2) Fallback: giá tiệm trả cố định trong data/assets.json
     if price is None and meta.get("gold_buy_price_trieu"):
         price = meta["gold_buy_price_trieu"]

@@ -81,6 +81,15 @@ Số lượng tài sản và hạn mức rủi ro **không còn hard-code trong 
 
 ⚠️ **Phát hiện quan trọng sau khi wire risk_limits.yaml**: vàng của chủ dự án hiện chiếm 74,7% tài sản — đã vượt cả ngưỡng **CRITICAL (70%)**, không chỉ warning (60%) như cảnh báo cũ từng ghi.
 
+## Module Vàng (Phase 4)
+
+- `gold/conversion.py` — hằng số chính xác `GRAMS_PER_TROY_OUNCE = 31.1034768`, `GRAMS_PER_VIETNAMESE_TAEL = 37.5` (đã sửa sai số ~0,0003tr/lượng của bản xấp xỉ cũ)
+- `gold/xuan_trieu_model.py` — ước tính giá tiệm từ XAU/USD real-time, `record_calibration_point()` để tích lũy lịch sử, `mae()` tính sai số dự báo (trả `None` trung thực khi <2 mẫu, không bịa số)
+- `gold/indicators.py` — RSI/MACD/MA/Bollinger/volatility cho giá vàng, dùng chung `analytics/ta_core.py` với cổ phiếu; `trend_label()` chỉ trả **xu hướng thị trường thuần túy** (TICH_CUC/TIEU_CUC/TRUNG_TINH) — **hành động danh mục KHÔNG được quyết định ở đây**, đó là việc của Decision Engine (Phase 7)
+- `data/normalized/xuan_trieu_gold_history.csv` — lịch sử hiệu chuẩn (hiện 1 điểm, cần tích lũy thêm qua các lần chụp ảnh mới)
+- `scripts/gold_price.py` giờ là CLI mỏng gọi `gold/xuan_trieu_model.py`, giữ nguyên contract JSON cũ (tương thích ngược)
+- `analytics/ta_core.py` — công thức lõi (sma/ema/rsi/macd/bollinger/atr/volatility) dùng chung cho `scripts/indicators.py` và `gold/indicators.py`, tránh 2 bản cài đặt khác nhau
+
 ## Khung phân tích
 
 `docs/phuong-phap-phan-tich.md` — khung bắt buộc mọi bản tin phải áp dụng cho VCB/CTD:

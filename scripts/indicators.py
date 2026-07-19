@@ -15,6 +15,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from analytics.ta_core import bollinger, macd, rsi, sma  # noqa: E402
+
 EOD_DIR = ROOT / "data" / "eod"
 
 
@@ -32,65 +37,6 @@ def load_closes(path):
             except (ValueError, KeyError):
                 continue
     return rows
-
-
-def sma(vals, n):
-    return sum(vals[-n:]) / n if len(vals) >= n else None
-
-
-def ema_series(vals, n):
-    if len(vals) < n:
-        return []
-    k = 2 / (n + 1)
-    out = [sum(vals[:n]) / n]
-    for v in vals[n:]:
-        out.append(v * k + out[-1] * (1 - k))
-    return out
-
-
-def rsi(closes, n=14):
-    if len(closes) < n + 1:
-        return None
-    gains, losses = [], []
-    for i in range(1, len(closes)):
-        d = closes[i] - closes[i - 1]
-        gains.append(max(d, 0))
-        losses.append(max(-d, 0))
-    # Wilder smoothing
-    ag = sum(gains[:n]) / n
-    al = sum(losses[:n]) / n
-    for i in range(n, len(gains)):
-        ag = (ag * (n - 1) + gains[i]) / n
-        al = (al * (n - 1) + losses[i]) / n
-    if al == 0:
-        return 100.0
-    rs = ag / al
-    return round(100 - 100 / (1 + rs), 1)
-
-
-def macd(closes, fast=12, slow=26, signal=9):
-    if len(closes) < slow + signal:
-        return None
-    ef = ema_series(closes, fast)
-    es = ema_series(closes, slow)
-    # căn chỉnh độ dài
-    ef = ef[-len(es):]
-    macd_line = [a - b for a, b in zip(ef, es)]
-    sig = ema_series(macd_line, signal)
-    if not sig:
-        return None
-    m, s = macd_line[-1], sig[-1]
-    return {"macd": round(m, 2), "signal": round(s, 2), "hist": round(m - s, 2)}
-
-
-def bollinger(closes, n=20, k=2):
-    if len(closes) < n:
-        return None
-    window = closes[-n:]
-    mid = sum(window) / n
-    var = sum((x - mid) ** 2 for x in window) / n
-    sd = var ** 0.5
-    return {"mid": round(mid, 1), "upper": round(mid + k * sd, 1), "lower": round(mid - k * sd, 1)}
 
 
 def analyze(path):
