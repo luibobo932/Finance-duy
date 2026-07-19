@@ -111,6 +111,18 @@ Số lượng tài sản và hạn mức rủi ro **không còn hard-code trong 
 
 ⚠️ **Rủi ro dữ liệu lớn nhất của Phase 6** (đã ghi từ Audit): `api.hsx.vn`/`services.entrade.com.vn` vẫn bị chặn mạng — `equity/market.py` và `equity/technical.py` nhận input do caller cung cấp (WebSearch hoặc CSV thủ công), không tự fetch được.
 
+## Decision Engine & Risk Officer (Phase 7) — quan trọng nhất
+
+Đây là nơi **DUY NHẤT** trong hệ thống được tạo ra kết luận GIỮ/CHỐT BỚT/... Trước Phase 7, mọi kết luận là AI viết văn xuôi trong bản tin — giờ phải qua rule engine bằng code.
+
+- `decision/action_mapper.py` — 9 action nội bộ (HOLD/TAKE_PARTIAL_PROFIT/DO_NOT_BUY_MORE/DEPOSIT/BUY_SMALL/WATCH/WAIT_FOR_CONFIRMATION/STAND_ASIDE/NO_DECISION) ánh xạ sang 7 nhãn tiếng Việt chuẩn; `NO_DECISION` → đúng nguyên văn `"CHƯA ĐỦ DỮ LIỆU ĐỂ RA QUYẾT ĐỊNH"`
+- `decision/risk_officer.py` — **có quyền phủ quyết**. 7 veto rule chuẩn (`stale_critical_data`, `conflicting_critical_sources`, `gold_concentration_critical`, `governance_red_flag`, `insufficient_liquidity`, `missing_financial_data`, `abnormal_price_data`) + downgrade mềm (`gold_concentration_warning` → tự đổi đề xuất mua thành CHỐT BỚT). Nguyên tắc: `approved = (final_action == original_action)`.
+- `decision/confidence_score.py` — tính điểm 0-100 bằng công thức có trọng số tường minh (đầy đủ 25% + mới 20% + đồng thuận tín hiệu 25% + lịch sử 15% + không xung đột 10% + rủi ro thấp 5%), không phải AI tự chấm điểm
+- `decision/policy_engine.py` — `decide()`: kết hợp xu hướng kỹ thuật + cơ bản + dòng tiền → đề xuất ban đầu → bắt buộc qua Risk Officer → output chuẩn `{asset, action, confidence, reasons, risks, conditions_to_change, data_quality, risk_veto}`. Đã sửa 1 lỗi trước khi commit: confidence phải nhất quán với `data_quality` (không được báo "POOR" mà vẫn cho điểm tin cậy cao)
+- `scripts/decide.py` — demo chạy **thật** với dữ liệu tài sản hiện tại: `python3 scripts/decide.py gold TICH_CUC`
+
+**Đã verify bằng chính kịch bản thật của chủ dự án**: vàng 74,7% + xu hướng TÍCH CỰC → hệ thống tự động trả về **"KHÔNG MUA THÊM"** (risk_veto=true), đúng yêu cầu gốc "nếu vàng ≥70% thì không cho phép đề xuất mua thêm vàng".
+
 ## Khung phân tích
 
 `docs/phuong-phap-phan-tich.md` — khung bắt buộc mọi bản tin phải áp dụng cho VCB/CTD:
