@@ -54,6 +54,7 @@ Routine chiều thứ Sáu tự thêm mục **Tổng kết tuần**. Cả hai ro
 | `watchlist.py` + `data/watchlist.json` | Theo dõi hiệu suất danh mục giả lập Buffett-list |
 | `networth.py` + `data/assets.json` | Tài sản ròng thực tế (vàng/tiết kiệm/mặt/cổ phiếu) + phân bổ + cảnh báo tập trung |
 | `gold_price.py` + `data/gold_model.json` | Ước tính giá vàng nhẫn tại tiệm theo XAU/USD real-time (hiệu chuẩn từ 1 ảnh bảng giá); networth tự dùng để định giá vàng động |
+| `health_check.py` | Health check (Phase 10): freshness dữ liệu + vệ sinh an ninh (.env, quét secret); exit 1 khi FAIL — dùng được trong automation |
 
 Xem `docs/ROADMAP.md` cho trạng thái toàn bộ 12 hạng mục phát triển và việc cần người dùng cung cấp.
 
@@ -124,6 +125,16 @@ Số lượng tài sản và hạn mức rủi ro **không còn hard-code trong 
 - `scripts/decide.py` — demo chạy **thật** với dữ liệu tài sản hiện tại: `python3 scripts/decide.py gold TICH_CUC`
 
 **Đã verify bằng chính kịch bản thật của chủ dự án**: vàng 74,7% + xu hướng TÍCH CỰC → hệ thống tự động trả về **"KHÔNG MUA THÊM"** (risk_veto=true), đúng yêu cầu gốc "nếu vàng ≥70% thì không cho phép đề xuất mua thêm vàng".
+
+## Health check & an ninh (Phase 10)
+
+`python3 scripts/health_check.py` (hoặc `--json`) kiểm tra một lượt:
+
+- **Freshness dữ liệu**: history.jsonl (≤2 ngày), EOD VCB/CTD (≤4 ngày — nới cho cuối tuần), lãi suất chuẩn hóa (≤7 ngày), hiệu chuẩn vàng tiệm (≤30 ngày). Cũ quá ngưỡng → WARN, thiếu hẳn → FAIL.
+- **An ninh**: `.env` không bị git track + có trong `.gitignore`; quét pattern token Telegram trong toàn bộ file được track.
+- Exit code 1 khi có FAIL → gắn được vào automation/routine như một guard.
+
+Security review 20/07/2026: `.env` sạch (không track, đã ignore), 100 file được track không chứa secret, log chỉ ghi message_id (không ghi token).
 
 ## Decision review & backtest nâng cấp (Phase 9)
 
