@@ -20,7 +20,7 @@
       "ticker": "VCB",
       "group": "A",
       "base_price": 58.5,
-      "last_price": 58.5,
+      "last_price": 57.4,
       "moat": "Chi phí vốn rẻ nhất hệ thống"
     },
     {
@@ -48,7 +48,7 @@
       "ticker": "MWG",
       "group": "B",
       "base_price": 76.7,
-      "last_price": 76.7,
+      "last_price": 75.2,
       "moat": "Chuỗi bán lẻ số 1"
     },
     {
@@ -76,7 +76,7 @@
       "ticker": "CTD",
       "group": "B",
       "base_price": 63.5,
-      "last_price": 63.5,
+      "last_price": 59.1,
       "moat": "Tổng thầu, backlog kỷ lục"
     }
   ]
