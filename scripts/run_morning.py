@@ -89,6 +89,7 @@ def send_telegram_report(text: str) -> None:
     stdout (kênh chính, luôn phải chạy được)."""
     from common import get_logger
     from common.env import get_env
+    from notifications.formatting import to_telegram_html
     from notifications.telegram import TelegramError, send_message
 
     logger = get_logger("bulletin_telegram")
@@ -98,7 +99,13 @@ def send_telegram_report(text: str) -> None:
         logger.info("Bỏ qua gửi Telegram: chưa cấu hình TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID trong .env")
         return
     try:
-        result = send_message(token, chat_id, text)
+        # Bản đẹp (HTML: icon + in đậm); nếu Telegram từ chối parse HTML vì
+        # ký tự bất ngờ nào đó thì fallback text thô — bản tin phải luôn tới.
+        try:
+            result = send_message(token, chat_id, to_telegram_html(text), parse_mode="HTML")
+        except TelegramError as e:
+            logger.warning(f"Gửi bản HTML thất bại ({e}) — fallback text thô")
+            result = send_message(token, chat_id, text)
         logger.info("Đã gửi bản tin qua Telegram",
                      extra={"extra_fields": {"message_id": result.get("message_id")}})
     except TelegramError as e:
