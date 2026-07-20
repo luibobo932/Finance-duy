@@ -45,6 +45,7 @@ Routine chiều thứ Sáu tự thêm mục **Tổng kết tuần**. Cả hai ro
 |---|---|
 | `trend.py` | Lịch sử snapshot + so sánh xu hướng + lãi/lỗ danh mục |
 | `tick.py` | Phát hiện gom hàng qua lệnh lớn tròn số lặp lại (cần dữ liệu khớp lệnh) |
+| `fetch_eod.py` | Tải EOD thật từ `services.entrade.com.vn` (bị chặn network policy trong sandbox claude.ai, đã xác nhận mở được trên laptop local), gộp vào `data/eod/<MÃ>.csv` |
 | `indicators.py` | RSI(14), MACD, SMA/EMA 20/50/200, Bollinger từ `data/eod/<MÃ>.csv` |
 | `backtest.py` | Backtest quy tắc (MA cross…) trên dữ liệu EOD |
 | `alerts.py` + `data/alerts.json` | Cảnh báo ngưỡng giá VCB/CTD/vàng bị chạm |

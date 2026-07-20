@@ -1,13 +1,13 @@
 # Roadmap phát triển — trạng thái 12 ý tưởng
 
-Cập nhật 18/07/2026. ✅ = đã xây & test xong · 🟡 = có công cụ, chờ dữ liệu/đầu vào người dùng · ⬜ = chưa làm.
+Cập nhật 20/07/2026. ✅ = đã xây & test xong · 🟡 = có công cụ, chờ dữ liệu/đầu vào người dùng · ⬜ = chưa làm.
 
 ## Nhóm 1 — Dữ liệu chuẩn
 
 | # | Ý tưởng | Trạng thái | Ghi chú |
 |---|---|---|---|
-| 1 | Nguồn dữ liệu giá duy nhất | 🟡 | `scripts/indicators.py` + `data/eod/<MÃ>.csv` đã sẵn sàng. **Cần**: mở network policy cho `api.hsx.vn`/`services.entrade.com.vn`, hoặc Codex bơm CSV EOD 20+ phiên. Khi có dữ liệu, RSI/MACD/MA/Bollinger tự tính. |
-| 2 | Tick data thật cho CTD | 🟡 | `scripts/tick.py` đã có (đếm lệnh tròn số lặp). **Cần**: API FireAnt/SSI hoặc file khớp lệnh CSV. |
+| 1 | Nguồn dữ liệu giá duy nhất | ✅ | **Đã xác nhận `services.entrade.com.vn` KHÔNG bị chặn trên laptop local** (2026-07-20) — chỉ bị chặn network policy trong claude.ai sandbox. `scripts/fetch_eod.py` (mới) gọi API `chart-api/v2/ohlcs/stock?...&resolution=1D` thật, gộp vào `data/eod/<MÃ>.csv`. Đã tải 27 phiên thật cho VCB và CTD (17/6–17/7/2026), `scripts/indicators.py` tự tính RSI/MACD/MA20/Bollinger từ dữ liệu thật. Vẫn cần thêm ~173 phiên để đủ MA200. |
+| 2 | Tick data thật cho CTD | ✅ | `scripts/tick.py fetch CTD <ngày>` đã chạy được thật trên laptop local (cùng domain entrade, nến 1 phút — **vẫn là proxy gần đúng, không phải từng lệnh khớp thật**, đúng như tài liệu đã ghi). Test 17/7/2026: 171 bản ghi, không phát hiện bất thường. |
 | 3 | Backtest quy tắc | ✅ | `scripts/backtest.py` (MA cross, mở rộng được). Chạy khi `data/eod/` đủ dài. |
 
 ## Nhóm 2 — Cảnh báo & lịch
@@ -37,7 +37,7 @@ Cập nhật 18/07/2026. ✅ = đã xây & test xong · 🟡 = có công cụ, c
 ## Cần người dùng / admin
 
 - [ ] **Giá vốn VCB, CTD** → `data/portfolio.json` (bật lãi/lỗ thật)
-- [ ] **Mở network policy** cho nguồn giá → bật chỉ báo kỹ thuật tự động (mục 1, 3)
-- [ ] **File khớp lệnh CTD** hoặc API key → soi lệnh nội bộ (mục 2)
+- [x] **Mở network policy** cho nguồn giá → ĐÃ XONG trên laptop local (2026-07-20), `scripts/fetch_eod.py` chạy thật (mục 1, 3). Vẫn cần chạy định kỳ để tích lũy đủ 200 phiên cho MA200.
+- [x] **File khớp lệnh CTD** hoặc API key → ĐÃ XONG trên laptop local, `scripts/tick.py fetch` dùng cùng nguồn entrade (proxy nến 1 phút, mục 2)
 - [ ] **Routine có connector** (tạo từ UI claude.ai) → email/calendar tự động (mục 5, 6)
-- [ ] **Mở network policy cho `api.telegram.org`** → bật gửi bản tin qua Telegram bot `@Tintucstock_bot` (mục 12, code đã sẵn sàng)
+- [ ] **TELEGRAM_BOT_TOKEN thật** trong `.env` local (không có trong git) → cần chủ dự án cung cấp lại để chạy `notifications/telegram.py whoami`/`send` trên laptop này (mục 12, xem README)
