@@ -69,8 +69,10 @@ def test_env_hygiene_ok():
 
 
 def test_find_secret_leaks_detects_telegram_token():
-    # Token GIẢ đúng định dạng BotFather — tuyệt đối không dùng token thật ở đây
-    files = {"docs/x.md": "token la 1234567890:FAKEtoken_abcdefghijklmnopqrstuvwx day"}
+    # Token GIẢ đúng định dạng BotFather, GHÉP CHUỖI lúc chạy — để chính file
+    # test này không khớp pattern khi health_check quét file nguồn được track
+    fake_token = "1234567890" + ":" + "FAKEtoken_abcdefghijklmnopqrstuvwx"
+    files = {"docs/x.md": f"token la {fake_token} day"}
     leaks = find_secret_leaks(files)
     assert leaks == ["docs/x.md"]
 
