@@ -21,7 +21,10 @@ sys.path.insert(0, str(ROOT / "scripts"))
 HIST = ROOT / "data" / "history.jsonl"
 
 # Import lại các hàm section dùng chung với bản tin sáng để không lặp code
-from run_morning import section_alerts, section_tai_san, section_tien_gui, section_tong_quan, section_vang  # noqa: E402
+from run_morning import (  # noqa: E402
+    section_alerts, section_tai_san, section_tien_gui, section_tong_quan, section_vang,
+    send_telegram_report,
+)
 
 
 def load_history() -> list[dict]:
@@ -57,12 +60,14 @@ def main():
     deposit_rates = load_normalized()
     ranked_deposits = rank(deposit_rates) if deposit_rates else []
 
-    print(f"# BẢN TIN ĐẦU TƯ CHIỀU — {port.updated}\n")
-    print(section_tong_quan(gold_decision), "\n")
-    print(section_tai_san({"parts": parts, "total": total}), "\n")
-    print(section_vang(est, gold_decision), "\n")
-    print(section_tien_gui(ranked_deposits), "\n")
-    print(section_alerts(), "\n")
+    sections = [
+        f"# BẢN TIN ĐẦU TƯ CHIỀU — {port.updated}",
+        section_tong_quan(gold_decision),
+        section_tai_san({"parts": parts, "total": total}),
+        section_vang(est, gold_decision),
+        section_tien_gui(ranked_deposits),
+        section_alerts(),
+    ]
 
     # Mục bắt buộc: so với bản tin trước (kỳ liền trước trong history.jsonl,
     # thường là bản sáng cùng ngày)
@@ -72,13 +77,18 @@ def main():
         # Không có lịch sử quyết định lưu lại theo kỳ ở bước này (Phase 9 sẽ
         # lưu vào journal) -> chỉ so market, không so quyết định (trung thực
         # về giới hạn hiện tại thay vì giả vờ so sánh được).
-        print(format_diff_section(market_changes, []), "\n")
+        sections.append(format_diff_section(market_changes, []))
     else:
-        print("## THAY ĐỔI SO VỚI BẢN TIN TRƯỚC\n\nChưa đủ 2 kỳ trong lịch sử để so sánh.\n")
+        sections.append("## THAY ĐỔI SO VỚI BẢN TIN TRƯỚC\n\nChưa đủ 2 kỳ trong lịch sử để so sánh.")
+
+    for s in sections:
+        print(s, "\n")
 
     from reporting import render_dashboard
 
     render_dashboard.main()
+
+    send_telegram_report("\n\n".join(sections))
 
 
 if __name__ == "__main__":

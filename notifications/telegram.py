@@ -44,11 +44,19 @@ class TelegramError(RuntimeError):
 
 def _call(token: str, method: str, params: dict | None = None) -> dict:
     url = API_BASE.format(token=token, method=method)
-    data = urllib.parse.urlencode(params or {}).encode()
+    data = urllib.parse.urlencode(params or {}).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers={"User-Agent": "Mozilla/5.0"})
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             body = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        # Telegram trả lỗi 4xx/5xx kèm mô tả cụ thể trong body (VD: markdown
+        # không hợp lệ) — đọc body thật thay vì báo nhầm thành "network bị chặn".
+        try:
+            detail = json.loads(e.read()).get("description", str(e))
+        except Exception:
+            detail = str(e)
+        raise TelegramError(f"Telegram API báo lỗi: {detail}") from e
     except urllib.error.URLError as e:
         raise TelegramError(f"{NETWORK_HINT}\nChi tiết lỗi: {e}") from e
     if not body.get("ok"):
@@ -68,11 +76,18 @@ def find_latest_chat_id(updates: list[dict]) -> int | None:
     return None
 
 
-def send_message(token: str, chat_id: int | str, text: str, parse_mode: str = "Markdown") -> dict:
+def send_message(token: str, chat_id: int | str, text: str, parse_mode: str | None = None) -> dict:
     # Telegram giới hạn 4096 ký tự/tin nhắn — cắt bớt an toàn nếu vượt
     if len(text) > 4000:
         text = text[:3990] + "\n\n…(cắt bớt, xem đầy đủ trong bản tin gốc)"
-    return _call(token, "sendMessage", {"chat_id": chat_id, "text": text, "parse_mode": parse_mode})
+    # Mặc định KHÔNG dùng parse_mode: nội dung bản tin luôn chứa ký tự đặc
+    # biệt không kiểm soát được (VD nhãn "TRUNG_TINH", "DO_NOT_BUY_MORE") —
+    # Markdown (legacy) của Telegram coi "_"/"*" lẻ cặp là lỗi cú pháp và từ
+    # chối gửi cả tin. Gửi trung thực nội dung > định dạng đẹp.
+    params = {"chat_id": chat_id, "text": text}
+    if parse_mode:
+        params["parse_mode"] = parse_mode
+    return _call(token, "sendMessage", params)
 
 
 def _save_chat_id(chat_id: int) -> None:

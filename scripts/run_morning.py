@@ -81,6 +81,30 @@ def section_tien_gui(ranked: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def send_telegram_report(text: str) -> None:
+    """Gửi bản tin qua Telegram nếu .env đã cấu hình đủ TOKEN + CHAT_ID.
+
+    Đây là kênh phụ trợ — thất bại (chưa cấu hình, mất mạng...) chỉ log cảnh
+    báo qua common/logsetup, KHÔNG được làm gián đoạn việc in bản tin ra
+    stdout (kênh chính, luôn phải chạy được)."""
+    from common import get_logger
+    from common.env import get_env
+    from notifications.telegram import TelegramError, send_message
+
+    logger = get_logger("bulletin_telegram")
+    token = get_env("TELEGRAM_BOT_TOKEN")
+    chat_id = get_env("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        logger.info("Bỏ qua gửi Telegram: chưa cấu hình TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID trong .env")
+        return
+    try:
+        result = send_message(token, chat_id, text)
+        logger.info("Đã gửi bản tin qua Telegram",
+                     extra={"extra_fields": {"message_id": result.get("message_id")}})
+    except TelegramError as e:
+        logger.warning(f"Gửi Telegram thất bại: {e}")
+
+
 def section_alerts() -> str:
     from alerts import load as load_alerts  # scripts/alerts.py
 
@@ -139,17 +163,23 @@ def main():
     deposit_rates = load_normalized()
     ranked_deposits = rank(deposit_rates) if deposit_rates else []
 
-    print(f"# BẢN TIN ĐẦU TƯ SÁNG — {port.updated}\n")
-    print(section_tong_quan(gold_decision), "\n")
-    print(section_tai_san({"parts": parts, "total": total}), "\n")
-    print(section_vang(est, gold_decision), "\n")
-    print(section_tien_gui(ranked_deposits), "\n")
-    print(section_alerts(), "\n")
+    sections = [
+        f"# BẢN TIN ĐẦU TƯ SÁNG — {port.updated}",
+        section_tong_quan(gold_decision),
+        section_tai_san({"parts": parts, "total": total}),
+        section_vang(est, gold_decision),
+        section_tien_gui(ranked_deposits),
+        section_alerts(),
+    ]
+    for s in sections:
+        print(s, "\n")
 
     # Sinh lại dashboard tự động
     from reporting import render_dashboard
 
     render_dashboard.main()
+
+    send_telegram_report("\n\n".join(sections))
 
 
 if __name__ == "__main__":
