@@ -1,5 +1,11 @@
 # Tài liệu bàn giao dự án — Bản tin Đầu tư tự động
 
+> ⚠️ **CŨ — chỉ còn giá trị lịch sử.** File này viết trước đợt tái cấu trúc lớn
+> (Phase 1-8: Data Contract, `config/*.yaml`, module `gold/`, `deposits/`,
+> `equity/`, `decision/` + Risk Officer, `reporting/`, Telegram). **Đọc
+> `README.md` (mục lục đầy đủ, cập nhật) và `docs/ROADMAP.md` (trạng thái 12
+> hạng mục) trước — chỉ quay lại đây nếu cần bối cảnh quy trình thủ công ban đầu.**
+
 Tài liệu này đủ để một agent/dev khác (Codex, v.v.) tiếp quản và tái dựng toàn bộ hệ thống.
 
 ## Hệ thống làm gì
