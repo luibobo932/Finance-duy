@@ -75,6 +75,21 @@ def parse_ohlc_response(data: dict) -> list[dict]:
     return rows
 
 
+MARKET_CLOSE_HOUR = 15  # HOSE đóng cửa 14:45, chốt 15:00 giờ VN
+
+
+def drop_incomplete_today(rows: list[dict], now: datetime) -> list[dict]:
+    """Bỏ bar của NGÀY HÔM NAY nếu phiên chưa đóng cửa (trước 15h giờ VN).
+
+    API entrade trả cả nến ngày đang giao dịch dở — nếu ghi vào data/eod,
+    RSI/MACD/MA sẽ tính trên nến chưa hoàn chỉnh rồi cho tín hiệu sai lệch.
+    Dữ liệu thiếu trung thực hơn dữ liệu nửa vời (data contract)."""
+    today = now.astimezone(VN).strftime("%Y-%m-%d")
+    if now.astimezone(VN).hour >= MARKET_CLOSE_HOUR:
+        return rows
+    return [r for r in rows if r["date"] != today]
+
+
 def load_existing(path: Path) -> list[dict]:
     if not path.exists():
         return []
@@ -119,7 +134,7 @@ def fetch_and_update(symbol: str, days: int, now: Optional[datetime] = None) -> 
     frm = int((now - timedelta(days=days)).timestamp())
     to = int(now.timestamp())
     raw = fetch_ohlc_raw(symbol, frm, to)
-    new_rows = parse_ohlc_response(raw)
+    new_rows = drop_incomplete_today(parse_ohlc_response(raw), now)
     path = EOD_DIR / f"{symbol.upper()}.csv"
     merged = merge_rows(load_existing(path), new_rows)
     write_csv(path, merged)

@@ -1,7 +1,9 @@
 """Test cho scripts/fetch_eod.py — chỉ phần logic thuần túy (parse/merge/csv),
 không gọi mạng thật (services.entrade.com.vn có thể bị chặn network policy
 tùy môi trường — xem docs/ROADMAP.md mục 1)."""
-from fetch_eod import load_existing, merge_rows, parse_ohlc_response, write_csv
+from datetime import datetime
+
+from fetch_eod import VN, drop_incomplete_today, load_existing, merge_rows, parse_ohlc_response, write_csv
 
 
 def test_parse_ohlc_response_converts_epoch_to_date():
@@ -59,3 +61,27 @@ def test_write_csv_then_load_existing_roundtrip(tmp_path):
 
 def test_load_existing_missing_file_returns_empty(tmp_path):
     assert load_existing(tmp_path / "nope.csv") == []
+
+
+def _row(date: str) -> dict:
+    return {"date": date, "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1}
+
+
+def test_drop_incomplete_today_removes_todays_bar_before_market_close():
+    # 10h sáng giờ VN 20/7 — phiên đang chạy, nến ngày 20/7 chưa hoàn chỉnh
+    now = datetime(2026, 7, 20, 10, 0, tzinfo=VN)
+    rows = [_row("2026-07-17"), _row("2026-07-20")]
+    assert [r["date"] for r in drop_incomplete_today(rows, now)] == ["2026-07-17"]
+
+
+def test_drop_incomplete_today_keeps_todays_bar_after_market_close():
+    # 15h30 giờ VN — HOSE đã đóng cửa, nến ngày là chính thức
+    now = datetime(2026, 7, 20, 15, 30, tzinfo=VN)
+    rows = [_row("2026-07-17"), _row("2026-07-20")]
+    assert [r["date"] for r in drop_incomplete_today(rows, now)] == ["2026-07-17", "2026-07-20"]
+
+
+def test_drop_incomplete_today_never_touches_past_dates():
+    now = datetime(2026, 7, 20, 9, 0, tzinfo=VN)
+    rows = [_row("2026-07-16"), _row("2026-07-17")]
+    assert drop_incomplete_today(rows, now) == rows
