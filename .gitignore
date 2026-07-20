@@ -3,3 +3,4 @@ __pycache__/
 .env
 logs/*.jsonl
 .pytest_cache/
+logs/*.log
