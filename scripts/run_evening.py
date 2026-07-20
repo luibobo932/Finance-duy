@@ -22,8 +22,8 @@ HIST = ROOT / "data" / "history.jsonl"
 
 # Import lại các hàm section dùng chung với bản tin sáng để không lặp code
 from run_morning import (  # noqa: E402
-    section_alerts, section_tai_san, section_tien_gui, section_tong_quan, section_vang,
-    send_telegram_report,
+    run_gold_decision, section_alerts, section_tai_san, section_tien_gui, section_tong_quan,
+    section_vang, send_telegram_report,
 )
 
 
@@ -34,28 +34,12 @@ def load_history() -> list[dict]:
 
 
 def main():
-    from decision.policy_engine import DecisionInput, decide
-    from decision.risk_officer import RiskContext
     from deposits.ranking import load_normalized, rank
-    from gold.indicators import analyze as gold_analyze
-    from gold.indicators import trend_label as gold_trend_label
     from gold.xuan_trieu_model import estimate as gold_estimate
-    from networth import compute as compute_networth
-    from portfolio.loader import load_decision_rules, load_risk_limits
     from reporting.diff_report import compare_snapshots, format_diff_section
 
-    port, _limits_unused, meta, parts, total, gold_price, gold_src = compute_networth()
-    limits = load_risk_limits()
-    rules = load_decision_rules()
+    port, parts, total, gold_decision = run_gold_decision(ky="chieu")
     est = gold_estimate()
-    gold_pct = (parts.get("Vàng") or 0) / total if total else None
-    trend = gold_trend_label(gold_analyze())
-    gold_decision = None
-    if gold_pct is not None:
-        gold_decision = decide(
-            DecisionInput(asset="Vàng nhẫn", asset_class="gold", trend_label=trend),
-            RiskContext(gold_allocation_pct=gold_pct), limits, rules,
-        )
 
     deposit_rates = load_normalized()
     ranked_deposits = rank(deposit_rates) if deposit_rates else []

@@ -137,28 +137,53 @@ def section_alerts() -> str:
     return "\n".join(lines)
 
 
-def main():
+def run_gold_decision(ky: str):
+    """Chạy Decision Engine cho vàng + ghi quyết định vào data/decisions.jsonl.
+
+    Phase 9: (1) accuracy từ decision review (nếu đủ ≥5 mẫu đã chấm) được nạp
+    vào trọng số lịch sử của confidence score — hệ thống tự "biết" nó đoán
+    đúng bao nhiêu; (2) mỗi quyết định được lưu bất biến kèm giá tham chiếu
+    tại thời điểm đó để review sau này (chống look-ahead: dup-guard theo
+    date+ky+asset, không ghi đè lịch sử)."""
+    from analytics.decision_review import historical_accuracy_for_confidence, review_all, summarize
+    from decision.decision_log import append_decision, build_entry, load_decisions
     from decision.policy_engine import DecisionInput, decide
     from decision.risk_officer import RiskContext
-    from deposits.ranking import load_normalized, rank
     from gold.indicators import analyze as gold_analyze
     from gold.indicators import trend_label as gold_trend_label
-    from gold.xuan_trieu_model import estimate as gold_estimate
     from networth import compute as compute_networth
     from portfolio.loader import load_decision_rules, load_risk_limits
 
     port, _limits_unused, meta, parts, total, gold_price, gold_src = compute_networth()
     limits = load_risk_limits()
     rules = load_decision_rules()
-    est = gold_estimate()
     gold_pct = (parts.get("Vàng") or 0) / total if total else None
     trend = gold_trend_label(gold_analyze())
+
+    hist = load_history()
+    past_decisions = load_decisions()
+    hist_acc = None
+    if past_decisions:
+        hist_acc = historical_accuracy_for_confidence(summarize(review_all(past_decisions, hist)))
+
     gold_decision = None
     if gold_pct is not None:
         gold_decision = decide(
-            DecisionInput(asset="Vàng nhẫn", asset_class="gold", trend_label=trend),
+            DecisionInput(asset="Vàng nhẫn", asset_class="gold", trend_label=trend,
+                          historical_accuracy_pct=hist_acc),
             RiskContext(gold_allocation_pct=gold_pct), limits, rules,
         )
+        if hist:
+            append_decision(build_entry(gold_decision, asset_class="gold", ky=ky, snapshot=hist[-1]))
+    return port, parts, total, gold_decision
+
+
+def main():
+    from deposits.ranking import load_normalized, rank
+    from gold.xuan_trieu_model import estimate as gold_estimate
+
+    port, parts, total, gold_decision = run_gold_decision(ky="sang")
+    est = gold_estimate()
 
     deposit_rates = load_normalized()
     ranked_deposits = rank(deposit_rates) if deposit_rates else []

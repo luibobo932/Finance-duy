@@ -23,7 +23,7 @@ Cập nhật 20/07/2026. ✅ = đã xây & test xong · 🟡 = có công cụ, c
 | # | Ý tưởng | Trạng thái | Ghi chú |
 |---|---|---|---|
 | 7 | Định giá theo quý | 🟡 | Khung trong `docs/phuong-phap-phan-tich.md`. Kích hoạt khi KQKD Q2 ra (cuối tháng 7). |
-| 8 | Nhật ký giao dịch | ✅ | `scripts/journal.py` + `data/journal.jsonl`. Ghi lệnh, tính win-rate, cảnh báo lệnh đi ngược khuyến nghị. **Bạn dùng**: nhắn mỗi lần mua/bán. |
+| 8 | Nhật ký giao dịch | ✅ | `scripts/journal.py` + `data/journal.jsonl`. Ghi lệnh, tính win-rate, cảnh báo lệnh đi ngược khuyến nghị. **Bạn dùng**: nhắn mỗi lần mua/bán. **Phase 9 bổ sung**: `scripts/review.py` + `data/decisions.jsonl` — hệ thống tự ghi mọi quyết định của Decision Engine và đối chiếu với giá thực tế sau đó (chống look-ahead), accuracy nạp ngược vào confidence score. |
 | 9 | Danh mục giả lập Buffett-list | ✅ | `scripts/watchlist.py` + `data/watchlist.json`. Theo dõi 11 mã so ngày lập. Cần cập nhật giá định kỳ. |
 
 ## Nhóm 4 — Trải nghiệm

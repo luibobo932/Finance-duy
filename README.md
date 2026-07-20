@@ -50,6 +50,7 @@ Routine chiều thứ Sáu tự thêm mục **Tổng kết tuần**. Cả hai ro
 | `backtest.py` | Backtest quy tắc (MA cross…) trên dữ liệu EOD |
 | `alerts.py` + `data/alerts.json` | Cảnh báo ngưỡng giá VCB/CTD/vàng bị chạm |
 | `journal.py` + `data/journal.jsonl` | Nhật ký giao dịch cá nhân: win-rate, đối chiếu khuyến nghị |
+| `review.py` + `data/decisions.jsonl` | Decision review (Phase 9): đối chiếu quyết định Decision Engine với giá thực tế sau đó, chống look-ahead |
 | `watchlist.py` + `data/watchlist.json` | Theo dõi hiệu suất danh mục giả lập Buffett-list |
 | `networth.py` + `data/assets.json` | Tài sản ròng thực tế (vàng/tiết kiệm/mặt/cổ phiếu) + phân bổ + cảnh báo tập trung |
 | `gold_price.py` + `data/gold_model.json` | Ước tính giá vàng nhẫn tại tiệm theo XAU/USD real-time (hiệu chuẩn từ 1 ảnh bảng giá); networth tự dùng để định giá vàng động |
@@ -123,6 +124,17 @@ Số lượng tài sản và hạn mức rủi ro **không còn hard-code trong 
 - `scripts/decide.py` — demo chạy **thật** với dữ liệu tài sản hiện tại: `python3 scripts/decide.py gold TICH_CUC`
 
 **Đã verify bằng chính kịch bản thật của chủ dự án**: vàng 74,7% + xu hướng TÍCH CỰC → hệ thống tự động trả về **"KHÔNG MUA THÊM"** (risk_veto=true), đúng yêu cầu gốc "nếu vàng ≥70% thì không cho phép đề xuất mua thêm vàng".
+
+## Decision review & backtest nâng cấp (Phase 9)
+
+Hệ thống giờ TỰ THEO DÕI thành tích khuyến nghị của chính nó:
+
+- `decision/decision_log.py` — mỗi lần `run_morning.py`/`run_evening.py` gọi Decision Engine, quyết định được ghi **bất biến** vào `data/decisions.jsonl` kèm giá tham chiếu tại đúng thời điểm đó (chặn ghi trùng ngày+kỳ+tài sản, không bao giờ ghi đè lịch sử)
+- `analytics/decision_review.py` — đối chiếu quyết định cũ với giá thực tế SAU đó. **Chống look-ahead-bias là ràng buộc cứng**: chỉ dùng snapshot có kỳ lớn hơn hẳn (sáng < chiều), chỉ so cùng trường giá đã ghi lúc quyết định. Chỉ chấm đúng/sai cho hành động có định hướng giá (MUA THĂM DÒ kỳ vọng tăng, CHỐT BỚT kỳ vọng giảm); GIỮ/KHÔNG MUA THÊM là quản trị rủi ro — trung thực ghi "không chấm điểm" thay vì bịa tiêu chí
+- Accuracy lịch sử (khi đủ ≥5 quyết định đã chấm) tự nạp ngược vào trọng số "lịch sử 15%" của confidence score — hệ thống tự biết nó đoán đúng bao nhiêu
+- `scripts/review.py` — CLI xem bảng review + tổng kết (`--json` để nhúng bản tin)
+- `scripts/backtest.py` nâng cấp: thêm quy tắc RSI (`--rule rsi`, ngưỡng `--buy-th`/`--sell-th`), phí giao dịch (`--fee 0.15` %/chiều), dùng chung `analytics/ta_core.py`; tín hiệu tại phiên i chỉ tính từ dữ liệu tới phiên i
+- `scripts/fetch_eod.py` có guard nến chưa đóng cửa: trước 15h giờ VN không ghi bar của ngày hôm nay (nến dở dang làm chỉ báo sai lệch)
 
 ## Bản tin & Dashboard tự sinh (Phase 8)
 
