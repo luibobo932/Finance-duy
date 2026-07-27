@@ -1,3 +1,4 @@
 {"date": "2026-07-20", "ky": "sang", "asset": "Vàng nhẫn", "asset_class": "gold", "action": "HOLD", "action_vi": "GIỮ", "confidence": 92, "risk_veto": false, "data_quality": "GOOD", "ref_price_field": "ring_sell", "ref_price": 145.0}
 {"date": "2026-07-20", "ky": "chieu", "asset": "Vàng nhẫn", "asset_class": "gold", "action": "HOLD", "action_vi": "GIỮ", "confidence": 92, "risk_veto": false, "data_quality": "GOOD", "ref_price_field": "ring_sell", "ref_price": 145.0}
 {"date": "2026-07-22", "ky": "chieu", "asset": "Vàng nhẫn", "asset_class": "gold", "action": "HOLD", "action_vi": "GIỮ", "confidence": 92, "risk_veto": false, "data_quality": "GOOD", "ref_price_field": "ring_sell", "ref_price": 147.5}
+{"date": "2026-07-27", "ky": "chieu", "asset": "Vàng nhẫn", "asset_class": "gold", "action": "HOLD", "action_vi": "GIỮ", "confidence": 92, "risk_veto": false, "data_quality": "GOOD", "ref_price_field": "xauusd", "ref_price": 4108.299805}

@@ -1,6 +1,16 @@
 # Finance-duy — Bản tin Đầu tư tự động
 
-Hệ thống tổng hợp tin tức đầu tư 2 lần/ngày (8h sáng & 6h chiều giờ Việt Nam) chạy bằng Claude Code Routines, phục vụ ra quyết định đầu tư.
+Hệ thống tổng hợp tin tức đầu tư, phục vụ ra quyết định đầu tư.
+
+⚠️ **Thay đổi kiến trúc quan trọng (2026-07-27)**: 2 Claude Code Routine trên
+claude.ai (sáng/chiều, dùng WebSearch) đã bị chủ dự án NGỪNG SỬ DỤNG — chúng
+từng độc lập ghi vào `data/watchlist.json`/`data/history.jsonl` trên CÙNG
+nhánh git với automation local bên dưới, gây xung đột git khiến automation
+bị KẸT ÂM THẦM 7 ngày (20–26/7) mà không ai biết. Giờ **chỉ còn 1 nguồn tự
+động duy nhất: task Windows local `daily_evening.bat`** (mục kế tiếp). Nếu
+2 routine cloud đó vẫn còn tồn tại trên claude.ai (trigger ID cũ:
+`trig_01VkDWQ59sqHpXDTyScxmzzV` sáng, `trig_01B8JjRY5Qm71deb3s69XwCb` chiều),
+cần xóa hẳn ở giao diện Routines của claude.ai để tránh xung đột tái diễn.
 
 ## Nội dung mỗi bản tin
 
@@ -21,14 +31,19 @@ Hệ thống tổng hợp tin tức đầu tư 2 lần/ngày (8h sáng & 6h chi�
 
 4. **Gợi ý hành động** — định hướng ngắn gọn cho nhà đầu tư (tham khảo, không phải khuyến nghị đầu tư)
 
-## Lịch chạy (Routines)
+## Lịch chạy (automation local — thay thế Routines cloud)
 
-| Routine | Cron (UTC) | Giờ VN | Trigger ID |
-|---|---|---|---|
-| Bản tin đầu tư sáng 8h | `0 1 * * *` | ~08:08 | `trig_01VkDWQ59sqHpXDTyScxmzzV` |
-| Bản tin đầu tư chiều 6h | `0 11 * * *` | ~18:08 | `trig_01B8JjRY5Qm71deb3s69XwCb` |
+Windows Task Scheduler task `FinanceDuy-BanTinChieu` chạy `scripts/daily_evening.bat` mỗi ngày **18:41 giờ VN**:
 
-Routine chiều thứ Sáu tự thêm mục **Tổng kết tuần**. Cả hai routine tự chạy `indicators.py`, `alerts.py`, `trend.py`, `watchlist.py` khi có dữ liệu.
+1. `git fetch` + `reset --hard origin/<nhánh>` — luôn đồng bộ sạch trước khi làm gì (xem cảnh báo kiến trúc ở trên)
+2. `fetch_eod.py VCB CTD` — giá EOD thật từ entrade
+3. `fetch_market_snapshot.py chieu` — **XAU/USD thật** (api.gold-api.com) + **tỷ giá USD/VND thật** (portal VCB) + đóng cửa VCB/CTD, ghi vào `data/history.jsonl`
+4. `watchlist.py update` — giá thật 11 mã Buffett-list
+5. `run_evening.py` — tổng hợp bản tin, chạy Decision Engine, **tự gửi Telegram**
+6. `health_check.py` — kiểm tra freshness + an ninh
+7. commit + push `data/` (không rebase — nếu push thất bại chỉ log cảnh báo, KHÔNG tự động merge/rebase để tránh lặp lại sự cố kẹt ở trên)
+
+**Vẫn CHƯA có nguồn tự động** (trung thực để trống trong bản tin, không bịa số) cho: VN-Index, khối ngoại mua/bán ròng, giá SJC/vàng nhẫn tại tiệm trong nước, lãi suất tiết kiệm, tin tức pháp lý/quản trị doanh nghiệp. Những phần này cần nhắn trực tiếp trong phiên chat (WebSearch) khi cần, hoặc `scripts/trend.py append` nhập tay.
 
 ## Lịch sử số liệu & xu hướng
 
@@ -46,6 +61,7 @@ Routine chiều thứ Sáu tự thêm mục **Tổng kết tuần**. Cả hai ro
 | `trend.py` | Lịch sử snapshot + so sánh xu hướng + lãi/lỗ danh mục |
 | `tick.py` | Phát hiện gom hàng qua lệnh lớn tròn số lặp lại (cần dữ liệu khớp lệnh) |
 | `fetch_eod.py` | Tải EOD thật từ `services.entrade.com.vn` (bị chặn network policy trong sandbox claude.ai, đã xác nhận mở được trên laptop local), gộp vào `data/eod/<MÃ>.csv` |
+| `fetch_market_snapshot.py` | Tải XAU/USD thật (gold-api.com) + tỷ giá USD/VND thật (VCB portal) + VCB/CTD EOD, ghi vào `data/history.jsonl` qua validate của `trend.py` — lấp khoảng trống sau khi ngừng routine cloud |
 | `indicators.py` | RSI(14), MACD, SMA/EMA 20/50/200, Bollinger từ `data/eod/<MÃ>.csv` |
 | `backtest.py` | Backtest quy tắc (MA cross…) trên dữ liệu EOD |
 | `alerts.py` + `data/alerts.json` | Cảnh báo ngưỡng giá VCB/CTD/vàng bị chạm |

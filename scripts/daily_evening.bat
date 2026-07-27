@@ -27,6 +27,7 @@ git fetch origin %BRANCH% >> logs\daily_task.log 2>&1
 git reset --hard origin/%BRANCH% >> logs\daily_task.log 2>&1
 
 "%PY%" scripts\fetch_eod.py VCB CTD >> logs\daily_task.log 2>&1
+"%PY%" scripts\fetch_market_snapshot.py chieu >> logs\daily_task.log 2>&1
 "%PY%" scripts\watchlist.py update >> logs\daily_task.log 2>&1
 "%PY%" scripts\run_evening.py >> logs\daily_task.log 2>&1
 "%PY%" scripts\health_check.py >> logs\daily_task.log 2>&1
