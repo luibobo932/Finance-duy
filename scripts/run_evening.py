@@ -22,8 +22,8 @@ HIST = ROOT / "data" / "history.jsonl"
 
 # Import lại các hàm section dùng chung với bản tin sáng để không lặp code
 from run_morning import (  # noqa: E402
-    run_gold_decision, section_alerts, section_tai_san, section_tien_gui, section_tong_quan,
-    section_vang, send_telegram_report,
+    bulletin_date, run_gold_decision, section_alerts, section_tai_san, section_tien_gui,
+    section_tong_quan, section_vang, send_telegram_report,
 )
 
 
@@ -40,12 +40,13 @@ def main():
 
     port, parts, total, gold_decision = run_gold_decision(ky="chieu")
     est = gold_estimate()
+    hist = load_history()
 
     deposit_rates = load_normalized()
     ranked_deposits = rank(deposit_rates) if deposit_rates else []
 
     sections = [
-        f"# BẢN TIN ĐẦU TƯ CHIỀU — {port.updated}",
+        f"# BẢN TIN ĐẦU TƯ CHIỀU — {bulletin_date(hist)}",
         section_tong_quan(gold_decision),
         section_tai_san({"parts": parts, "total": total}),
         section_vang(est, gold_decision),
@@ -55,7 +56,6 @@ def main():
 
     # Mục bắt buộc: so với bản tin trước (kỳ liền trước trong history.jsonl,
     # thường là bản sáng cùng ngày)
-    hist = load_history()
     if len(hist) >= 2:
         market_changes = compare_snapshots(hist[-2], hist[-1])
         # Không có lịch sử quyết định lưu lại theo kỳ ở bước này (Phase 9 sẽ
