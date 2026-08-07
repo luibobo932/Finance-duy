@@ -6,77 +6,77 @@
       "ticker": "FPT",
       "group": "A",
       "base_price": 67.0,
-      "last_price": 70.7,
+      "last_price": 70.8,
       "moat": "Độc tôn CNTT VN"
     },
     {
       "ticker": "VNM",
       "group": "A",
       "base_price": 59.0,
-      "last_price": 59.0,
+      "last_price": 62.0,
       "moat": "Thương hiệu sữa số 1"
     },
     {
       "ticker": "VCB",
       "group": "A",
       "base_price": 58.5,
-      "last_price": 59.0,
+      "last_price": 59.7,
       "moat": "Chi phí vốn rẻ nhất hệ thống"
     },
     {
       "ticker": "GAS",
       "group": "A",
       "base_price": 76.2,
-      "last_price": 69.8,
+      "last_price": 74.6,
       "moat": "Độc quyền trung nguồn khí"
     },
     {
       "ticker": "ACB",
       "group": "A",
       "base_price": 23.55,
-      "last_price": 22.15,
+      "last_price": 22.4,
       "moat": "Ngân hàng bán lẻ thận trọng"
     },
     {
       "ticker": "HPG",
       "group": "B",
       "base_price": 21.85,
-      "last_price": 21.85,
+      "last_price": 22.0,
       "moat": "Dẫn đầu chi phí thép"
     },
     {
       "ticker": "MWG",
       "group": "B",
       "base_price": 76.7,
-      "last_price": 71.2,
+      "last_price": 71.0,
       "moat": "Chuỗi bán lẻ số 1"
     },
     {
       "ticker": "PNJ",
       "group": "B",
       "base_price": 43.0,
-      "last_price": 36.45,
+      "last_price": 36.0,
       "moat": "Thương hiệu trang sức số 1"
     },
     {
       "ticker": "REE",
       "group": "B",
       "base_price": 46.25,
-      "last_price": 47.5,
+      "last_price": 47.1,
       "moat": "Điện + nước, dòng tiền đều; P/B đáy 2 năm"
     },
     {
       "ticker": "BSR",
       "group": "B",
       "base_price": 24.9,
-      "last_price": 25.05,
+      "last_price": 26.2,
       "moat": "Lọc dầu quy mô"
     },
     {
       "ticker": "CTD",
       "group": "B",
       "base_price": 63.5,
-      "last_price": 62.2,
+      "last_price": 62.1,
       "moat": "Tổng thầu, backlog kỷ lục"
     }
   ]
