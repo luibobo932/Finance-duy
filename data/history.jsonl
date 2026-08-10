@@ -16,3 +16,4 @@
 {"date": "2026-08-04", "ky": "chieu", "vnindex": {}, "gold": {"xauusd": 4063.7}, "fx_vcb_sell": 26460.0, "vcb": {"close": 60000, "change_pct": -1.32, "volume": 5.093}, "ctd": {"close": 63600, "change_pct": 1.6, "volume": 0.415}}
 {"date": "2026-08-06", "ky": "chieu", "vnindex": {}, "gold": {"xauusd": 4263.1}, "fx_vcb_sell": 26420.0, "vcb": {"close": 59000, "change_pct": -0.51, "volume": 2.963}, "ctd": {"close": 62200, "change_pct": -1.58, "volume": 0.322}}
 {"date": "2026-08-07", "ky": "chieu", "vnindex": {}, "gold": {"xauusd": 4324.3}, "fx_vcb_sell": 26410.0, "vcb": {"close": 59700, "change_pct": 1.19, "volume": 6.522}, "ctd": {"close": 62100, "change_pct": -0.16, "volume": 0.318}}
+{"date": "2026-08-10", "ky": "chieu", "vnindex": {}, "gold": {"xauusd": 4340.4}, "fx_vcb_sell": 26350.0, "vcb": {"close": 60300, "change_pct": 1.01, "volume": 2.714}, "ctd": {"close": 62400, "change_pct": 0.48, "volume": 0.248}}
