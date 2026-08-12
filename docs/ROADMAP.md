@@ -30,7 +30,7 @@ Cập nhật 20/07/2026. ✅ = đã xây & test xong · 🟡 = có công cụ, c
 
 | # | Ý tưởng | Trạng thái | Ghi chú |
 |---|---|---|---|
-| 10 | Trang lưu trữ bản tin | ⬜ | Dự kiến: mỗi bản tin snapshot vào `dashboard/archive/`. |
+| 10 | Trang lưu trữ bản tin | 🟡 | `dashboard/ban-tin-dau-tu.html` giờ **sinh 100% từ `history.jsonl`** (`scripts/build_dashboard.py`) và hiện TOÀN BỘ lịch sử thay vì cửa sổ trượt 9 kỳ — nên bản thân trang đã là trang lưu trữ. Còn thiếu: snapshot từng kỳ ra file riêng trong `dashboard/archive/` để xem lại đúng trang của một ngày cụ thể. |
 | 11 | Bản tin tổng kết tuần (thứ Sáu) | 🟡 | Đã thêm mục vào prompt routine chiều thứ Sáu (xem README). |
 | 12 | Telegram bot | 🟡 | `notifications/telegram.py` xây xong + test (bot `@Tintucstock_bot`, token đã lưu `.env`). **Bị chặn bởi network policy** (`api.telegram.org` — xác nhận qua log proxy "403 policy denial"). Cần mở domain này trong Network policy của environment trên claude.ai, sau đó chạy `python3 notifications/telegram.py whoami` rồi `send`. |
 

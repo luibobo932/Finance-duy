@@ -151,11 +151,47 @@ Hệ thống giờ TỰ THEO DÕI thành tích khuyến nghị của chính nó:
 
 - `scripts/run_morning.py` / `scripts/run_evening.py` — orchestrator ghép Tài sản ròng + Vàng (qua Decision Engine) + Tiền gửi + Cảnh báo ngưỡng thành 1 bản tin có cấu trúc. **Không tự fetch dữ liệu thị trường** (network vẫn chặn HOSE/entrade) — giả định `scripts/trend.py append` đã ghi snapshot hôm nay trước đó, đúng quy trình routine hiện tại.
 - `reporting/diff_report.py` — mục "THAY ĐỔI SO VỚI BẢN TIN TRƯỚC" bắt buộc trong bản tin chiều; nếu quyết định đổi, **luôn kèm lý do** (không được báo "đã đổi" mà không giải thích)
-- `reporting/render_dashboard.py` — sinh `dashboard/auto_dashboard.html` **tự động từ dữ liệu thật**, có badge trạng thái (OK/DÙNG FALLBACK/DỮ LIỆU ĐÃ CŨ/DỮ LIỆU KHÔNG KHẢ DỤNG/NGUỒN XUNG ĐỘT) cho từng số liệu. File `dashboard/ban-tin-dau-tu.html` (thiết kế tay) **không bị ghi đè** — dashboard tự sinh là file riêng, việc chuyển hẳn sang bản tự động là lựa chọn của người vận hành ở bước sau.
+- `reporting/render_dashboard.py` — sinh `dashboard/auto_dashboard.html`: bảng **chẩn đoán**, mỗi số liệu kèm badge trạng thái (OK/DÙNG FALLBACK/DỮ LIỆU ĐÃ CŨ/DỮ LIỆU KHÔNG KHẢ DỤNG/NGUỒN XUNG ĐỘT).
 
 ⚠️ **1 lỗi thật phát hiện + sửa khi nối dữ liệu**: `data/alerts.json` ghi ngưỡng VCB/CTD theo đơn vị "nghìn đồng" nhưng `data/history.jsonl` lưu giá cổ phiếu theo VND thô — nếu không quy đổi, mọi giá cổ phiếu thật sẽ luôn bị báo "vượt ngưỡng" sai. Đã sửa trong `scripts/run_morning.py`.
 
-Chạy thử: `python3 scripts/trend.py append '<json>' && python3 scripts/run_morning.py` (hoặc `run_evening.py`).
+## Dashboard bản tin tự sinh (nâng cấp 12/08/2026)
+
+`dashboard/ban-tin-dau-tu.html` trước đây **sửa tay mỗi kỳ**: ~71 cặp toạ độ SVG cộng mọi con số trong thẻ/bảng/chân trang. Một con số sai sẽ vẽ ra đường sai mà không gì báo lỗi, và vì thêm điểm là phải tính lại tay nên biểu đồ bị giới hạn ở "cửa sổ trượt 9 kỳ" — lịch sử cũ bị đẩy khỏi hình dù vẫn còn trong `history.jsonl`.
+
+Nay file này **sinh 100% từ dữ liệu**:
+
+```
+python3 scripts/build_dashboard.py           # ghi dashboard/ban-tin-dau-tu.html
+python3 scripts/build_dashboard.py --check   # chỉ kiểm tra, không ghi file
+```
+
+- `reporting/chart.py` — sinh SVG từ dữ liệu: trục tự chia bước tròn (1–2–5×10^n), `None` = **NGẮT đường** (không nội suy qua chỗ thiếu = không bịa số), nhãn cuối tự tách khi chồng nhau, cột luôn mọc từ gốc 0, màu qua CSS var nên theme sáng/tối tự đổi
+- `reporting/dashboard_builder.py` — dựng cả trang; định giá lịch sử dùng **chính mô hình của `networth.py`** (có test chống lệch 2 nguồn). Hiện **toàn bộ** lịch sử, thêm 3 biểu đồ trước đây không có: tổng tài sản theo thời gian, tỷ trọng vàng vs ngưỡng critical, VN-Index
+- `analytics/advice_tracker.py` — đếm số kỳ liên tiếp vượt ngưỡng và tỷ trọng đã đi hướng nào; đẩy cảnh báo lên đầu mục rủi ro. Ra đời vì 6 bản tin liên tiếp đều khuyên CHỐT BỚT mà tỷ trọng vàng vẫn bò 74,6% → 75,1% và **không gì trong hệ thống thấy điều đó**
+
+## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
+
+```
+python3 scripts/trend.py append '<json snapshot>'   # 1 lệnh, 3 việc
+python3 scripts/run_morning.py                      # hoặc run_evening.py
+```
+
+`trend.py append` giờ làm cả 3 việc, cố ý gộp vì từng bỏ sót thật:
+
+1. Ghi snapshot — chặn giá âm/bằng 0 **và giá bất khả thi so với kỳ trước**
+2. Đồng bộ lãi suất sang `data/normalized/deposit_rates.jsonl` (`deposits/sync.py`)
+3. Chạy Decision Engine và ghi vào `data/decisions.jsonl`
+
+Vì sao gộp: 6 bản tin 20–22/7 đều ra khuyến nghị nhưng `decisions.jsonl` chỉ có **2** bản ghi — orchestrator bị bỏ qua nên decision review + confidence score (Phase 9) chạy trên dữ liệu rỗng. `append` là bước LUÔN được gọi nên gắn vào đây thì không còn đường bỏ sót.
+
+### Chặn giá bất khả thi (`analytics/price_sanity.py`)
+
+4/6 bản tin phải viết tay cảnh báo Simplize trả giá CTD 73.800đ khi giá đã xác minh là 59.100đ. Việc phát hiện phụ thuộc vào người soạn **nhớ** rằng nguồn đó không đáng tin.
+
+Nay dùng ràng buộc cứng của sàn thay cho danh sách đen — **HOSE ±7%/phiên, HNX ±10%, UPCoM ±15%**: giá lệch quá biên độ tích lũy trong số phiên đã trôi qua là *bất khả thi*, sàn không cho khớp ở mức đó. Nhờ vậy bắt được **mọi** nguồn sai, kể cả nguồn chưa từng gặp. Tham chiếu cách > 10 phiên thì trả "không đủ căn cứ" thay vì gật đầu vô nghĩa.
+
+Sự kiện doanh nghiệp thật (chia tách, thưởng cổ phiếu) hợp lệ vượt biên độ → `append ... --force`, và lý do được ghi thẳng vào `risk_flags.note_forced_append` để việc bỏ qua kiểm tra không bao giờ âm thầm.
 
 ## Gửi bản tin qua Telegram
 

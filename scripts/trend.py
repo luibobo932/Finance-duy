@@ -3,7 +3,14 @@
 
 Cách dùng:
   python3 scripts/trend.py append '<json snapshot>'   # hoặc đọc từ stdin
+  python3 scripts/trend.py append '<json>' --force    # bỏ qua chặn biên độ giá
   python3 scripts/trend.py report
+
+`append` làm 3 việc trong 1 lệnh (cố ý — xem chú thích trong cmd_append):
+  1. Ghi snapshot vào data/history.jsonl (chặn giá âm/bằng 0 và giá BẤT KHẢ THI
+     so với kỳ trước theo biên độ sàn)
+  2. Đồng bộ lãi suất sang data/normalized/deposit_rates.jsonl
+  3. Chạy Decision Engine và ghi quyết định vào data/decisions.jsonl
 """
 import json
 import sys
@@ -49,7 +56,7 @@ def fmt(x, nd=2):
     return s
 
 
-def validate_snapshot(snap: dict) -> list[str]:
+def validate_snapshot(snap: dict, prev: dict | None = None) -> list[str]:
     """Trả về danh sách lỗi dữ liệu bất thường (rỗng = hợp lệ).
 
     Chỉ kiểm tra các trường GIÁ (phải > 0 nếu có mặt) — các trường có thể
@@ -65,10 +72,44 @@ def validate_snapshot(snap: dict) -> list[str]:
         dp = DataPoint(name=label, value=v, unit="", source="snapshot_input")
         if is_abnormal(dp):
             errors.append(f"{label} = {v} bất thường (giá phải > 0)")
+    errors.extend(validate_price_plausibility(snap, prev))
     return errors
 
 
-def cmd_append(arg):
+def validate_price_plausibility(snap: dict, prev: dict | None) -> list[str]:
+    """Chặn giá cổ phiếu BẤT KHẢ THI so với kỳ trước, theo biên độ sàn.
+
+    Đây là tuyến phòng thủ ra đời từ lỗi thật: 4/6 bản tin 20–22/7 phải viết
+    tay cảnh báo Simplize trả giá CTD 73.800đ trong khi giá đã xác minh là
+    59.100đ (+24,9% trong 1 phiên — vượt xa biên 7% của HOSE). Việc phát hiện
+    trước đây phụ thuộc vào người soạn NHỚ rằng nguồn đó không đáng tin.
+
+    `prev` truyền TƯỜNG MINH (không tự đọc file) để hàm kiểm tra vẫn là hàm
+    thuần: cùng đầu vào luôn cho cùng kết quả, không phụ thuộc trạng thái đĩa.
+
+    So với kỳ TRƯỚC trong history (cùng đơn vị đồng), không so với data/eod/
+    (đơn vị nghìn đồng) để không lẫn đơn vị.
+    """
+    from analytics.price_sanity import check_price
+
+    if not prev:
+        return []
+    errors = []
+    for ticker in ("vcb", "ctd"):
+        cur_price = get(snap, ticker, "close")
+        ref_price = get(prev, ticker, "close")
+        if cur_price is None or ref_price is None:
+            continue
+        result = check_price(
+            ticker.upper(), cur_price, ref_price,
+            reference_date=prev.get("date"), target_date=snap.get("date"),
+        )
+        if not result.ok:
+            errors.append(result.message)
+    return errors
+
+
+def cmd_append(arg, force: bool = False):
     raw = arg if arg else sys.stdin.read()
     snap = json.loads(raw)
     missing = [k for k in REQUIRED if k not in snap]
@@ -76,14 +117,28 @@ def cmd_append(arg):
         sys.exit(f"LỖI: snapshot thiếu trường bắt buộc: {missing}")
     if snap["ky"] not in ("sang", "chieu"):
         sys.exit("LỖI: 'ky' phải là 'sang' hoặc 'chieu'")
-    errors = validate_snapshot(snap)
+    existing = load_history()
+    errors = validate_snapshot(snap, existing[-1] if existing else None)
     if errors:
         from common import get_logger
 
         logger = get_logger("trend")
         for e in errors:
             logger.error(e)
-        sys.exit("LỖI: dữ liệu bất thường, từ chối ghi:\n" + "\n".join(f"  - {e}" for e in errors))
+        if not force:
+            sys.exit(
+                "LỖI: dữ liệu bất thường, từ chối ghi:\n"
+                + "\n".join(f"  - {e}" for e in errors)
+                + "\n\nNếu đây là sự kiện doanh nghiệp THẬT (chia tách, thưởng cổ phiếu, "
+                  "phát hành quyền — giá tham chiếu đổi hợp lệ ngoài biên độ), chạy lại với "
+                  "--force và ghi lý do vào risk_flags của snapshot."
+            )
+        # --force: vẫn ghi nhưng để lại dấu vết trong chính dữ liệu, không âm thầm
+        snap.setdefault("risk_flags", {})["note_forced_append"] = (
+            "Snapshot được ghi với --force dù vượt kiểm tra biên độ giá: "
+            + " | ".join(errors)
+        )
+        print("⚠️  Ghi với --force, đã ghi lý do vào risk_flags.note_forced_append")
     hist = load_history()
     if any(h["date"] == snap["date"] and h["ky"] == snap["ky"] for h in hist):
         sys.exit(f"LỖI: đã có snapshot {snap['date']} kỳ {snap['ky']} — không ghi trùng")
@@ -267,7 +322,8 @@ def main():
     if len(sys.argv) < 2 or sys.argv[1] not in ("append", "report"):
         sys.exit(__doc__)
     if sys.argv[1] == "append":
-        cmd_append(sys.argv[2] if len(sys.argv) > 2 else None)
+        args = [a for a in sys.argv[2:] if a != "--force"]
+        cmd_append(args[0] if args else None, force="--force" in sys.argv[2:])
     else:
         cmd_report()
 

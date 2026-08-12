@@ -73,3 +73,39 @@ def test_validate_snapshot_multiple_errors_all_reported():
     }
     errors = trend.validate_snapshot(snap)
     assert len(errors) == 2
+
+
+# --- Kiểm tra biên độ giá khi ghi snapshot (thêm 12/8) ----------------------
+
+def test_khong_co_ky_truoc_thi_khong_kiem_tra_bien_do():
+    """Snapshot đầu tiên không có gì để so — phải cho qua, không chặn oan."""
+    snap = {"date": "2026-07-22", "ky": "sang", "vcb": {"close": 57400},
+            "vnindex": {"close": 1700}, "gold": {"xauusd": 4100}, "fx_vcb_sell": 26286}
+    assert trend.validate_snapshot(snap, None) == []
+
+
+def test_chan_gia_CTD_bat_kha_thi_so_voi_ky_truoc():
+    """Case thật: Simplize trả 73.800 khi giá đã xác minh là 59.100."""
+    prev = {"date": "2026-07-22", "ky": "chieu", "ctd": {"close": 59100}}
+    snap = {"date": "2026-07-23", "ky": "sang", "ctd": {"close": 73800},
+            "vnindex": {"close": 1700}, "gold": {"xauusd": 4100}, "fx_vcb_sell": 26286}
+    errors = trend.validate_snapshot(snap, prev)
+    assert len(errors) == 1
+    assert "BẤT KHẢ THI" in errors[0] and "CTD" in errors[0]
+
+
+def test_cho_qua_gia_giam_san_hop_le():
+    """-6,93% (phiên sàn HOSE) là hợp lệ, không được chặn oan."""
+    prev = {"date": "2026-07-17", "ky": "chieu", "ctd": {"close": 63500}}
+    snap = {"date": "2026-07-20", "ky": "chieu", "ctd": {"close": 59100},
+            "vnindex": {"close": 1700}, "gold": {"xauusd": 4100}, "fx_vcb_sell": 26286}
+    assert trend.validate_snapshot(snap, prev) == []
+
+
+def test_validate_snapshot_la_ham_thuan_khong_doc_file():
+    """Cùng đầu vào phải cho cùng kết quả, không phụ thuộc data/history.jsonl
+    trên đĩa — trước khi sửa, hàm này tự load file nên test bị dữ liệu thật
+    ảnh hưởng."""
+    snap = {"date": "2026-07-23", "ky": "sang", "ctd": {"close": 73800},
+            "vnindex": {"close": 1700}, "gold": {"xauusd": 4100}, "fx_vcb_sell": 26286}
+    assert trend.validate_snapshot(snap) == trend.validate_snapshot(snap, None) == []
