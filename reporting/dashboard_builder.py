@@ -1,0 +1,578 @@
+"""Sinh dashboard bản tin TỪ data/history.jsonl — không sửa tay số nào nữa.
+
+Trước module này, `dashboard/ban-tin-dau-tu.html` được sửa TAY mỗi kỳ: ~71 toạ
+độ SVG + mọi con số trong thẻ, bảng, chân trang. Hệ quả thực tế đã gặp:
+- Biểu đồ chỉ hiện được 9 kỳ ("cửa sổ trượt") vì thêm điểm là phải tính lại tay
+- Lịch sử cũ bị đẩy ra khỏi hình dù dữ liệu vẫn còn trong history.jsonl
+- Không có cách nào kiểm tra hình vẽ có khớp số hay không
+
+Ở đây mọi con số và toạ độ đều TÍNH từ `data/history.jsonl` + `config/*.yaml`,
+nên hình luôn khớp dữ liệu và lịch sử hiện đầy đủ.
+
+Định giá lịch sử: mỗi snapshot được định giá lại bằng CHÍNH mô hình mà
+`scripts/networth.py` dùng (gold/xuan_trieu_model theo XAU + tỷ giá của snapshot
+đó), nên đường "tổng tài sản" nhất quán với con số hiển thị ở thẻ đầu trang.
+"""
+from __future__ import annotations
+
+import html
+import json
+import sys
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Optional
+
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from analytics.advice_tracker import summarize_pending  # noqa: E402
+from gold.xuan_trieu_model import estimate as gold_estimate  # noqa: E402
+from portfolio.loader import load_portfolio, load_risk_limits  # noqa: E402
+from reporting.chart import (  # noqa: E402
+    Bar,
+    Box,
+    Segment,
+    Series,
+    allocation_legend,
+    bar_chart,
+    legend,
+    line_chart,
+    stacked_bar,
+    thin_labels,
+)
+
+HISTORY_PATH = ROOT / "data" / "history.jsonl"
+WATCHLIST_PATH = ROOT / "data" / "watchlist.json"
+OUTPUT_PATH = ROOT / "dashboard" / "ban-tin-dau-tu.html"
+
+# Tuổi dữ liệu quá mốc này thì gắn nhãn "đã cũ" — bản tin 2 kỳ/ngày nên quá
+# 1 ngày không có snapshot mới là dấu hiệu routine hỏng, phải nhìn thấy ngay.
+STALE_AFTER = timedelta(days=1)
+
+KY_VI = {"sang": "sáng", "chieu": "chiều"}
+
+# Nhãn tiếng Việt cho các khoá `note_*` hay dùng trong snapshot. Khoá lạ sẽ
+# rơi về chính tên khoá (đọc được, chỉ không đẹp) — thà thấy nhãn thô còn hơn
+# gộp 2 ghi chú khác nhau vào cùng một tiêu đề.
+NOTE_TOPIC_VI = {
+    "gold": "vàng",
+    "gold_surge": "vàng tăng mạnh",
+    "market": "thị trường",
+    "market_detail": "chi tiết thị trường",
+    "market_outlook": "triển vọng thị trường",
+    "selloff": "áp lực bán",
+    "selloff_cause": "nguyên nhân bán tháo",
+    "data_conflict": "xung đột dữ liệu",
+    "ctd_data": "dữ liệu CTD",
+    "ctd_price_conflict": "xung đột giá CTD",
+}
+
+
+@dataclass
+class Valuation:
+    """Định giá danh mục tại 1 snapshot."""
+    gold_trieu: Optional[float]
+    savings_trieu: float
+    cash_trieu: float
+    total_trieu: Optional[float]
+    gold_pct: Optional[float]
+    gold_price_trieu: Optional[float]
+
+
+def load_history(path: Optional[Path] = None) -> list[dict]:
+    path = path or HISTORY_PATH
+    if not path.exists():
+        return []
+    return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+
+
+def snapshot_label(snap: dict) -> str:
+    """Nhãn ngắn cho trục x: '22/7c' = chiều 22/7."""
+    date = snap.get("date") or ""
+    parts = date.split("-")
+    short = f"{int(parts[2])}/{int(parts[1])}" if len(parts) == 3 else date
+    return f"{short}{'c' if snap.get('ky') == 'chieu' else 's'}"
+
+
+def value_at(snap: dict, port) -> Valuation:
+    """Định giá danh mục theo giá vàng CỦA CHÍNH snapshot đó.
+
+    Số lượng tài sản là hằng số trong config, nên đường giá trị theo thời gian
+    phản ánh đúng biến động giá — không phải thay đổi do mua/bán.
+    """
+    savings = port.savings_principal_vnd / 1_000_000
+    cash = port.cash_amount_vnd / 1_000_000
+    xau = (snap.get("gold") or {}).get("xauusd")
+    fx = snap.get("fx_vcb_sell")
+    price = None
+    if xau and fx:
+        est = gold_estimate(xau_usd=xau, usd_vnd=fx)
+        if est:
+            price = est.shop_buy_trieu  # giá tiệm TRẢ khi bán — giá trị thanh lý thật
+    if price is None:
+        return Valuation(None, savings, cash, None, None, None)
+    gold = port.gold_quantity_tael * price
+    total = gold + savings + cash
+    return Valuation(gold, savings, cash, total, gold / total if total else None, price)
+
+
+def _freshness(latest: dict) -> tuple[str, str]:
+    """(nhãn, mức) cho tuổi dữ liệu — mức thuộc {ok, warn, bad}."""
+    date = latest.get("date")
+    if not date:
+        return "không rõ thời điểm dữ liệu", "bad"
+    try:
+        stamp = datetime.strptime(date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return f"thời điểm không đọc được: {date}", "bad"
+    age = datetime.now(timezone.utc) - stamp
+    if age <= STALE_AFTER:
+        return "dữ liệu mới", "ok"
+    days = age.days
+    return f"dữ liệu cũ {days} ngày — kiểm tra routine bản tin", "warn" if days <= 3 else "bad"
+
+
+def build_context(history: Optional[list[dict]] = None) -> dict:
+    history = history if history is not None else load_history()
+    if not history:
+        raise SystemExit("data/history.jsonl trống — chạy scripts/trend.py append trước.")
+
+    port = load_portfolio()
+    limits = load_risk_limits()
+    latest = history[-1]
+    vals = [value_at(s, port) for s in history]
+    cur = vals[-1]
+    labels = [snapshot_label(s) for s in history]
+
+    watchlist = {}
+    if WATCHLIST_PATH.exists():
+        watchlist = json.loads(WATCHLIST_PATH.read_text(encoding="utf-8"))
+
+    # Ngưỡng trong config là PHÂN SỐ (0.70) — đổi sang % để dùng chung đơn vị
+    # với tỷ trọng hiển thị trên biểu đồ.
+    def _pct(key: str) -> Optional[float]:
+        raw = (limits or {}).get(key)
+        return float(raw) * 100 if raw is not None else None
+
+    critical_pct = _pct("gold_critical")
+    warning_pct = _pct("gold_warning")
+
+    return {
+        "history": history,
+        "labels": labels,
+        "valuations": vals,
+        "current": cur,
+        "latest": latest,
+        "portfolio": port,
+        "limits": limits,
+        "critical_pct": critical_pct,
+        "warning_pct": warning_pct,
+        "watchlist": watchlist,
+        "freshness": _freshness(latest),
+        "pending": summarize_pending(history, vals),
+        "generated_at": datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=7))),
+    }
+
+
+# ---------------------------------------------------------------- render helpers
+
+def _n(value: Optional[float], decimals: int = 1, suffix: str = "") -> str:
+    """Số kiểu Việt hoặc '—' khi thiếu — KHÔNG bao giờ in 0 thay cho thiếu."""
+    if value is None:
+        return '<span class="na">chưa có dữ liệu</span>'
+    text = f"{value:,.{decimals}f}".translate(str.maketrans({",": ".", ".": ","}))
+    return f"{text}{suffix}"
+
+
+def _tile(label: str, value: str, delta: str, flag: bool = False) -> str:
+    cls = " flag" if flag else ""
+    return (
+        f'<div class="card tile"><div class="label">{html.escape(label)}</div>'
+        f'<div class="value">{value}</div>'
+        f'<div class="delta{cls}">{delta}</div></div>'
+    )
+
+
+def _status_card(level: str, tag: str, body: str) -> str:
+    return (
+        f'<div class="status-card {level}"><div class="tag">● {html.escape(tag)}</div>'
+        f'<div class="body">{body}</div></div>'
+    )
+
+
+def _delta_text(series: list[Optional[float]], decimals: int = 1, suffix: str = "") -> str:
+    """'▲ 3,8 so với kỳ trước' — so sánh 2 giá trị có thật gần nhất."""
+    real = [v for v in series if v is not None]
+    if len(real) < 2:
+        return "chưa có kỳ trước để so sánh"
+    diff = real[-1] - real[-2]
+    if abs(diff) < 10 ** -decimals / 2:
+        return "đi ngang so với kỳ trước"
+    arrow = "▲" if diff > 0 else "▼"
+    return f"{arrow} {_n(abs(diff), decimals, suffix)} so với kỳ trước"
+
+
+def render(ctx: dict) -> str:
+    hist = ctx["history"]
+    labels = ctx["labels"]
+    vals = ctx["valuations"]
+    cur = ctx["current"]
+    latest = ctx["latest"]
+    port = ctx["portfolio"]
+    x_labels = thin_labels(labels)
+
+    ky_vi = KY_VI.get(latest.get("ky", ""), latest.get("ky", ""))
+    date_parts = (latest.get("date") or "").split("-")
+    date_vi = f"{date_parts[2]}/{date_parts[1]}/{date_parts[0]}" if len(date_parts) == 3 else latest.get("date", "")
+
+    fresh_label, fresh_level = ctx["freshness"]
+
+    # --- Thẻ số liệu -------------------------------------------------------
+    totals = [v.total_trieu for v in vals]
+    golds = [v.gold_trieu for v in vals]
+    gold_pcts = [v.gold_pct * 100 if v.gold_pct is not None else None for v in vals]
+    critical = ctx["critical_pct"]
+    over_critical = (
+        cur.gold_pct is not None and critical is not None and cur.gold_pct * 100 >= critical
+    )
+
+    tiles = "".join([
+        _tile("Tổng tài sản (ước tính)", _n(cur.total_trieu, 1, " tr"), _delta_text(totals, 1, " tr")),
+        _tile(
+            f"Vàng nhẫn — {_n(port.gold_quantity_tael, 1)} lượng",
+            _n(cur.gold_trieu, 1, " tr"),
+            (f"{_n((cur.gold_pct or 0) * 100)}% tổng tài sản"
+             + (f" — vượt ngưỡng critical {_n(critical, 0)}%" if over_critical else "")),
+            flag=over_critical,
+        ),
+        _tile("Tiết kiệm", _n(cur.savings_trieu, 0, " tr"),
+              f"{_n((cur.savings_trieu / cur.total_trieu * 100) if cur.total_trieu else None)}% tổng tài sản"),
+        _tile("Tiền mặt", _n(cur.cash_trieu, 0, " tr"),
+              f"{_n((cur.cash_trieu / cur.total_trieu * 100) if cur.total_trieu else None)}% tổng tài sản"),
+    ])
+
+    # --- Phân bổ tài sản ---------------------------------------------------
+    segs = [
+        Segment("Vàng nhẫn", cur.gold_trieu or 0, "--s-yellow"),
+        Segment("Tiết kiệm", cur.savings_trieu, "--s-blue"),
+        Segment("Tiền mặt", cur.cash_trieu, "--s-aqua"),
+    ]
+    alloc_note = (
+        f"Risk Officer: vàng ≥ {_n(critical, 0)}% → KHÔNG mua thêm vàng (ngưỡng trong "
+        "<code>config/risk_limits.yaml</code>)." if critical else
+        "Ngưỡng tập trung chưa cấu hình trong <code>config/risk_limits.yaml</code>."
+    )
+
+    # --- Tổng tài sản + tỷ trọng vàng theo thời gian -----------------------
+    total_series = [Series("Tổng tài sản", totals, "--s-violet", " tr")]
+    pct_series = [Series("Tỷ trọng vàng", gold_pcts, "--s-yellow", "%")]
+    # Ngưỡng rủi ro vẽ như 1 chuỗi phẳng để thấy khoảng cách tới ngưỡng — cùng
+    # đơn vị %, nên hợp lệ trên chung 1 trục (không phải trục thứ hai).
+    if critical is not None:
+        pct_series.append(Series(f"Ngưỡng critical {_n(critical, 0)}%",
+                                 [float(critical)] * len(gold_pcts), "--s-red", "%", end_label=False))
+
+    # --- Giá vàng ----------------------------------------------------------
+    gold_series = [
+        Series("SJC bán", [(s.get("gold") or {}).get("sjc_sell") for s in hist], "--s-red", " tr"),
+        Series("Nhẫn bán", [(s.get("gold") or {}).get("ring_sell") for s in hist], "--s-orange", " tr"),
+        Series("SJC mua", [(s.get("gold") or {}).get("sjc_buy") for s in hist], "--s-blue", " tr"),
+    ]
+    xau_series = [Series("XAU/USD", [(s.get("gold") or {}).get("xauusd") for s in hist], "--s-magenta", " $")]
+    premium_series = [Series("Chênh lệch VN–TG", [s.get("gold", {}).get("premium_trieu") for s in hist],
+                             "--s-green", " tr")]
+
+    # --- VN-Index + khối ngoại --------------------------------------------
+    vnindex_series = [Series("VN-Index", [(s.get("vnindex") or {}).get("close") for s in hist], "--s-blue")]
+    foreign = [s.get("foreign_net_ty") for s in hist]
+
+    # --- Lãi suất ----------------------------------------------------------
+    deposits = latest.get("deposit_top") or []
+    deposit_bars = [
+        Bar(d.get("bank", "?"), float(d.get("rate_pct") or 0), "--s-blue",
+            f"kỳ hạn {d.get('term_months')} tháng")
+        for d in deposits if d.get("rate_pct")
+    ]
+    savings_note = ""
+    if deposit_bars and cur.savings_trieu:
+        best = max(deposit_bars, key=lambda b: b.value)
+        yearly = cur.savings_trieu * best.value / 100
+        savings_note = (
+            f"Lãi dự kiến cho {_n(cur.savings_trieu, 0)} tr ở mức cao nhất "
+            f"({html.escape(best.label)} {_n(best.value, 2)}%/năm): "
+            f"<b>{_n(yearly, 1)} tr/năm</b> ({_n(yearly / 12, 2)} tr/tháng)."
+        )
+
+    # --- Thẻ rủi ro từ risk_flags của snapshot ----------------------------
+    flags = latest.get("risk_flags") or {}
+    risk_cards: list[str] = []
+    pending = ctx["pending"]
+    if pending.get("message"):
+        risk_cards.append(_status_card("critical", pending["tag"], pending["message"]))
+    for key, tag, level in [
+        ("war", "Địa chính trị / chiến sự", "warning"),
+        ("trump", "Động thái Trump / thuế quan", "warning"),
+        ("fed", "Fed / lãi suất", "warning"),
+        ("arrest", "Rủi ro pháp lý lãnh đạo doanh nghiệp", "good"),
+    ]:
+        text = flags.get(key)
+        if text:
+            risk_cards.append(_status_card(level, tag, html.escape(str(text))))
+    # Ghi chú tự do trong snapshot: lấy nhãn từ CHÍNH tên khoá để 2 ghi chú
+    # khác nhau không hiện cùng một tiêu đề (đã từng thấy 2 thẻ trùng nhãn).
+    for key, value in sorted(flags.items()):
+        if key.startswith("note_") and value:
+            raw = key[len("note_"):]
+            topic = NOTE_TOPIC_VI.get(raw, raw.replace("_", " ").strip() or "khác")
+            risk_cards.append(_status_card("warning", f"Ghi chú: {topic}", html.escape(str(value))))
+    if not risk_cards:
+        risk_cards.append(_status_card("good", "Không có cờ rủi ro", "Snapshot mới nhất không ghi cờ rủi ro nào."))
+
+    # --- Watchlist ---------------------------------------------------------
+    rows = []
+    for st in (ctx["watchlist"].get("stocks") or []):
+        base, last = st.get("base_price"), st.get("last_price")
+        if base and last:
+            chg = (last - base) / base * 100
+            cls = ("color:var(--st-critical);font-weight:600" if chg <= -3
+                   else "color:var(--st-warning-text);font-weight:600" if chg < 0
+                   else "color:var(--good-text);font-weight:600" if chg > 0 else "")
+            chg_cell = f'<td style="{cls}">{_n(chg, 2, "%")}</td>' if chg else '<td class="chg-flat">0,00%</td>'
+        else:
+            chg_cell = '<td class="chg-flat">chưa có dữ liệu</td>'
+        rows.append(
+            f'<tr><td class="tk">{html.escape(st.get("ticker", "?"))}</td>'
+            f'<td>{html.escape(st.get("group", ""))}</td>'
+            f'<td>{_n(base, 2)}</td><td>{_n(last, 2)}</td>{chg_cell}'
+            f'<td>{html.escape(st.get("moat", ""))}</td></tr>'
+        )
+    watchlist_rows = "\n".join(rows) or '<tr><td colspan="6" class="na">Chưa có mã nào trong watchlist.</td></tr>'
+    base_date = ctx["watchlist"].get("base_date", "?")
+
+    gen = ctx["generated_at"].strftime("%d/%m/%Y %H:%M")
+
+    return f"""<title>Bản tin đầu tư — Duy</title>
+{_CSS}
+<div class="viz-root">
+<div class="wrap">
+
+  <header class="top">
+    <h1>Bản tin đầu tư — Duy</h1>
+    <div class="sub">Kỳ {html.escape(ky_vi)} {html.escape(date_vi)}
+      <span class="badge {fresh_level}">{html.escape(fresh_label)}</span></div>
+    <div class="sub gen">Trang này được <b>sinh tự động</b> từ <code>data/history.jsonl</code>
+      ({len(hist)} snapshot) lúc {gen} (giờ VN) — không có số liệu nào nhập tay.</div>
+  </header>
+
+  <section class="grid-tiles">{tiles}</section>
+
+  <section class="card">
+    <h2 class="card-title">Phân bổ tài sản</h2>
+    <p class="card-note">{alloc_note}</p>
+    {stacked_bar(segs)}
+    {allocation_legend(segs)}
+  </section>
+
+  <section class="two-col">
+    <div class="card">
+      <h2 class="card-title">Tổng tài sản theo thời gian</h2>
+      <p class="card-note">Triệu đồng. Định giá lại từng kỳ theo giá vàng của chính kỳ đó — số lượng
+        tài sản không đổi, nên đường này là biến động GIÁ, không phải mua/bán.</p>
+      {line_chart(total_series, x_labels, decimals=0, aria_label="Tổng tài sản theo thời gian")}
+    </div>
+    <div class="card">
+      <h2 class="card-title">Tỷ trọng vàng vs ngưỡng rủi ro</h2>
+      <p class="card-note">%. Đường đỏ là ngưỡng critical trong <code>config/risk_limits.yaml</code> —
+        khoảng cách tới nó là mức độ lệch khỏi khẩu vị rủi ro đã đặt.</p>
+      {line_chart(pct_series, x_labels, decimals=1, aria_label="Tỷ trọng vàng so với ngưỡng rủi ro")}
+      {legend(pct_series)}
+    </div>
+  </section>
+
+  <section class="two-col">
+    <div class="card">
+      <h2 class="card-title">Giá vàng trong nước — toàn bộ lịch sử</h2>
+      <p class="card-note">Triệu đồng/lượng, giá niêm yết. Chỗ khuyết = kỳ đó không có số liệu
+        (đường bị ngắt, không nội suy).</p>
+      {line_chart(gold_series, x_labels, decimals=1, aria_label="Giá vàng trong nước theo kỳ")}
+      {legend(gold_series)}
+    </div>
+    <div class="card">
+      <h2 class="card-title">Vàng thế giới (XAU/USD)</h2>
+      <p class="card-note">USD/oz. Tách riêng khỏi giá trong nước vì khác đơn vị —
+        không bao giờ ghép 2 trục y vào một biểu đồ.</p>
+      {line_chart(xau_series, x_labels, decimals=0, aria_label="Giá vàng thế giới XAU/USD")}
+    </div>
+  </section>
+
+  <section class="two-col">
+    <div class="card">
+      <h2 class="card-title">Chênh lệch vàng VN – thế giới</h2>
+      <p class="card-note">Triệu đồng/lượng. Chênh lệch nới rộng = mua trong nước đắt hơn so với
+        giá trị quốc tế; thu hẹp = giá trong nước đang điều chỉnh về sát thế giới.</p>
+      {line_chart(premium_series, x_labels, decimals=1, aria_label="Chênh lệch giá vàng VN và thế giới")}
+    </div>
+    <div class="card">
+      <h2 class="card-title">Lãi suất tiết kiệm &lt; 1 tỷ</h2>
+      <p class="card-note">%/năm, theo snapshot kỳ này. Cột mọc từ gốc 0 để không phóng đại chênh lệch.</p>
+      {bar_chart(deposit_bars, decimals=2, value_suffix="%", aria_label="Lãi suất tiết kiệm top ngân hàng")
+        or '<p class="na">Kỳ này chưa ghi nhận lãi suất.</p>'}
+      <p class="card-note" style="margin:10px 0 0">{savings_note}</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">VN-Index theo kỳ</h2>
+    <p class="card-note">Điểm. Khối ngoại kỳ này: <b>{
+      ('mua ròng ' + _n(foreign[-1], 0, ' tỷ')) if (foreign[-1] or 0) > 0
+      else ('bán ròng ' + _n(abs(foreign[-1]), 0, ' tỷ')) if foreign[-1]
+      else 'chưa có dữ liệu'}</b>.</p>
+    {line_chart(vnindex_series, x_labels, decimals=0, aria_label="VN-Index theo kỳ",
+                box=Box(width=700, height=220))}
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">Rủi ro cần theo dõi</h2>
+    <p class="card-note">Lấy nguyên văn cờ rủi ro từ snapshot — thuật ngữ pháp lý giữ đúng như nguồn,
+      không quy kết khi nguồn chỉ nói đang xác minh.</p>
+    <div class="status-cards">{"".join(risk_cards)}</div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">Watchlist cổ phiếu</h2>
+    <p class="card-note">Đã bán hết cổ phiếu thực tế — đây là danh sách theo dõi (Buffett-list),
+      gốc so sánh {html.escape(str(base_date))}. Giá nghìn đồng.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Mã</th><th>Nhóm</th><th>Giá gốc</th><th>Giá gần nhất</th>
+          <th>Biến động</th><th>Lợi thế cạnh tranh</th></tr></thead>
+        <tbody>{watchlist_rows}</tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="foot">
+    Nguồn: <code>data/history.jsonl</code> ({len(hist)} snapshot),
+    <code>config/portfolio.yaml</code>, <code>config/risk_limits.yaml</code>,
+    <code>data/watchlist.json</code>, <code>data/gold_model.json</code> —
+    repo Finance-duy, nhánh <code>claude/investment-news-aggregator-w81l70</code>.<br>
+    Giá vàng tiệm là ƯỚC TÍNH từ XAU/USD qua mô hình hiệu chuẩn 1 mẫu (độ tin cậy LOW) —
+    gửi ảnh bảng giá mới để tăng độ chính xác.<br>
+    Đây là công cụ hỗ trợ theo dõi cá nhân, không phải khuyến nghị đầu tư từ tổ chức được cấp phép.
+  </footer>
+
+</div>
+</div>"""
+
+
+_CSS = """<style>
+  .viz-root {
+    color-scheme: light;
+    --page:#f9f9f7; --surface-1:#fcfcfb; --text-primary:#0b0b0b; --text-secondary:#52514e;
+    --text-muted:#898781; --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+    --good-text:#006300;
+    --s-blue:#2a78d6; --s-green:#008300; --s-magenta:#e87ba4; --s-yellow:#eda100;
+    --s-aqua:#1baf7a; --s-orange:#eb6834; --s-violet:#4a3aa7; --s-red:#e34948;
+    --st-good:#0ca30c; --st-warning:#fab219; --st-critical:#d03b3b; --st-warning-text:#a06400;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page); color: var(--text-primary);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --page:#0d0d0d; --surface-1:#1a1a19; --text-primary:#ffffff; --text-secondary:#c3c2b7;
+      --text-muted:#898781; --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+      --good-text:#0ca30c;
+      --s-blue:#3987e5; --s-green:#008300; --s-magenta:#d55181; --s-yellow:#c98500;
+      --s-aqua:#199e70; --s-orange:#d95926; --s-violet:#9085e9; --s-red:#e66767;
+      --st-warning-text:#fab219;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --page:#0d0d0d; --surface-1:#1a1a19; --text-primary:#ffffff; --text-secondary:#c3c2b7;
+    --text-muted:#898781; --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --good-text:#0ca30c;
+    --s-blue:#3987e5; --s-green:#008300; --s-magenta:#d55181; --s-yellow:#c98500;
+    --s-aqua:#199e70; --s-orange:#d95926; --s-violet:#9085e9; --s-red:#e66767;
+    --st-warning-text:#fab219;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .viz-root { min-height: 100%; padding: 24px 16px 48px; }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  header.top { margin-bottom: 24px; }
+  header.top h1 { font-size: 1.5rem; margin: 0 0 6px; }
+  header.top .sub { color: var(--text-secondary); font-size: 0.9rem; }
+  header.top .gen { color: var(--text-muted); font-size: 0.78rem; margin-top: 4px; }
+  .badge { display:inline-block; padding:1px 8px; border-radius:999px; font-size:.72rem;
+           font-weight:600; margin-left:4px; }
+  .badge.ok { background:rgba(12,163,12,.15); color:var(--good-text); }
+  .badge.warn { background:rgba(250,178,25,.18); color:var(--st-warning-text); }
+  .badge.bad { background:rgba(208,59,59,.15); color:var(--st-critical); }
+  .card { background: var(--surface-1); border: 1px solid var(--border);
+          border-radius: 12px; padding: 18px 20px; }
+  .grid-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 12px; margin-bottom: 16px; }
+  .tile .label { color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 6px; }
+  .tile .value { font-size: 1.6rem; font-weight: 600; }
+  .tile .delta { font-size: 0.8rem; margin-top: 4px; color: var(--text-muted); }
+  .tile .delta.flag { color: var(--st-warning-text); font-weight: 600; }
+  section { margin-bottom: 16px; }
+  h2.card-title { font-size: 1rem; margin: 0 0 4px; }
+  .card-note { color: var(--text-muted); font-size: 0.78rem; margin: 0 0 14px; line-height:1.5; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.8rem;
+            color: var(--text-secondary); margin-top: 10px; }
+  .legend .item { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } }
+  svg { display: block; max-width: 100%; overflow: visible; }
+  svg text { fill: var(--text-secondary); font-size: 11px; }
+  svg .muted { fill: var(--text-muted); }
+  svg .axis-line { stroke: var(--axis); stroke-width: 1; }
+  svg .grid-line { stroke: var(--grid); stroke-width: 1; }
+  .status-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .status-card { border-left: 3px solid var(--st-warning); padding-left: 12px; }
+  .status-card.critical { border-color: var(--st-critical); }
+  .status-card.warning { border-color: var(--st-warning); }
+  .status-card.good { border-color: var(--st-good); }
+  .status-card .tag { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem;
+        font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 6px; }
+  .status-card.critical .tag { color: var(--st-critical); }
+  .status-card.warning .tag { color: var(--st-warning-text); }
+  .status-card.good .tag { color: var(--good-text); }
+  .status-card .body { font-size: 0.86rem; color: var(--text-primary); line-height: 1.5; }
+  /* Bảng rộng phải TỰ cuộn ngang trong khung của nó — không được để thân
+     trang cuộn ngang, cũng không bóp cột chữ thành sợi dọc trên điện thoại. */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-scroll table { min-width: 560px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  thead th { text-align: left; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;
+             text-transform: uppercase; letter-spacing: 0.02em; padding: 6px 10px;
+             border-bottom: 1px solid var(--grid); }
+  tbody td { padding: 8px 10px; border-bottom: 1px solid var(--grid);
+             font-variant-numeric: tabular-nums; }
+  tbody tr:last-child td { border-bottom: none; }
+  .tk { font-weight: 600; font-variant-numeric: normal; }
+  .chg-flat { color: var(--text-muted); }
+  .na { color: var(--text-muted); font-style: italic; }
+  footer.foot { margin-top: 24px; color: var(--text-muted); font-size: 0.78rem; line-height: 1.6; }
+</style>"""
+
+
+def main() -> None:
+    ctx = build_context()
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT_PATH.write_text(render(ctx), encoding="utf-8")
+    n = len(ctx["history"])
+    print(f"Đã sinh {OUTPUT_PATH.relative_to(ROOT)} từ {n} snapshot "
+          f"(kỳ mới nhất: {ctx['latest'].get('date')} {ctx['latest'].get('ky')}).")
+    if ctx["pending"].get("message"):
+        print(f"⚠️  {ctx['pending']['tag']}")
+
+
+if __name__ == "__main__":
+    main()

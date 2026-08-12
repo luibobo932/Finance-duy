@@ -2,302 +2,347 @@
 <style>
   .viz-root {
     color-scheme: light;
-    --page:        #f9f9f7;
-    --surface-1:   #fcfcfb;
-    --text-primary:#0b0b0b;
-    --text-secondary:#52514e;
-    --text-muted:  #898781;
-    --grid:        #e1e0d9;
-    --axis:        #c3c2b7;
-    --border:      rgba(11,11,11,0.10);
-    --good-text:   #006300;
-
-    --s-blue:   #2a78d6;
-    --s-green:  #008300;
-    --s-magenta:#e87ba4;
-    --s-yellow: #eda100;
-    --s-aqua:   #1baf7a;
-    --s-orange: #eb6834;
-    --s-violet: #4a3aa7;
-    --s-red:    #e34948;
-
-    --st-good:    #0ca30c;
-    --st-warning: #fab219;
-    --st-serious: #ec835a;
-    --st-critical:#d03b3b;
-    --st-warning-text: #a06400;
-
+    --page:#f9f9f7; --surface-1:#fcfcfb; --text-primary:#0b0b0b; --text-secondary:#52514e;
+    --text-muted:#898781; --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+    --good-text:#006300;
+    --s-blue:#2a78d6; --s-green:#008300; --s-magenta:#e87ba4; --s-yellow:#eda100;
+    --s-aqua:#1baf7a; --s-orange:#eb6834; --s-violet:#4a3aa7; --s-red:#e34948;
+    --st-good:#0ca30c; --st-warning:#fab219; --st-critical:#d03b3b; --st-warning-text:#a06400;
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    background: var(--page);
-    color: var(--text-primary);
+    background: var(--page); color: var(--text-primary);
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) .viz-root {
       color-scheme: dark;
-      --page:        #0d0d0d;
-      --surface-1:   #1a1a19;
-      --text-primary:#ffffff;
-      --text-secondary:#c3c2b7;
-      --text-muted:  #898781;
-      --grid:        #2c2c2a;
-      --axis:        #383835;
-      --border:      rgba(255,255,255,0.10);
-      --good-text:   #0ca30c;
+      --page:#0d0d0d; --surface-1:#1a1a19; --text-primary:#ffffff; --text-secondary:#c3c2b7;
+      --text-muted:#898781; --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+      --good-text:#0ca30c;
       --s-blue:#3987e5; --s-green:#008300; --s-magenta:#d55181; --s-yellow:#c98500;
       --s-aqua:#199e70; --s-orange:#d95926; --s-violet:#9085e9; --s-red:#e66767;
-      --st-warning-text: #fab219;
+      --st-warning-text:#fab219;
     }
   }
   :root[data-theme="dark"] .viz-root {
     color-scheme: dark;
-    --page:        #0d0d0d;
-    --surface-1:   #1a1a19;
-    --text-primary:#ffffff;
-    --text-secondary:#c3c2b7;
-    --text-muted:  #898781;
-    --grid:        #2c2c2a;
-    --axis:        #383835;
-    --border:      rgba(255,255,255,0.10);
-    --good-text:   #0ca30c;
+    --page:#0d0d0d; --surface-1:#1a1a19; --text-primary:#ffffff; --text-secondary:#c3c2b7;
+    --text-muted:#898781; --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --good-text:#0ca30c;
     --s-blue:#3987e5; --s-green:#008300; --s-magenta:#d55181; --s-yellow:#c98500;
     --s-aqua:#199e70; --s-orange:#d95926; --s-violet:#9085e9; --s-red:#e66767;
-    --st-warning-text: #fab219;
+    --st-warning-text:#fab219;
   }
-
   * { box-sizing: border-box; }
   body { margin: 0; }
   .viz-root { min-height: 100%; padding: 24px 16px 48px; }
   .wrap { max-width: 960px; margin: 0 auto; }
-
   header.top { margin-bottom: 24px; }
-  header.top h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  header.top h1 { font-size: 1.5rem; margin: 0 0 6px; }
   header.top .sub { color: var(--text-secondary); font-size: 0.9rem; }
-
-  .card {
-    background: var(--surface-1);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px 20px;
-  }
-  .grid-tiles {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-    margin-bottom: 16px;
-  }
+  header.top .gen { color: var(--text-muted); font-size: 0.78rem; margin-top: 4px; }
+  .badge { display:inline-block; padding:1px 8px; border-radius:999px; font-size:.72rem;
+           font-weight:600; margin-left:4px; }
+  .badge.ok { background:rgba(12,163,12,.15); color:var(--good-text); }
+  .badge.warn { background:rgba(250,178,25,.18); color:var(--st-warning-text); }
+  .badge.bad { background:rgba(208,59,59,.15); color:var(--st-critical); }
+  .card { background: var(--surface-1); border: 1px solid var(--border);
+          border-radius: 12px; padding: 18px 20px; }
+  .grid-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 12px; margin-bottom: 16px; }
   .tile .label { color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 6px; }
   .tile .value { font-size: 1.6rem; font-weight: 600; }
   .tile .delta { font-size: 0.8rem; margin-top: 4px; color: var(--text-muted); }
   .tile .delta.flag { color: var(--st-warning-text); font-weight: 600; }
-
   section { margin-bottom: 16px; }
   h2.card-title { font-size: 1rem; margin: 0 0 4px; }
-  .card-note { color: var(--text-muted); font-size: 0.78rem; margin: 0 0 14px; }
-
-  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.8rem; color: var(--text-secondary); margin-top: 10px; }
+  .card-note { color: var(--text-muted); font-size: 0.78rem; margin: 0 0 14px; line-height:1.5; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.8rem;
+            color: var(--text-secondary); margin-top: 10px; }
   .legend .item { display: flex; align-items: center; gap: 6px; }
   .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
-
-  .two-col { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; }
-  @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
-
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } }
+  svg { display: block; max-width: 100%; overflow: visible; }
   svg text { fill: var(--text-secondary); font-size: 11px; }
   svg .muted { fill: var(--text-muted); }
   svg .axis-line { stroke: var(--axis); stroke-width: 1; }
   svg .grid-line { stroke: var(--grid); stroke-width: 1; }
-
-  .status-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .status-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
   .status-card { border-left: 3px solid var(--st-warning); padding-left: 12px; }
   .status-card.critical { border-color: var(--st-critical); }
   .status-card.warning { border-color: var(--st-warning); }
   .status-card.good { border-color: var(--st-good); }
-  .status-card .tag { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 6px; }
+  .status-card .tag { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem;
+        font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 6px; }
   .status-card.critical .tag { color: var(--st-critical); }
   .status-card.warning .tag { color: var(--st-warning-text); }
   .status-card.good .tag { color: var(--good-text); }
   .status-card .body { font-size: 0.86rem; color: var(--text-primary); line-height: 1.5; }
-  .status-card .body .k { color: var(--text-secondary); }
-
+  /* Bảng rộng phải TỰ cuộn ngang trong khung của nó — không được để thân
+     trang cuộn ngang, cũng không bóp cột chữ thành sợi dọc trên điện thoại. */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-scroll table { min-width: 560px; }
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  thead th { text-align: left; color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.02em; padding: 6px 10px; border-bottom: 1px solid var(--grid); }
-  tbody td { padding: 8px 10px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+  thead th { text-align: left; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;
+             text-transform: uppercase; letter-spacing: 0.02em; padding: 6px 10px;
+             border-bottom: 1px solid var(--grid); }
+  tbody td { padding: 8px 10px; border-bottom: 1px solid var(--grid);
+             font-variant-numeric: tabular-nums; }
   tbody tr:last-child td { border-bottom: none; }
   .tk { font-weight: 600; font-variant-numeric: normal; }
   .chg-flat { color: var(--text-muted); }
   .na { color: var(--text-muted); font-style: italic; }
-
   footer.foot { margin-top: 24px; color: var(--text-muted); font-size: 0.78rem; line-height: 1.6; }
 </style>
-
 <div class="viz-root">
 <div class="wrap">
 
   <header class="top">
     <h1>Bản tin đầu tư — Duy</h1>
-    <div class="sub">Cập nhật: 22/07/2026 (Thứ Tư), bản tin chiều · Vàng nhẫn · Tiết kiệm · VN-Index · VCB/CTD watchlist</div>
+    <div class="sub">Kỳ chiều 22/07/2026
+      <span class="badge bad">dữ liệu cũ 21 ngày — kiểm tra routine bản tin</span></div>
+    <div class="sub gen">Trang này được <b>sinh tự động</b> từ <code>data/history.jsonl</code>
+      (11 snapshot) lúc 13/08/2026 06:33 (giờ VN) — không có số liệu nào nhập tay.</div>
   </header>
 
-  <section class="grid-tiles">
-    <div class="card tile">
-      <div class="label">Tổng tài sản (ước tính)</div>
-      <div class="value">≈ 1.128,3 triệu</div>
-      <div class="delta">6,5 lượng vàng nhẫn + 246tr tiết kiệm + 35tr mặt</div>
-    </div>
-    <div class="card tile">
-      <div class="label">Vàng nhẫn — 6,5 lượng</div>
-      <div class="value">847,3 triệu</div>
-      <div class="delta flag">75,1% tổng tài sản — vượt hẳn ngưỡng critical</div>
-    </div>
-    <div class="card tile">
-      <div class="label">Tiết kiệm</div>
-      <div class="value">246 triệu</div>
-      <div class="delta">21,8% tổng tài sản</div>
-    </div>
-    <div class="card tile">
-      <div class="label">Tiền mặt</div>
-      <div class="value">35 triệu</div>
-      <div class="delta">3,1% tổng tài sản</div>
-    </div>
-  </section>
+  <section class="grid-tiles"><div class="card tile"><div class="label">Tổng tài sản (ước tính)</div><div class="value">1.128,3 tr</div><div class="delta">▲ 3,9 tr so với kỳ trước</div></div><div class="card tile"><div class="label">Vàng nhẫn — 6,5 lượng</div><div class="value">847,3 tr</div><div class="delta flag">75,1% tổng tài sản — vượt ngưỡng critical 70%</div></div><div class="card tile"><div class="label">Tiết kiệm</div><div class="value">246 tr</div><div class="delta">21,8% tổng tài sản</div></div><div class="card tile"><div class="label">Tiền mặt</div><div class="value">35 tr</div><div class="delta">3,1% tổng tài sản</div></div></section>
 
   <section class="card">
     <h2 class="card-title">Phân bổ tài sản</h2>
-    <p class="card-note">Vàng chiếm 3/4 danh mục — Risk Officer khuyến nghị KHÔNG mua thêm vàng ở tỷ trọng này.</p>
-    <svg viewBox="0 0 620 56" width="100%" height="56" role="img" aria-label="Phân bổ tài sản: vàng 75,1%, tiết kiệm 21,8%, tiền mặt 3,1%">
-      <rect x="0" y="16" width="450" height="24" rx="4" fill="var(--s-yellow)"/>
-      <rect x="454" y="16" width="147" height="24" rx="4" fill="var(--s-blue)"/>
-      <rect x="605" y="16" width="15" height="24" rx="4" fill="var(--s-aqua)"/>
-    </svg>
-    <div class="legend">
-      <span class="item"><span class="swatch" style="background:var(--s-yellow)"></span>Vàng nhẫn — 75,1%</span>
-      <span class="item"><span class="swatch" style="background:var(--s-blue)"></span>Tiết kiệm — 21,8%</span>
-      <span class="item"><span class="swatch" style="background:var(--s-aqua)"></span>Tiền mặt — 3,1%</span>
+    <p class="card-note">Risk Officer: vàng ≥ 70% → KHÔNG mua thêm vàng (ngưỡng trong <code>config/risk_limits.yaml</code>).</p>
+    <svg viewBox="0 0 620 56" width="100%" height="56" role="img" aria-label="Phân bổ: Vàng nhẫn 75.1%, Tiết kiệm 21.8%, Tiền mặt 3.1%">
+<rect x="0.0" y="16" width="462.6" height="24" rx="4" fill="var(--s-yellow)"><title>Vàng nhẫn: 75,1%</title></rect>
+<rect x="464.6" y="16" width="134.3" height="24" rx="4" fill="var(--s-blue)"><title>Tiết kiệm: 21,8%</title></rect>
+<rect x="600.9" y="16" width="19.1" height="24" rx="4" fill="var(--s-aqua)"><title>Tiền mặt: 3,1%</title></rect>
+</svg>
+    <div class="legend"><span class="item"><span class="swatch" style="background:var(--s-yellow)"></span>Vàng nhẫn — 75,1%</span><span class="item"><span class="swatch" style="background:var(--s-blue)"></span>Tiết kiệm — 21,8%</span><span class="item"><span class="swatch" style="background:var(--s-aqua)"></span>Tiền mặt — 3,1%</span></div>
+  </section>
+
+  <section class="two-col">
+    <div class="card">
+      <h2 class="card-title">Tổng tài sản theo thời gian</h2>
+      <p class="card-note">Triệu đồng. Định giá lại từng kỳ theo giá vàng của chính kỳ đó — số lượng
+        tài sản không đổi, nên đường này là biến động GIÁ, không phải mua/bán.</p>
+      <svg viewBox="0 0 700 240" width="100%" height="240" role="img" aria-label="Tổng tài sản theo thời gian">
+<line class="axis-line" x1="44" y1="194.0" x2="644" y2="194.0"/>
+<text class="muted" x="38" y="198.0" text-anchor="end">1.100</text>
+<line class="grid-line" x1="44" y1="134.7" x2="644" y2="134.7"/>
+<text class="muted" x="38" y="138.7" text-anchor="end">1.110</text>
+<line class="grid-line" x1="44" y1="75.3" x2="644" y2="75.3"/>
+<text class="muted" x="38" y="79.3" text-anchor="end">1.120</text>
+<line class="grid-line" x1="44" y1="16.0" x2="644" y2="16.0"/>
+<text class="muted" x="38" y="20.0" text-anchor="end">1.130</text>
+<text class="muted" x="44.0" y="212" text-anchor="middle">17/7c</text>
+<text class="muted" x="164.0" y="212" text-anchor="middle">18/7c</text>
+<text class="muted" x="284.0" y="212" text-anchor="middle">19/7c</text>
+<text class="muted" x="404.0" y="212" text-anchor="middle">20/7c</text>
+<text class="muted" x="524.0" y="212" text-anchor="middle">21/7c</text>
+<text style="font-weight:600" x="644.0" y="212" text-anchor="middle">22/7c</text>
+<polyline points="44.0,176.6 104.0,135.8 164.0,136.2 224.0,136.2 284.0,131.1 344.0,163.5 404.0,145.4 464.0,141.5 524.0,71.7 584.0,49.4 644.0,26.2" fill="none" stroke="var(--s-violet)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="644.0" cy="26.2" r="4" fill="var(--s-violet)" stroke="var(--surface-1)" stroke-width="2"><title>Tổng tài sản: 1.128 tr</title></circle>
+<text class="muted" x="652.0" y="30.2">1.128</text>
+</svg>
+    </div>
+    <div class="card">
+      <h2 class="card-title">Tỷ trọng vàng vs ngưỡng rủi ro</h2>
+      <p class="card-note">%. Đường đỏ là ngưỡng critical trong <code>config/risk_limits.yaml</code> —
+        khoảng cách tới nó là mức độ lệch khỏi khẩu vị rủi ro đã đặt.</p>
+      <svg viewBox="0 0 700 240" width="100%" height="240" role="img" aria-label="Tỷ trọng vàng so với ngưỡng rủi ro">
+<line class="axis-line" x1="44" y1="194.0" x2="644" y2="194.0"/>
+<text class="muted" x="38" y="198.0" text-anchor="end">70,0</text>
+<line class="grid-line" x1="44" y1="134.7" x2="644" y2="134.7"/>
+<text class="muted" x="38" y="138.7" text-anchor="end">72,0</text>
+<line class="grid-line" x1="44" y1="75.3" x2="644" y2="75.3"/>
+<text class="muted" x="38" y="79.3" text-anchor="end">74,0</text>
+<line class="grid-line" x1="44" y1="16.0" x2="644" y2="16.0"/>
+<text class="muted" x="38" y="20.0" text-anchor="end">76,0</text>
+<text class="muted" x="44.0" y="212" text-anchor="middle">17/7c</text>
+<text class="muted" x="164.0" y="212" text-anchor="middle">18/7c</text>
+<text class="muted" x="284.0" y="212" text-anchor="middle">19/7c</text>
+<text class="muted" x="404.0" y="212" text-anchor="middle">20/7c</text>
+<text class="muted" x="524.0" y="212" text-anchor="middle">21/7c</text>
+<text style="font-weight:600" x="644.0" y="212" text-anchor="middle">22/7c</text>
+<polyline points="44.0,59.8 104.0,55.1 164.0,55.2 224.0,55.2 284.0,54.6 344.0,58.3 404.0,56.2 464.0,55.8 524.0,47.9 584.0,45.4 644.0,42.9" fill="none" stroke="var(--s-yellow)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="644.0" cy="42.9" r="4" fill="var(--s-yellow)" stroke="var(--surface-1)" stroke-width="2"><title>Tỷ trọng vàng: 75,1%</title></circle>
+<polyline points="44.0,194.0 104.0,194.0 164.0,194.0 224.0,194.0 284.0,194.0 344.0,194.0 404.0,194.0 464.0,194.0 524.0,194.0 584.0,194.0 644.0,194.0" fill="none" stroke="var(--s-red)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="644.0" cy="194.0" r="4" fill="var(--s-red)" stroke="var(--surface-1)" stroke-width="2"><title>Ngưỡng critical 70%: 70,0%</title></circle>
+<text class="muted" x="652.0" y="46.9">75,1</text>
+</svg>
+      <div class="legend"><span class="item"><span class="swatch" style="background:var(--s-yellow)"></span>Tỷ trọng vàng</span><span class="item"><span class="swatch" style="background:var(--s-red)"></span>Ngưỡng critical 70%</span></div>
     </div>
   </section>
 
   <section class="two-col">
     <div class="card">
-      <h2 class="card-title">Giá vàng — 9 kỳ gần nhất (cửa sổ trượt)</h2>
-      <p class="card-note">Triệu đồng/lượng, giá niêm yết SJC (mua/bán) và nhẫn (bán) — nguồn <code>data/history.jsonl</code>. XAU/USD tiếp tục leo cao trong ngày (4.069$ rạng sáng → 4.134$ chiều), giá trong nước đi ngang so với sáng — độ trễ thường 1-2 ngày.</p>
-      <svg viewBox="0 0 700 240" width="100%" height="240" role="img" aria-label="Xu hướng giá vàng 9 kỳ gần nhất, thế giới tiếp tục tăng trong khi trong nước tạm đi ngang">
-        <line class="grid-line" x1="40" y1="50" x2="680" y2="50"/>
-        <line class="grid-line" x1="40" y1="110" x2="680" y2="110"/>
-        <line class="grid-line" x1="40" y1="170" x2="680" y2="170"/>
-        <line class="axis-line" x1="40" y1="230" x2="680" y2="230"/>
-        <text class="muted" x="34" y="53" text-anchor="end">148</text>
-        <text class="muted" x="34" y="113" text-anchor="end">146</text>
-        <text class="muted" x="34" y="173" text-anchor="end">144</text>
-        <text class="muted" x="34" y="233" text-anchor="end">142</text>
-
-        <text class="muted" x="40" y="248" text-anchor="middle">18/7c</text>
-        <text class="muted" x="120" y="248" text-anchor="middle">19/7s</text>
-        <text class="muted" x="200" y="248" text-anchor="middle">19/7c</text>
-        <text class="muted" x="280" y="248" text-anchor="middle">20/7s</text>
-        <text class="muted" x="360" y="248" text-anchor="middle">20/7c</text>
-        <text class="muted" x="440" y="248" text-anchor="middle">21/7s</text>
-        <text class="muted" x="520" y="248" text-anchor="middle">21/7c</text>
-        <text class="muted" x="600" y="248" text-anchor="middle">22/7s</text>
-        <text x="680" y="248" text-anchor="middle" style="font-weight:600">22/7c</text>
-
-        <polyline points="40,65 120,65 200,65 280,80 360,104 440,125 520,125 600,110 680,110" fill="none" stroke="var(--s-red)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-        <polyline points="40,95 120,95 200,95 280,140 360,104 440,125 520,128 600,65 680,65" fill="none" stroke="var(--s-orange)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-        <polyline points="40,155 120,155 200,155 280,176 360,209 440,230 520,230 600,215 680,215" fill="none" stroke="var(--s-blue)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-
-        <g>
-          <circle cx="680" cy="110" r="4" fill="var(--s-red)" stroke="var(--surface-1)" stroke-width="2"><title>SJC bán: 146,0 triệu/lượng (đi ngang so với sáng)</title></circle>
-          <circle cx="680" cy="65" r="4" fill="var(--s-orange)" stroke="var(--surface-1)" stroke-width="2"><title>Nhẫn bán (Doji): 147,5 triệu/lượng (đi ngang so với sáng)</title></circle>
-          <circle cx="680" cy="215" r="4" fill="var(--s-blue)" stroke="var(--surface-1)" stroke-width="2"><title>SJC mua: 142,5 triệu/lượng (đi ngang so với sáng)</title></circle>
-        </g>
-        <text x="608" y="68" class="muted">147,5</text>
-        <text x="608" y="104" class="muted">146,0</text>
-        <text x="612" y="211" class="muted">142,5</text>
-      </svg>
-      <div class="legend">
-        <span class="item"><span class="swatch" style="background:var(--s-red)"></span>SJC bán</span>
-        <span class="item"><span class="swatch" style="background:var(--s-orange)"></span>Nhẫn bán</span>
-        <span class="item"><span class="swatch" style="background:var(--s-blue)"></span>SJC mua</span>
-      </div>
+      <h2 class="card-title">Giá vàng trong nước — toàn bộ lịch sử</h2>
+      <p class="card-note">Triệu đồng/lượng, giá niêm yết. Chỗ khuyết = kỳ đó không có số liệu
+        (đường bị ngắt, không nội suy).</p>
+      <svg viewBox="0 0 700 240" width="100%" height="240" role="img" aria-label="Giá vàng trong nước theo kỳ">
+<line class="axis-line" x1="44" y1="194.0" x2="644" y2="194.0"/>
+<text class="muted" x="38" y="198.0" text-anchor="end">142,0</text>
+<line class="grid-line" x1="44" y1="134.7" x2="644" y2="134.7"/>
+<text class="muted" x="38" y="138.7" text-anchor="end">144,0</text>
+<line class="grid-line" x1="44" y1="75.3" x2="644" y2="75.3"/>
+<text class="muted" x="38" y="79.3" text-anchor="end">146,0</text>
+<line class="grid-line" x1="44" y1="16.0" x2="644" y2="16.0"/>
+<text class="muted" x="38" y="20.0" text-anchor="end">148,0</text>
+<text class="muted" x="44.0" y="212" text-anchor="middle">17/7c</text>
+<text class="muted" x="164.0" y="212" text-anchor="middle">18/7c</text>
+<text class="muted" x="284.0" y="212" text-anchor="middle">19/7c</text>
+<text class="muted" x="404.0" y="212" text-anchor="middle">20/7c</text>
+<text class="muted" x="524.0" y="212" text-anchor="middle">21/7c</text>
+<text style="font-weight:600" x="644.0" y="212" text-anchor="middle">22/7c</text>
+<polyline points="44.0,57.5 104.0,57.5 164.0,30.8 224.0,30.8 284.0,30.8 344.0,45.7 404.0,69.4 464.0,90.2 524.0,90.2 584.0,75.3 644.0,75.3" fill="none" stroke="var(--s-red)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="644.0" cy="75.3" r="4" fill="var(--s-red)" stroke="var(--surface-1)" stroke-width="2"><title>SJC bán: 146,0 tr</title></circle>
+<polyline points="44.0,87.2 104.0,87.2 164.0,60.5 224.0,60.5 284.0,60.5 344.0,105.0 404.0,69.4 464.0,90.2 524.0,93.1 584.0,30.8 644.0,30.8" fill="none" stroke="var(--s-orange)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="644.0" cy="30.8" r="4" fill="var(--s-orange)" stroke="var(--surface-1)" stroke-width="2"><title>Nhẫn bán: 147,5 tr</title></circle>
+<polyline points="44.0,146.5 104.0,146.5 164.0,119.8 224.0,119.8 284.0,119.8 344.0,140.6 404.0,173.2 464.0,194.0 524.0,194.0 584.0,179.2 644.0,179.2" fill="none" stroke="var(--s-blue)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="644.0" cy="179.2" r="4" fill="var(--s-blue)" stroke="var(--surface-1)" stroke-width="2"><title>SJC mua: 142,5 tr</title></circle>
+<text class="muted" x="652.0" y="34.8">147,5</text>
+<text class="muted" x="652.0" y="79.3">146,0</text>
+<text class="muted" x="652.0" y="183.2">142,5</text>
+</svg>
+      <div class="legend"><span class="item"><span class="swatch" style="background:var(--s-red)"></span>SJC bán</span><span class="item"><span class="swatch" style="background:var(--s-orange)"></span>Nhẫn bán</span><span class="item"><span class="swatch" style="background:var(--s-blue)"></span>SJC mua</span></div>
     </div>
-
     <div class="card">
-      <h2 class="card-title">Lãi suất tiết kiệm — top ngân hàng</h2>
-      <p class="card-note">%/năm, tiền gửi dưới 1 tỷ · OCB mới xuất hiện trong top thay HLBank</p>
-      <svg viewBox="0 0 380 240" width="100%" height="240" role="img" aria-label="Lãi suất tiết kiệm top ngân hàng, VIB dẫn đầu kỳ hạn 6 tháng">
-        <line class="grid-line" x1="30" y1="40" x2="360" y2="40"/>
-        <line class="grid-line" x1="30" y1="90" x2="360" y2="90"/>
-        <line class="grid-line" x1="30" y1="140" x2="360" y2="140"/>
-        <line class="axis-line" x1="30" y1="200" x2="360" y2="200"/>
-
-        <rect x="55" y="58" width="52" height="142" rx="4" fill="var(--s-blue)"/>
-        <text x="81" y="52" text-anchor="middle" style="font-weight:600">8,0%</text>
-        <text class="muted" x="81" y="216" text-anchor="middle">VIB</text>
-        <text class="muted" x="81" y="230" text-anchor="middle">kỳ hạn 6 tháng</text>
-
-        <rect x="164" y="68" width="52" height="132" rx="4" fill="var(--s-blue)"/>
-        <text x="190" y="62" text-anchor="middle" style="font-weight:600">7,4%</text>
-        <text class="muted" x="190" y="216" text-anchor="middle">Cake by VPBank</text>
-        <text class="muted" x="190" y="230" text-anchor="middle">kỳ hạn 12 tháng</text>
-
-        <rect x="273" y="74" width="52" height="126" rx="4" fill="var(--s-blue)"/>
-        <text x="299" y="68" text-anchor="middle" style="font-weight:600">7,1%</text>
-        <text class="muted" x="299" y="216" text-anchor="middle">OCB</text>
-        <text class="muted" x="299" y="230" text-anchor="middle">kỳ hạn 12 tháng</text>
-      </svg>
-      <p class="card-note" style="margin:10px 0 0">VIB 8,0%/năm là ưu đãi online kỳ hạn 6–11 tháng — lãi suất cao hơn cả kỳ hạn dài, đáng cân nhắc nếu muốn giữ linh hoạt đáo hạn sớm.</p>
+      <h2 class="card-title">Vàng thế giới (XAU/USD)</h2>
+      <p class="card-note">USD/oz. Tách riêng khỏi giá trong nước vì khác đơn vị —
+        không bao giờ ghép 2 trục y vào một biểu đồ.</p>
+      <svg viewBox="0 0 700 240" width="100%" height="240" role="img" aria-label="Giá vàng thế giới XAU/USD">
+<line class="axis-line" x1="44" y1="194.0" x2="644" y2="194.0"/>
+<text class="muted" x="38" y="198.0" text-anchor="end">3.950</text>
+<line class="grid-line" x1="44" y1="149.5" x2="644" y2="149.5"/>
+<text class="muted" x="38" y="153.5" text-anchor="end">4.000</text>
+<line class="grid-line" x1="44" y1="105.0" x2="644" y2="105.0"/>
+<text class="muted" x="38" y="109.0" text-anchor="end">4.050</text>
+<line class="grid-line" x1="44" y1="60.5" x2="644" y2="60.5"/>
+<text class="muted" x="38" y="64.5" text-anchor="end">4.100</text>
+<line class="grid-line" x1="44" y1="16.0" x2="644" y2="16.0"/>
+<text class="muted" x="38" y="20.0" text-anchor="end">4.150</text>
+<text class="muted" x="44.0" y="212" text-anchor="middle">17/7c</text>
+<text class="muted" x="164.0" y="212" text-anchor="middle">18/7c</text>
+<text class="muted" x="284.0" y="212" text-anchor="middle">19/7c</text>
+<text class="muted" x="404.0" y="212" text-anchor="middle">20/7c</text>
+<text class="muted" x="524.0" y="212" text-anchor="middle">21/7c</text>
+<text style="font-weight:600" x="644.0" y="212" text-anchor="middle">22/7c</text>
+<polyline points="44.0,163.7 104.0,134.1 164.0,134.4 224.0,134.4 284.0,134.7 344.0,158.4 404.0,145.1 464.0,142.4 524.0,91.7 584.0,47.2 644.0,30.2" fill="none" stroke="var(--s-magenta)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="644.0" cy="30.2" r="4" fill="var(--s-magenta)" stroke="var(--surface-1)" stroke-width="2"><title>XAU/USD: 4.134 $</title></circle>
+<text class="muted" x="652.0" y="34.2">4.134</text>
+</svg>
     </div>
+  </section>
+
+  <section class="two-col">
+    <div class="card">
+      <h2 class="card-title">Chênh lệch vàng VN – thế giới</h2>
+      <p class="card-note">Triệu đồng/lượng. Chênh lệch nới rộng = mua trong nước đắt hơn so với
+        giá trị quốc tế; thu hẹp = giá trong nước đang điều chỉnh về sát thế giới.</p>
+      <svg viewBox="0 0 700 240" width="100%" height="240" role="img" aria-label="Chênh lệch giá vàng VN và thế giới">
+<line class="axis-line" x1="44" y1="194.0" x2="644" y2="194.0"/>
+<text class="muted" x="38" y="198.0" text-anchor="end">14,0</text>
+<line class="grid-line" x1="44" y1="134.7" x2="644" y2="134.7"/>
+<text class="muted" x="38" y="138.7" text-anchor="end">16,0</text>
+<line class="grid-line" x1="44" y1="75.3" x2="644" y2="75.3"/>
+<text class="muted" x="38" y="79.3" text-anchor="end">18,0</text>
+<line class="grid-line" x1="44" y1="16.0" x2="644" y2="16.0"/>
+<text class="muted" x="38" y="20.0" text-anchor="end">20,0</text>
+<text class="muted" x="44.0" y="212" text-anchor="middle">17/7c</text>
+<text class="muted" x="164.0" y="212" text-anchor="middle">18/7c</text>
+<text class="muted" x="284.0" y="212" text-anchor="middle">19/7c</text>
+<text class="muted" x="404.0" y="212" text-anchor="middle">20/7c</text>
+<text class="muted" x="524.0" y="212" text-anchor="middle">21/7c</text>
+<text style="font-weight:600" x="644.0" y="212" text-anchor="middle">22/7c</text>
+<polyline points="44.0,30.8 104.0,63.5 164.0,33.8 224.0,33.8 284.0,33.8 344.0,27.9 404.0,66.4 464.0,90.2 524.0,143.6 584.0,146.5 644.0,164.3" fill="none" stroke="var(--s-green)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="644.0" cy="164.3" r="4" fill="var(--s-green)" stroke="var(--surface-1)" stroke-width="2"><title>Chênh lệch VN–TG: 15,0 tr</title></circle>
+<text class="muted" x="652.0" y="168.3">15,0</text>
+</svg>
+    </div>
+    <div class="card">
+      <h2 class="card-title">Lãi suất tiết kiệm &lt; 1 tỷ</h2>
+      <p class="card-note">%/năm, theo snapshot kỳ này. Cột mọc từ gốc 0 để không phóng đại chênh lệch.</p>
+      <svg viewBox="0 0 380 240" width="100%" height="240" role="img" aria-label="Lãi suất tiết kiệm top ngân hàng">
+<line class="axis-line" x1="30" y1="188.0" x2="360" y2="188.0"/>
+<line class="grid-line" x1="30" y1="145.0" x2="360" y2="145.0"/>
+<line class="grid-line" x1="30" y1="102.0" x2="360" y2="102.0"/>
+<line class="grid-line" x1="30" y1="59.0" x2="360" y2="59.0"/>
+<line class="grid-line" x1="30" y1="16.0" x2="360" y2="16.0"/>
+<rect x="58.6" y="16.0" width="52.8" height="172.0" rx="4" fill="var(--s-blue)"><title>VIB: 8,00%</title></rect>
+<text x="85.0" y="10.0" text-anchor="middle" style="font-weight:600">8,00%</text>
+<text class="muted" x="85.0" y="204" text-anchor="middle">VIB</text>
+<text class="muted" x="85.0" y="218" text-anchor="middle">kỳ hạn 6 tháng</text>
+<rect x="168.6" y="28.9" width="52.8" height="159.1" rx="4" fill="var(--s-blue)"><title>Cake by VPBank: 7,40%</title></rect>
+<text x="195.0" y="22.9" text-anchor="middle" style="font-weight:600">7,40%</text>
+<text class="muted" x="195.0" y="204" text-anchor="middle">Cake by VPBank</text>
+<text class="muted" x="195.0" y="218" text-anchor="middle">kỳ hạn 12 tháng</text>
+<rect x="278.6" y="35.3" width="52.8" height="152.7" rx="4" fill="var(--s-blue)"><title>OCB: 7,10%</title></rect>
+<text x="305.0" y="29.3" text-anchor="middle" style="font-weight:600">7,10%</text>
+<text class="muted" x="305.0" y="204" text-anchor="middle">OCB</text>
+<text class="muted" x="305.0" y="218" text-anchor="middle">kỳ hạn 12 tháng</text>
+</svg>
+      <p class="card-note" style="margin:10px 0 0">Lãi dự kiến cho 246 tr ở mức cao nhất (VIB 8,00%/năm): <b>19,7 tr/năm</b> (1,64 tr/tháng).</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">VN-Index theo kỳ</h2>
+    <p class="card-note">Điểm. Khối ngoại kỳ này: <b>bán ròng 1.940 tỷ</b>.</p>
+    <svg viewBox="0 0 700 220" width="100%" height="220" role="img" aria-label="VN-Index theo kỳ">
+<line class="axis-line" x1="44" y1="174.0" x2="644" y2="174.0"/>
+<text class="muted" x="38" y="178.0" text-anchor="end">1.650</text>
+<line class="grid-line" x1="44" y1="121.3" x2="644" y2="121.3"/>
+<text class="muted" x="38" y="125.3" text-anchor="end">1.700</text>
+<line class="grid-line" x1="44" y1="68.7" x2="644" y2="68.7"/>
+<text class="muted" x="38" y="72.7" text-anchor="end">1.750</text>
+<line class="grid-line" x1="44" y1="16.0" x2="644" y2="16.0"/>
+<text class="muted" x="38" y="20.0" text-anchor="end">1.800</text>
+<text class="muted" x="44.0" y="192" text-anchor="middle">17/7c</text>
+<text class="muted" x="164.0" y="192" text-anchor="middle">18/7c</text>
+<text class="muted" x="284.0" y="192" text-anchor="middle">19/7c</text>
+<text class="muted" x="404.0" y="192" text-anchor="middle">20/7c</text>
+<text class="muted" x="524.0" y="192" text-anchor="middle">21/7c</text>
+<text style="font-weight:600" x="644.0" y="192" text-anchor="middle">22/7c</text>
+<polyline points="44.0,29.2 104.0,29.2 164.0,29.2 224.0,29.2 284.0,29.2 344.0,29.2 404.0,75.5 464.0,75.5 524.0,89.1 584.0,154.5 644.0,154.5" fill="none" stroke="var(--s-blue)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="644.0" cy="154.5" r="4" fill="var(--s-blue)" stroke="var(--surface-1)" stroke-width="2"><title>VN-Index: 1.669</title></circle>
+<text class="muted" x="652.0" y="158.5">1.669</text>
+</svg>
   </section>
 
   <section class="card">
     <h2 class="card-title">Rủi ro cần theo dõi</h2>
-    <p class="card-note">Trạng thái pháp lý dùng đúng thuật ngữ nguồn — không quy kết khi chỉ đang xác minh.</p>
-    <div class="status-cards">
-      <div class="status-card critical">
-        <div class="tag">● Phiên bán tháo lịch sử — 519 mã giảm, cổ phiếu họ Vin giảm sàn</div>
-        <div class="body">VN-Index đóng cửa 1.668,53 (‑3,58%) — 519 mã giảm/196 mã tăng, cổ phiếu họ Vin giảm sàn. Khối ngoại bán ròng ~1.940 tỷ, tập trung SSI (‑292 tỷ), VIC (‑208 tỷ), VCB (‑202 tỷ) — nhưng vẫn <b>mua ròng chọn lọc VNM (+166,5 tỷ), HPG (+51,7 tỷ)</b>, cho thấy dòng tiền ngoại phân hoá chứ không rút toàn bộ — <span class="k">SHS cảnh báo kịch bản tiêu cực có thể kiểm định lại đáy tháng 4/2026.</span></div>
-      </div>
-      <div class="status-card warning">
-        <div class="tag">● Vàng thế giới tiếp tục tăng mạnh trong ngày</div>
-        <div class="body">XAU/USD leo từ 4.069$ (rạng sáng) lên 4.134$ (13h30 VN) — chưa có dấu hiệu chững lại, vượt xa ngưỡng cảnh báo 4.060$/4.114$. Địa chính trị Mỹ-Iran-Houthi vẫn là nền tảng chính; Lầu Năm Góc cảnh báo rủi ro ngân sách quân sự cạn kiệt — <span class="k">yếu tố hỗ trợ vàng có thể còn kéo dài.</span></div>
-      </div>
-      <div class="status-card good">
-        <div class="tag">● Lãnh đạo doanh nghiệp trong danh mục</div>
-        <div class="body">Không có vụ khởi tố/bắt giữ MỚI liên quan VCB/CTD/Buffett-list. Các vụ ACV/PC1/TV2/TV3/Vinaconex đều cũ, đang tố tụng, <span class="k">không phải tin mới và nằm ngoài watchlist thực tế.</span></div>
-      </div>
-    </div>
+    <p class="card-note">Lấy nguyên văn cờ rủi ro từ snapshot — thuật ngữ pháp lý giữ đúng như nguồn,
+      không quy kết khi nguồn chỉ nói đang xác minh.</p>
+    <div class="status-cards"><div class="status-card critical"><div class="tag">● Khuyến nghị treo 11 kỳ — tỷ trọng vàng chưa giảm</div><div class="body">Tỷ trọng vàng đã vượt ngưỡng critical 70% <b>11 kỳ liên tiếp</b> và vẫn TĂNG từ 74,5% lên 75,1% (tính theo số lượng đang khai báo trong <code>config/portfolio.yaml</code>). Hệ thống đã ghi 2 quyết định cho vàng trong <code>data/decisions.jsonl</code>. Hai lựa chọn dứt khoát: <b>(1)</b> thực hiện chốt bớt để đưa tỷ trọng về khẩu vị đã đặt, hoặc <b>(2)</b> nếu đã cân nhắc và chấp nhận mức tập trung này, hãy nâng ngưỡng trong <code>config/risk_limits.yaml</code> để hệ thống ngừng nhắc — giữ nguyên cả hai sẽ khiến cảnh báo mất tác dụng vì lặp mãi.</div></div><div class="status-card warning"><div class="tag">● Địa chính trị / chiến sự</div><div class="body">Không có diễn biến quân sự mới nổi bật hơn sáng nay; Mỹ-Iran và phong tỏa Hormuz/Houthi vẫn là yếu tố nền</div></div><div class="status-card warning"><div class="tag">● Động thái Trump / thuế quan</div><div class="body">Không có phát ngôn mới trong ngày so với sáng</div></div><div class="status-card warning"><div class="tag">● Fed / lãi suất</div><div class="body">Không có phát biểu Fed mới</div></div><div class="status-card good"><div class="tag">● Rủi ro pháp lý lãnh đạo doanh nghiệp</div><div class="body">Không có vụ khởi tố/bắt giữ MỚI liên quan VCB/CTD/Buffett-list trong phiên hôm nay; các vụ ACV/PC1/TV2/TV3/Vinaconex đều cũ</div></div><div class="status-card warning"><div class="tag">● Ghi chú: vàng</div><div class="body">XAU/USD tiếp tục tăng mạnh trong ngày: 4.069$ (rạng sáng) -&gt; 4.134$ (13h30 VN) - đà tăng chưa dừng, vượt xa các ngưỡng cảnh báo cũ (4.060$, 4.114$). Vàng trong nước tiếp tục đuổi theo, một số thương hiệu (Doji) đã vượt 147,5tr/lượng bán ra</div></div><div class="status-card warning"><div class="tag">● Ghi chú: chi tiết thị trường</div><div class="body">Phiên bán tháo lịch sử: 519 mã giảm/196 mã tăng, cổ phiếu họ Vin giảm sàn, cổ phiếu trụ đè thị trường. Khối ngoại bán ròng gần 1.940 tỷ tập trung SSI (-292 tỷ), VIC (-208 tỷ), VCB (-202 tỷ); mua ròng VNM (+166,5 tỷ), HPG (+51,7 tỷ), GEE (+26,9 tỷ) - cho thấy dòng tiền ngoại vẫn chọn lọc mua một số mã cơ bản tốt giữa phiên bán tháo</div></div></div>
   </section>
 
   <section class="card">
     <h2 class="card-title">Watchlist cổ phiếu</h2>
-    <p class="card-note">Đã bán hết cổ phiếu thực tế — đây là danh sách theo dõi (Buffett-list giả lập). VCB tính từ % biến động đã xác minh (‑3,88%) trên giá gốc 57.400đ; CTD chưa xác định được số hôm nay (xem cảnh báo dưới bảng).</p>
-    <div class="status-card warning" style="margin-bottom:14px">
-      <div class="tag">● Không xác minh được giá CTD hôm nay — nhưng có tin tích cực</div>
-      <div class="body">Simplize tiếp tục hiển thị CTD = 73.800đ — đã biết đây là nguồn sai (lệch lớn so với EOD entrade đã xác minh 59.100đ ngày 20/7), không dùng. Tin định tính: MBS/VCBS đánh giá tích cực nhóm xây dựng (CTD, CII, VCG), VCBS dự báo CTD 2026 doanh thu 27.343 tỷ (+9%), LNST 522 tỷ (+14%), EPS 5.033đ/cp — <span class="k">kết hợp RSI 17,3 quá bán sâu, CTD đáng chú ý nhất để canh nến đảo chiều.</span></div>
+    <p class="card-note">Đã bán hết cổ phiếu thực tế — đây là danh sách theo dõi (Buffett-list),
+      gốc so sánh 2026-07-18. Giá nghìn đồng.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Mã</th><th>Nhóm</th><th>Giá gốc</th><th>Giá gần nhất</th>
+          <th>Biến động</th><th>Lợi thế cạnh tranh</th></tr></thead>
+        <tbody><tr><td class="tk">FPT</td><td>A</td><td>67,00</td><td>67,00</td><td class="chg-flat">0,00%</td><td>Độc tôn CNTT VN</td></tr>
+<tr><td class="tk">VNM</td><td>A</td><td>59,00</td><td>59,00</td><td class="chg-flat">0,00%</td><td>Thương hiệu sữa số 1</td></tr>
+<tr><td class="tk">VCB</td><td>A</td><td>58,50</td><td>55,17</td><td style="color:var(--st-critical);font-weight:600">-5,69%</td><td>Chi phí vốn rẻ nhất hệ thống</td></tr>
+<tr><td class="tk">GAS</td><td>A</td><td>76,20</td><td>76,20</td><td class="chg-flat">0,00%</td><td>Độc quyền trung nguồn khí</td></tr>
+<tr><td class="tk">ACB</td><td>A</td><td>23,55</td><td>23,55</td><td class="chg-flat">0,00%</td><td>Ngân hàng bán lẻ thận trọng</td></tr>
+<tr><td class="tk">HPG</td><td>B</td><td>21,85</td><td>21,85</td><td class="chg-flat">0,00%</td><td>Dẫn đầu chi phí thép</td></tr>
+<tr><td class="tk">MWG</td><td>B</td><td>76,70</td><td>75,20</td><td style="color:var(--st-warning-text);font-weight:600">-1,96%</td><td>Chuỗi bán lẻ số 1</td></tr>
+<tr><td class="tk">PNJ</td><td>B</td><td>43,00</td><td>43,00</td><td class="chg-flat">0,00%</td><td>Thương hiệu trang sức số 1</td></tr>
+<tr><td class="tk">REE</td><td>B</td><td>46,25</td><td>46,25</td><td class="chg-flat">0,00%</td><td>Điện + nước, dòng tiền đều; P/B đáy 2 năm</td></tr>
+<tr><td class="tk">BSR</td><td>B</td><td>24,90</td><td>24,90</td><td class="chg-flat">0,00%</td><td>Lọc dầu quy mô</td></tr>
+<tr><td class="tk">CTD</td><td>B</td><td>63,50</td><td>59,10</td><td style="color:var(--st-critical);font-weight:600">-6,93%</td><td>Tổng thầu, backlog kỷ lục</td></tr></tbody>
+      </table>
     </div>
-    <table>
-      <thead>
-        <tr><th>Mã</th><th>Nhóm</th><th>Giá gốc</th><th>Giá gần nhất</th><th>Biến động</th><th>Lợi thế cạnh tranh</th></tr>
-      </thead>
-      <tbody>
-        <tr><td class="tk">VCB</td><td>A</td><td>58.500</td><td>≈55.170</td><td style="color:var(--st-critical);font-weight:600">‑3,88% (hôm nay)</td><td>Chi phí vốn rẻ nhất hệ thống — <b>thủng hỗ trợ 58.0, bán mạnh nhất nhóm NH</b></td></tr>
-        <tr><td class="tk">CTD</td><td>B</td><td>63.500</td><td>59.100*</td><td style="color:var(--st-warning-text);font-weight:600">chưa xác định hôm nay</td><td>Tổng thầu, backlog kỷ lục — <b>RSI 17,3 quá bán, MBS/VCBS đánh giá tích cực</b></td></tr>
-        <tr><td class="tk">MWG</td><td>B</td><td>76.700</td><td>75.200</td><td style="color:var(--st-warning-text);font-weight:600">‑1,96% (20/7)</td><td>Chuỗi bán lẻ số 1 — thấp nhất 6 tháng, <b>khối ngoại mua ròng mạnh nhất thị trường (+206 tỷ, 20/7)</b></td></tr>
-        <tr><td class="tk">FPT</td><td>A</td><td>67.000</td><td>67.000</td><td class="chg-flat">chưa cập nhật</td><td>Độc tôn CNTT VN</td></tr>
-        <tr><td class="tk">VNM</td><td>A</td><td>59.000</td><td>59.000</td><td class="chg-flat">chưa cập nhật</td><td>Thương hiệu sữa số 1 — <b>khối ngoại mua ròng mạnh nhất thị trường hôm nay (+166,5 tỷ)</b></td></tr>
-        <tr><td class="tk">GAS</td><td>A</td><td>76.200</td><td>76.200</td><td class="chg-flat">chưa cập nhật</td><td>Độc quyền trung nguồn khí</td></tr>
-        <tr><td class="tk">ACB</td><td>A</td><td>23.550</td><td>23.550</td><td class="chg-flat">chưa cập nhật</td><td>Ngân hàng bán lẻ thận trọng</td></tr>
-        <tr><td class="tk">HPG</td><td>B</td><td>21.850</td><td>21.850</td><td class="chg-flat">chưa cập nhật</td><td>Dẫn đầu chi phí thép</td></tr>
-        <tr><td class="tk">PNJ</td><td>B</td><td>43.000</td><td>43.000</td><td class="chg-flat">chưa cập nhật</td><td>Thương hiệu trang sức số 1</td></tr>
-        <tr><td class="tk">REE</td><td>B</td><td>46.250</td><td>46.250</td><td class="chg-flat">chưa cập nhật</td><td>Điện + nước, P/B đáy 2 năm</td></tr>
-        <tr><td class="tk">BSR</td><td>B</td><td>24.900</td><td>24.900</td><td class="chg-flat">chưa cập nhật</td><td>Lọc dầu quy mô</td></tr>
-      </tbody>
-    </table>
-    <p class="card-note" style="margin:12px 0 0"><b>CTD &amp; VCB đều thủng hỗ trợ kỹ thuật + RSI quá bán sâu</b> — tín hiệu kỹ thuật "quá bán" nhưng hỗ trợ đã vỡ, khối lượng phiên chưa xác nhận là climax bán tháo. Canh thêm 1-2 phiên xem có nến đảo chiều + volume xác nhận trước khi coi là vùng mua.</p>
   </section>
 
   <footer class="foot">
-    VN-Index đóng cửa hôm nay (22/7): 1.668,53 điểm (▼3,58%, ▼62,03đ) — phiên giảm thứ 4 liên tiếp, mất mốc hỗ trợ tâm lý 1.700, thanh khoản tăng, 519 mã giảm/196 mã tăng. Khối ngoại bán ròng ~1.940 tỷ (SSI, VIC, VCB bị bán mạnh nhất; VNM, HPG được mua ròng chọn lọc).<br>
-    Chỉ báo kỹ thuật (từ dữ liệu EOD thật, entrade, 28 phiên tới 20/7 — chưa cập nhật phiên 21-22/7 do không tự fetch được trong sandbox này): VCB RSI14 25,2, CTD RSI14 17,3 tính trên giá 20/7 — với mức giảm thêm 2 phiên sau đó, RSI thực tế nhiều khả năng còn thấp hơn. Cả hai vẫn thủng ngưỡng hỗ trợ; ngưỡng gold-res (4.060$) tiếp tục active, giá vàng thế giới đã vượt xa lên 4.134$.<br>
-    Nguồn dữ liệu: <code>data/history.jsonl</code>, <code>data/eod/*.csv</code> (entrade, laptop local), <code>config/portfolio.yaml</code>, <code>data/watchlist.json</code>, <code>data/assets.json</code> trong repo Finance-duy (nhánh claude/investment-news-aggregator-w81l70) + WebSearch (thoibaotaichinhvietnam.vn, baomoi.com, tapchikinhtetaichinh.vn, techz.vn, danviet.vn, vietnam.vn) chiều 22/7/2026.<br>
+    Nguồn: <code>data/history.jsonl</code> (11 snapshot),
+    <code>config/portfolio.yaml</code>, <code>config/risk_limits.yaml</code>,
+    <code>data/watchlist.json</code>, <code>data/gold_model.json</code> —
+    repo Finance-duy, nhánh <code>claude/investment-news-aggregator-w81l70</code>.<br>
+    Giá vàng tiệm là ƯỚC TÍNH từ XAU/USD qua mô hình hiệu chuẩn 1 mẫu (độ tin cậy LOW) —
+    gửi ảnh bảng giá mới để tăng độ chính xác.<br>
     Đây là công cụ hỗ trợ theo dõi cá nhân, không phải khuyến nghị đầu tư từ tổ chức được cấp phép.
   </footer>
 

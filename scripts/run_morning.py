@@ -207,9 +207,14 @@ def main():
         print(s, "\n")
 
     # Sinh lại dashboard tự động
-    from reporting import render_dashboard
+    # Hai dashboard, hai vai trò khác nhau:
+    # - auto_dashboard.html: bảng chẩn đoán, mỗi số kèm badge nguồn/độ tin cậy
+    # - ban-tin-dau-tu.html: trang bản tin cho người đọc, sinh từ history.jsonl
+    #   (trước đây phải sửa tay ~71 toạ độ SVG mỗi kỳ — giờ tự tính)
+    from reporting import dashboard_builder, render_dashboard
 
     render_dashboard.main()
+    dashboard_builder.main()
 
     send_telegram_report("\n\n".join(sections))
 

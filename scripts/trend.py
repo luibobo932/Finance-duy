@@ -92,6 +92,14 @@ def cmd_append(arg):
         f.write(json.dumps(snap, ensure_ascii=False) + "\n")
     print(f"Đã ghi snapshot {snap['date']} ({snap['ky']}) — tổng {len(hist) + 1} bản ghi")
 
+    # Đổ luôn lãi suất sang kho chuẩn hoá để module deposits/ và bản tin không
+    # còn nói 2 chuyện khác nhau (đã từng lệch: bản tin 22/7 vs kho 19/7).
+    from deposits.sync import sync_snapshot
+
+    added = sync_snapshot(snap)
+    if added:
+        print(f"Đã đồng bộ {added} mức lãi suất sang data/normalized/deposit_rates.jsonl")
+
 
 def delta_line(name, cur, prev, unit=""):
     if cur is None:
