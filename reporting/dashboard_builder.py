@@ -202,6 +202,42 @@ def _status_card(level: str, tag: str, body: str) -> str:
     )
 
 
+def last_real_index(values: list[Optional[float]]) -> Optional[int]:
+    """Vị trí giá trị có thật gần nhất, None nếu chuỗi trống hoàn toàn."""
+    for i in range(len(values) - 1, -1, -1):
+        if values[i] is not None:
+            return i
+    return None
+
+
+def series_end_note(values: list[Optional[float]], labels: list[str], what: str) -> str:
+    """Câu ghi rõ chuỗi dừng ở kỳ nào và vì sao — thay vì để nửa biểu đồ trống
+    mà người đọc không biết là hỏng hay là chưa có nguồn.
+
+    Nảy sinh từ thực tế: từ 27/7 task tự động chỉ lấy được XAU/USD + tỷ giá +
+    giá cổ phiếu; giá SJC/nhẫn trong nước, VN-Index, khối ngoại và lãi suất
+    KHÔNG có nguồn tự động (xem README) nên các chuỗi đó dừng lại giữa đường.
+    """
+    idx = last_real_index(values)
+    if idx is None:
+        return f"Chưa có kỳ nào ghi nhận {what}."
+    if idx == len(values) - 1:
+        return ""
+    thieu = len(values) - 1 - idx
+    return (f"⚠️ Chuỗi {what} dừng ở kỳ <b>{html.escape(labels[idx])}</b> "
+            f"({thieu} kỳ sau đó không có số liệu) — chưa có nguồn tự động, "
+            "cần nhập tay qua <code>scripts/trend.py append</code>.")
+
+
+def latest_snapshot_with(history: list[dict], key: str) -> Optional[dict]:
+    """Snapshot mới nhất CÓ trường `key` — để hiển thị số liệu gần nhất còn
+    dùng được kèm ngày, thay vì bỏ trống thẻ khi kỳ này thiếu."""
+    for snap in reversed(history):
+        if snap.get(key):
+            return snap
+    return None
+
+
 def _delta_text(series: list[Optional[float]], decimals: int = 1, suffix: str = "") -> str:
     """'▲ 3,8 so với kỳ trước' — so sánh 2 giá trị có thật gần nhất."""
     real = [v for v in series if v is not None]
@@ -289,7 +325,30 @@ def render(ctx: dict) -> str:
     foreign = [s.get("foreign_net_ty") for s in hist]
 
     # --- Lãi suất ----------------------------------------------------------
-    deposits = latest.get("deposit_top") or []
+    # Lãi suất đổi chậm và KHÔNG có nguồn tự động, nên dùng snapshot gần nhất
+    # có số liệu thay vì bỏ trống thẻ — kèm ngày và cảnh báo nếu đã cũ.
+    deposit_snap = latest_snapshot_with(hist, "deposit_top")
+    deposits = (deposit_snap or {}).get("deposit_top") or []
+    deposit_date = (deposit_snap or {}).get("date")
+    deposit_stale_days = None
+    if deposit_date and latest.get("date"):
+        try:
+            deposit_stale_days = (
+                datetime.strptime(latest["date"], "%Y-%m-%d")
+                - datetime.strptime(deposit_date, "%Y-%m-%d")
+            ).days
+        except ValueError:
+            deposit_stale_days = None
+    if not deposit_date:
+        deposit_note = "Chưa kỳ nào ghi nhận lãi suất."
+    elif deposit_stale_days:
+        deposit_note = (
+            f"%/năm theo snapshot <b>{html.escape(deposit_date)}</b> — "
+            f"⚠️ đã {deposit_stale_days} ngày không cập nhật (lãi suất không có nguồn tự động; "
+            "cập nhật qua <code>scripts/trend.py append</code>). Cột mọc từ gốc 0."
+        )
+    else:
+        deposit_note = "%/năm, tiền gửi dưới 1 tỷ, theo snapshot kỳ này. Cột mọc từ gốc 0."
     deposit_bars = [
         Bar(d.get("bank", "?"), float(d.get("rate_pct") or 0), "--s-blue",
             f"kỳ hạn {d.get('term_months')} tháng")
@@ -395,7 +454,8 @@ def render(ctx: dict) -> str:
     <div class="card">
       <h2 class="card-title">Giá vàng trong nước — toàn bộ lịch sử</h2>
       <p class="card-note">Triệu đồng/lượng, giá niêm yết. Chỗ khuyết = kỳ đó không có số liệu
-        (đường bị ngắt, không nội suy).</p>
+        (đường bị ngắt, không nội suy).<br>{
+        series_end_note(list(gold_series[1].values), labels, "giá vàng trong nước")}</p>
       {line_chart(gold_series, x_labels, decimals=1, aria_label="Giá vàng trong nước theo kỳ")}
       {legend(gold_series)}
     </div>
@@ -411,14 +471,15 @@ def render(ctx: dict) -> str:
     <div class="card">
       <h2 class="card-title">Chênh lệch vàng VN – thế giới</h2>
       <p class="card-note">Triệu đồng/lượng. Chênh lệch nới rộng = mua trong nước đắt hơn so với
-        giá trị quốc tế; thu hẹp = giá trong nước đang điều chỉnh về sát thế giới.</p>
+        giá trị quốc tế; thu hẹp = giá trong nước đang điều chỉnh về sát thế giới.<br>{
+        series_end_note(list(premium_series[0].values), labels, "chênh lệch VN–TG")}</p>
       {line_chart(premium_series, x_labels, decimals=1, aria_label="Chênh lệch giá vàng VN và thế giới")}
     </div>
     <div class="card">
       <h2 class="card-title">Lãi suất tiết kiệm &lt; 1 tỷ</h2>
-      <p class="card-note">%/năm, theo snapshot kỳ này. Cột mọc từ gốc 0 để không phóng đại chênh lệch.</p>
+      <p class="card-note">{deposit_note}</p>
       {bar_chart(deposit_bars, decimals=2, value_suffix="%", aria_label="Lãi suất tiết kiệm top ngân hàng")
-        or '<p class="na">Kỳ này chưa ghi nhận lãi suất.</p>'}
+        or '<p class="na">Chưa có kỳ nào ghi nhận lãi suất.</p>'}
       <p class="card-note" style="margin:10px 0 0">{savings_note}</p>
     </div>
   </section>
@@ -428,7 +489,8 @@ def render(ctx: dict) -> str:
     <p class="card-note">Điểm. Khối ngoại kỳ này: <b>{
       ('mua ròng ' + _n(foreign[-1], 0, ' tỷ')) if (foreign[-1] or 0) > 0
       else ('bán ròng ' + _n(abs(foreign[-1]), 0, ' tỷ')) if foreign[-1]
-      else 'chưa có dữ liệu'}</b>.</p>
+      else 'chưa có dữ liệu'}</b>.<br>{
+      series_end_note(list(vnindex_series[0].values), labels, "VN-Index")}</p>
     {line_chart(vnindex_series, x_labels, decimals=0, aria_label="VN-Index theo kỳ",
                 box=Box(width=700, height=220))}
   </section>

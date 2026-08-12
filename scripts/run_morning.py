@@ -24,6 +24,24 @@ sys.path.insert(0, str(ROOT / "scripts"))
 HIST = ROOT / "data" / "history.jsonl"
 
 
+def bulletin_date(hist: list[dict], today: "date | None" = None) -> str:
+    """Ngày hiển thị trên tiêu đề bản tin.
+
+    KHÔNG dùng portfolio.updated (config/portfolio.yaml) — trường đó là ngày
+    chủ dự án tự tay cập nhật SỐ LƯỢNG tài sản (vàng/tiết kiệm/tiền mặt),
+    đứng yên hàng tuần/tháng, không phải ngày bản tin đang chạy. Bug thật đã
+    xảy ra: bản tin chạy 26/7 vẫn in tiêu đề "2026-07-19" vì lấy nhầm trường
+    này. Ưu tiên ngày của snapshot mới nhất trong history.jsonl (dữ liệu thật
+    bản tin đang tường thuật); nếu chưa có snapshot nào thì dùng ngày hôm nay.
+    """
+    from datetime import date as _date
+
+    today = today or _date.today()
+    if hist and hist[-1].get("date"):
+        return hist[-1]["date"]
+    return today.isoformat()
+
+
 def load_history() -> list[dict]:
     if not HIST.exists():
         return []
@@ -196,7 +214,7 @@ def main():
     ranked_deposits = rank(deposit_rates) if deposit_rates else []
 
     sections = [
-        f"# BẢN TIN ĐẦU TƯ SÁNG — {port.updated}",
+        f"# BẢN TIN ĐẦU TƯ SÁNG — {bulletin_date(load_history())}",
         section_tong_quan(gold_decision),
         section_tai_san({"parts": parts, "total": total}),
         section_vang(est, gold_decision),

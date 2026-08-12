@@ -99,12 +99,6 @@ def test_render_khong_no_voi_mot_snapshot_duy_nhat():
     assert "chưa có kỳ trước để so sánh" in html_out
 
 
-def test_render_chua_cau_hinh_deposit_thi_noi_ro():
-    snap = _snap()
-    snap["deposit_top"] = []
-    assert "Kỳ này chưa ghi nhận lãi suất" in render(build_context([snap]))
-
-
 def test_render_co_du_cac_muc_chinh():
     html_out = render(build_context([_snap(date="2026-07-21", ky="sang"), _snap()]))
     for muc in ["Phân bổ tài sản", "Tổng tài sản theo thời gian",
@@ -192,3 +186,69 @@ def test_khong_canh_bao_khi_duoi_nguong():
 def test_du_lieu_rong_khong_lam_no_tracker():
     from analytics.advice_tracker import summarize_pending
     assert summarize_pending([], []) == {}
+
+
+# --- Suy giảm duyên dáng khi thiếu nguồn tự động (thêm 12/8) ----------------
+# Từ 27/7 task tự động chỉ lấy được XAU/USD + tỷ giá + giá cổ phiếu; giá SJC
+# trong nước, VN-Index, khối ngoại, lãi suất KHÔNG có nguồn tự động. Dashboard
+# phải nói rõ chuỗi dừng ở đâu, không để nửa biểu đồ trống không giải thích.
+
+def test_vi_tri_gia_tri_that_gan_nhat():
+    from reporting.dashboard_builder import last_real_index
+    assert last_real_index([1.0, 2.0, None, None]) == 1
+    assert last_real_index([None, None]) is None
+    assert last_real_index([]) is None
+    assert last_real_index([None, 5.0]) == 1
+
+
+def test_ghi_chu_chuoi_dung_neu_thieu_cac_ky_cuoi():
+    from reporting.dashboard_builder import series_end_note
+    note = series_end_note([1.0, 2.0, None, None], ["a", "b", "c", "d"], "giá vàng")
+    assert "dừng ở kỳ" in note and "<b>b</b>" in note and "2 kỳ" in note
+
+
+def test_khong_ghi_chu_khi_chuoi_du_toi_ky_cuoi():
+    from reporting.dashboard_builder import series_end_note
+    assert series_end_note([1.0, 2.0], ["a", "b"], "giá vàng") == ""
+
+
+def test_ghi_chu_khi_chuoi_trong_hoan_toan():
+    from reporting.dashboard_builder import series_end_note
+    assert "Chưa có kỳ nào" in series_end_note([None, None], ["a", "b"], "giá vàng")
+
+
+def test_lai_suat_dung_snapshot_gan_nhat_co_so_lieu_kem_NGAY():
+    """Kỳ này thiếu lãi suất -> lấy kỳ gần nhất có, nhưng PHẢI ghi rõ ngày và
+    số ngày đã cũ; im lặng dùng số cũ như số mới là bịa."""
+    co = _snap(date="2026-07-22", ky="chieu")
+    khong = _snap(date="2026-08-10", ky="chieu")
+    khong["deposit_top"] = []
+    out = render(build_context([co, khong]))
+    assert "2026-07-22" in out
+    assert "19 ngày không cập nhật" in out
+    assert "VIB" in out  # vẫn hiện được số liệu dùng được
+
+
+def test_khong_ky_nao_co_lai_suat_thi_noi_ro():
+    snap = _snap()
+    snap["deposit_top"] = []
+    assert "Chưa có kỳ nào ghi nhận lãi suất" in render(build_context([snap]))
+
+
+def test_snapshot_gan_nhat_co_truong():
+    from reporting.dashboard_builder import latest_snapshot_with
+    a, b = _snap(date="2026-07-22"), _snap(date="2026-08-10")
+    b["deposit_top"] = []
+    assert latest_snapshot_with([a, b], "deposit_top")["date"] == "2026-07-22"
+    assert latest_snapshot_with([b], "deposit_top") is None
+
+
+def test_lich_su_dai_thi_nhan_truc_x_thua_ra_nhung_ve_du_diem():
+    """19 snapshot: nhãn phải thưa để không thành vệt đen, nhưng KHÔNG bớt điểm."""
+    hist = [_snap(date=f"2026-08-{d:02d}", ky=k)
+            for d in range(1, 11) for k in ("sang", "chieu")]
+    out = render(build_context(hist))
+    import re
+    pts = re.search(r'aria-label="Tổng tài sản theo thời gian">(.*?)</svg>', out, re.S).group(1)
+    so_diem = len(re.search(r'points="([^"]+)"', pts).group(1).split())
+    assert so_diem == len(hist)  # vẽ đủ 20 điểm
