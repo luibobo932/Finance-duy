@@ -100,6 +100,55 @@ def cmd_append(arg):
     if added:
         print(f"Đã đồng bộ {added} mức lãi suất sang data/normalized/deposit_rates.jsonl")
 
+    # Ghi quyết định NGAY tại đây, không chờ orchestrator. Lý do: 6 bản tin
+    # 20-22/7 đều ra khuyến nghị nhưng data/decisions.jsonl chỉ có 2 bản ghi —
+    # run_morning/run_evening bị bỏ qua nên Decision Engine không thấy khuyến
+    # nghị thật, khiến decision review và confidence score (Phase 9) chạy trên
+    # dữ liệu rỗng. Append là bước LUÔN được gọi, nên gắn vào đây thì không
+    # còn đường bỏ sót.
+    _log_decision_for(snap)
+
+
+def _log_decision_for(snap: dict) -> None:
+    """Chạy Decision Engine cho snapshot vừa ghi và lưu kết quả (bất biến).
+
+    Lỗi ở bước này KHÔNG được làm hỏng việc ghi snapshot — snapshot là dữ liệu
+    gốc, quyết định là thứ dẫn xuất và có thể tính lại sau.
+    """
+    try:
+        from decision.decision_log import append_decision, build_entry
+        from decision.policy_engine import DecisionInput, decide
+        from decision.risk_officer import RiskContext
+        from gold.indicators import analyze as gold_analyze
+        from gold.indicators import trend_label as gold_trend_label
+        from portfolio.loader import load_decision_rules, load_risk_limits
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        from networth import compute as compute_networth
+
+        _port, _lim, _meta, parts, total, _price, _src = compute_networth()
+        if not total:
+            print("Chưa ghi được quyết định: chưa định giá được danh mục.")
+            return
+        gold_pct = (parts.get("Vàng") or 0) / total
+        decision = decide(
+            DecisionInput(asset="Vàng nhẫn", asset_class="gold",
+                          trend_label=gold_trend_label(gold_analyze())),
+            RiskContext(gold_allocation_pct=gold_pct),
+            load_risk_limits(), load_decision_rules(),
+        )
+        if append_decision(build_entry(decision, asset_class="gold", ky=snap["ky"], snapshot=snap)):
+            veto = " (Risk Officer đã điều chỉnh)" if decision["risk_veto"] else ""
+            print(f"Quyết định đã ghi: vàng → {decision['action_vi']} "
+                  f"({decision['confidence']}/100){veto}")
+        else:
+            print("Quyết định kỳ này đã có trong data/decisions.jsonl — không ghi trùng.")
+    except Exception as exc:  # noqa: BLE001 — không để lỗi dẫn xuất phá dữ liệu gốc
+        from common import get_logger
+
+        get_logger("trend").error("khong ghi duoc quyet dinh: %s", exc)
+        print(f"⚠️  Snapshot đã ghi nhưng CHƯA ghi được quyết định: {exc}")
+
 
 def delta_line(name, cur, prev, unit=""):
     if cur is None:

@@ -83,25 +83,66 @@ def _check_data_quality(ctx: RiskContext, rules: dict, veto_reasons: list[str]) 
     return len(veto_reasons) > 0
 
 
-def _apply_gold_rule(proposal: ProposedAction, ctx: RiskContext, limits: dict,
+def _apply_gold_rule(proposal: ProposedAction, ctx: RiskContext, limits: dict, rules: dict,
                       veto_reasons: list[str], warnings: list[str], conditions: list[str]) -> str:
-    if proposal.asset_class != "gold" or proposal.action != Action.BUY_SMALL.value:
+    """Rule tập trung vàng — hành động lấy từ `config/decision_rules.yaml`.
+
+    Hai nhánh, vì hai đề xuất khác nhau đặt ra hai câu hỏi khác nhau:
+
+    1) Đề xuất MUA THÊM → câu hỏi "có được mua thêm không?" → trả lời dứt khoát
+       KHÔNG MUA THÊM ở mức critical (đúng yêu cầu gốc của chủ dự án), hạ xuống
+       CHỐT BỚT ở mức warning.
+    2) Đề xuất GIỮ / ĐỨNG NGOÀI mà tỷ trọng ĐÃ vượt critical → câu hỏi "giữ
+       nguyên có ổn không?". Trước đây nhánh này bị bỏ trống: rule chỉ chạy khi
+       đề xuất là BUY_SMALL, nên vàng 75,1% vẫn ra "GIỮ, tin cậy 92" — ngưỡng
+       critical hoá ra chỉ chặn mua chứ không nói được gì khi danh mục đã lệch
+       quá xa. Nay nhánh này nâng lên CHỐT BỚT.
+
+    Tắt nhánh (2) bằng `escalate_hold_above_critical: false` nếu chủ danh mục
+    thực sự muốn hệ thống chỉ chặn mua và im lặng ở mọi mức tập trung.
+    """
+    if proposal.asset_class != "gold":
         return proposal.action
     gold_pct = ctx.gold_allocation_pct
     if gold_pct is None:
         return proposal.action
+
     critical = limits.get("gold_critical", 0.70)
     warning = limits.get("gold_warning", 0.60)
-    if gold_pct >= critical:
+    # Ngưỡng lấy từ risk_limits.yaml, HÀNH ĐỘNG lấy từ decision_rules.yaml —
+    # trước đây 3 khoá dưới đây có trong config nhưng không dòng code nào đọc,
+    # nên config trông như nguồn sự thật mà thực chất chỉ để trang trí.
+    gold_rules = (rules or {}).get("gold") or {}
+
+    if proposal.action == Action.BUY_SMALL.value:
+        if gold_pct >= critical:
+            veto_reasons.append("gold_concentration_critical")
+            conditions.append(f"Chỉ xem xét mua thêm vàng khi tỷ trọng giảm dưới {critical*100:.0f}%")
+            return gold_rules.get("above_critical_action", Action.DO_NOT_BUY_MORE.value)
+        if gold_pct >= warning:
+            veto_reasons.append("gold_concentration_warning")
+            warnings.append(
+                f"Vàng đang {gold_pct*100:.0f}% (≥ ngưỡng warning {warning*100:.0f}%) — ưu tiên chốt bớt thay vì mua thêm"
+            )
+            return gold_rules.get("above_warning_action", Action.TAKE_PARTIAL_PROFIT.value)
+        return proposal.action
+
+    # Nhánh (2): đề xuất thụ động trong khi tỷ trọng đã vượt ngưỡng critical
+    passive = (Action.HOLD.value, Action.WATCH.value)
+    if proposal.action in passive and gold_pct >= critical:
+        if not gold_rules.get("escalate_hold_above_critical", True):
+            warnings.append(
+                f"Vàng đang {gold_pct*100:.0f}% (≥ critical {critical*100:.0f}%) nhưng cấu hình đang tắt "
+                "việc tự nâng đề xuất giữ thành chốt bớt (escalate_hold_above_critical: false)"
+            )
+            return proposal.action
         veto_reasons.append("gold_concentration_critical")
-        conditions.append(f"Chỉ xem xét mua thêm vàng khi tỷ trọng giảm dưới {critical*100:.0f}%")
-        return Action.DO_NOT_BUY_MORE.value
-    if gold_pct >= warning:
-        veto_reasons.append("gold_concentration_warning")
         warnings.append(
-            f"Vàng đang {gold_pct*100:.0f}% (≥ ngưỡng warning {warning*100:.0f}%) — ưu tiên chốt bớt thay vì mua thêm"
+            f"Vàng đang {gold_pct*100:.0f}% (≥ critical {critical*100:.0f}%) — giữ nguyên tỷ trọng này "
+            "không còn là lựa chọn trung tính, cần giảm tỷ trọng"
         )
-        return Action.TAKE_PARTIAL_PROFIT.value
+        conditions.append(f"Trở lại GIỮ khi tỷ trọng vàng giảm dưới {critical*100:.0f}%")
+        return gold_rules.get("concentrated_hold_action", Action.TAKE_PARTIAL_PROFIT.value)
     return proposal.action
 
 
@@ -166,7 +207,7 @@ def review(proposal: ProposedAction, ctx: RiskContext, limits: dict, rules: dict
         )
 
     action = proposal.action
-    action = _apply_gold_rule(proposal, ctx, limits, veto_reasons, warnings, conditions)
+    action = _apply_gold_rule(proposal, ctx, limits, rules, veto_reasons, warnings, conditions)
     proposal_after_gold = ProposedAction(proposal.asset, proposal.asset_class, action)
     action = _apply_governance_rule(proposal_after_gold, ctx, rules, veto_reasons, warnings)
     proposal_after_gov = ProposedAction(proposal.asset, proposal.asset_class, action)

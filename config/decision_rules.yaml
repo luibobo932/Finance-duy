@@ -6,9 +6,22 @@
 gold:
   # Ngưỡng lấy từ risk_limits.yaml qua code, không lặp số ở đây — nhưng ghi
   # rõ ý nghĩa hành động ứng với từng mức để dễ đọc.
+  #
+  # Khi tín hiệu thị trường đề xuất MUA THÊM ("có được mua thêm không?"):
   above_critical_action: DO_NOT_BUY_MORE      # >= gold_critical (70%)
   above_warning_action: TAKE_PARTIAL_PROFIT   # >= gold_warning (60%), < critical
   below_warning_action: HOLD                  # < gold_warning
+  #
+  # Khi tín hiệu thị trường đề xuất GIỮ / ĐỨNG NGOÀI mà tỷ trọng ĐÃ vượt
+  # critical ("giữ nguyên có ổn không?"). Nhánh này trước đây bị bỏ trống:
+  # rule chỉ chạy khi đề xuất là mua, nên vàng 75,1% vẫn ra "GIỮ, tin cậy 92"
+  # trong 6 bản tin liên tiếp — ngưỡng critical chỉ chặn được việc mua thêm
+  # chứ không nói được gì khi danh mục đã lệch quá xa khẩu vị đã đặt.
+  concentrated_hold_action: TAKE_PARTIAL_PROFIT
+  # Đặt false nếu chủ danh mục CHẤP NHẬN mức tập trung hiện tại và chỉ muốn hệ
+  # thống chặn mua thêm, không tự đề xuất chốt bớt. Khi tắt, hệ thống vẫn ghi
+  # một dòng cảnh báo để việc tắt là lựa chọn hiển thị, không phải im lặng.
+  escalate_hold_above_critical: true
 
 equity:
   # Trạng thái quản trị (Phase 6, equity/governance.py) chặn đề xuất mua

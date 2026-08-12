@@ -159,3 +159,61 @@ def test_veto_rules_list_matches_spec_names():
         "governance_red_flag", "insufficient_liquidity", "missing_financial_data", "abnormal_price_data",
     }
     assert expected.issubset(set(VETO_RULES))
+
+
+# --- Nhánh "giữ nguyên khi đã quá tập trung" (lỗi gốc phát hiện 12/8) -------
+# Trước bản sửa này, rule tập trung vàng chỉ chạy khi đề xuất là BUY_SMALL,
+# nên vàng 75,1% vẫn cho ra "GIỮ, tin cậy 92" suốt 6 bản tin liên tiếp trong
+# khi bản tin viết tay lại khuyên CHỐT BỚT — máy và người nói ngược nhau.
+
+def test_gold_critical_nang_GIU_thanh_CHOT_BOT():
+    proposal = ProposedAction(asset="XAUUSD", asset_class="gold", action=Action.HOLD.value)
+    ctx = RiskContext(gold_allocation_pct=0.751)  # đúng tỷ trọng thật ngày 22/7
+    rr = review(proposal, ctx, LIMITS, RULES)
+    assert rr.final_action == Action.TAKE_PARTIAL_PROFIT.value
+    assert rr.approved is False
+    assert "gold_concentration_critical" in rr.veto_reasons
+    assert any("giữ nguyên tỷ trọng này" in w for w in rr.warnings)
+
+
+def test_gold_critical_nang_ca_DUNG_NGOAI():
+    proposal = ProposedAction(asset="XAUUSD", asset_class="gold", action=Action.WATCH.value)
+    rr = review(proposal, RiskContext(gold_allocation_pct=0.80), LIMITS, RULES)
+    assert rr.final_action == Action.TAKE_PARTIAL_PROFIT.value
+
+
+def test_gold_duoi_critical_thi_GIU_van_la_GIU():
+    """Chỉ vượt warning (65%) mà đề xuất là giữ thì KHÔNG nâng cấp — nhánh
+    này chỉ kích hoạt từ mức critical, tránh nhắc chốt bớt quá sớm."""
+    proposal = ProposedAction(asset="XAUUSD", asset_class="gold", action=Action.HOLD.value)
+    rr = review(proposal, RiskContext(gold_allocation_pct=0.65), LIMITS, RULES)
+    assert rr.final_action == Action.HOLD.value
+    assert rr.approved is True
+
+
+def test_co_the_TAT_nhanh_nang_cap_bang_config():
+    """Chủ danh mục chấp nhận mức tập trung -> tắt được, nhưng vẫn phải thấy
+    cảnh báo để việc tắt là lựa chọn hiển thị chứ không phải im lặng."""
+    rules = {**RULES, "gold": {**RULES.get("gold", {}), "escalate_hold_above_critical": False}}
+    proposal = ProposedAction(asset="XAUUSD", asset_class="gold", action=Action.HOLD.value)
+    rr = review(proposal, RiskContext(gold_allocation_pct=0.751), LIMITS, rules)
+    assert rr.final_action == Action.HOLD.value
+    assert rr.approved is True
+    assert any("escalate_hold_above_critical" in w for w in rr.warnings)
+
+
+def test_hanh_dong_doc_tu_config_khong_hard_code():
+    """3 khoá trong decision_rules.yaml trước đây KHÔNG được code nào đọc.
+    Đổi giá trị trong config phải đổi được kết quả thật."""
+    rules = {**RULES, "gold": {**RULES.get("gold", {}), "above_critical_action": Action.STAND_ASIDE.value}}
+    proposal = ProposedAction(asset="XAUUSD", asset_class="gold", action=Action.BUY_SMALL.value)
+    rr = review(proposal, RiskContext(gold_allocation_pct=0.90), LIMITS, rules)
+    assert rr.final_action == Action.STAND_ASIDE.value
+
+
+def test_thieu_ty_trong_vang_thi_khong_doan():
+    """Không biết tỷ trọng -> không được tự suy ra là đang quá tập trung."""
+    proposal = ProposedAction(asset="XAUUSD", asset_class="gold", action=Action.HOLD.value)
+    rr = review(proposal, RiskContext(gold_allocation_pct=None), LIMITS, RULES)
+    assert rr.final_action == Action.HOLD.value
+    assert rr.approved is True

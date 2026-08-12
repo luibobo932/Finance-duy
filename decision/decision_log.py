@@ -19,6 +19,16 @@ from typing import Optional
 ROOT = Path(__file__).resolve().parent.parent
 DECISIONS_PATH = ROOT / "data" / "decisions.jsonl"
 
+# Phiên bản bộ rule đã tạo ra quyết định. Tăng số này MỖI KHI rule đổi hành vi,
+# vì review đối chiếu quyết định cũ với giá sau đó — không có mốc này thì hai
+# quyết định do hai bộ rule khác nhau sinh ra sẽ bị trộn vào cùng một thống kê
+# accuracy mà không ai biết.
+#   v1 (đến 2026-08-12): rule tập trung vàng CHỈ chạy khi đề xuất là mua thêm,
+#      nên vàng ≥70% vẫn ra "GIỮ".
+#   v2 (từ 2026-08-12): đề xuất GIỮ/ĐỨNG NGOÀI khi vàng ≥ critical được nâng
+#      thành CHỐT BỚT; hành động đọc từ config/decision_rules.yaml.
+RULE_VERSION = 2
+
 # Trường giá tham chiếu theo asset_class, thử theo thứ tự — bản ghi quyết định
 # lưu lại TÊN trường đã dùng để review chỉ so sánh cùng đơn vị.
 REF_PRICE_FIELDS: dict[str, list[tuple[str, ...]]] = {
@@ -63,6 +73,7 @@ def build_entry(decision: dict, asset_class: str, ky: str, snapshot: Optional[di
         "data_quality": decision["data_quality"],
         "ref_price_field": ref_field,
         "ref_price": ref_price,
+        "rule_version": RULE_VERSION,
     }
 
 
