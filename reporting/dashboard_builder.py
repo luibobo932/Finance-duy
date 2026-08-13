@@ -28,6 +28,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from analytics.advice_tracker import summarize_pending  # noqa: E402
+from decision.rebalance import plan as rebalance_plan  # noqa: E402
 from gold.xuan_trieu_model import estimate as gold_estimate  # noqa: E402
 from portfolio.loader import load_portfolio, load_risk_limits  # noqa: E402
 from reporting.chart import (  # noqa: E402
@@ -159,9 +160,29 @@ def build_context(history: Optional[list[dict]] = None) -> dict:
     critical_pct = _pct("gold_critical")
     warning_pct = _pct("gold_warning")
 
+    # Kế hoạch giảm tỷ trọng — chỉ dựng khi có đủ giá vàng; thiếu thì để None
+    # và mục này biến mất khỏi trang thay vì hiện bảng rỗng.
+    rebalance = None
+    if cur.gold_price_trieu:
+        est = gold_estimate()
+        try:
+            rebalance = rebalance_plan(
+                gold_tael=port.gold_quantity_tael,
+                sell_price_trieu=cur.gold_price_trieu,
+                buy_price_trieu=est.shop_sell_trieu if est else None,
+                savings_trieu=cur.savings_trieu,
+                cash_trieu=cur.cash_trieu,
+                limits=limits or {},
+                ranked_rates=_ranked_deposit_rates(),
+                rate_as_of=(latest_snapshot_with(history, "deposit_top") or {}).get("date"),
+            )
+        except Exception:  # noqa: BLE001 — thiếu kế hoạch không được làm sập cả trang
+            rebalance = None
+
     return {
         "history": history,
         "labels": labels,
+        "rebalance": rebalance,
         "valuations": vals,
         "current": cur,
         "latest": latest,
@@ -200,6 +221,17 @@ def _status_card(level: str, tag: str, body: str) -> str:
         f'<div class="status-card {level}"><div class="tag">● {html.escape(tag)}</div>'
         f'<div class="body">{body}</div></div>'
     )
+
+
+def _ranked_deposit_rates() -> list[dict]:
+    """Lãi suất đã xếp hạng, [] nếu chưa có — không để lỗi đọc file phá cả trang."""
+    try:
+        from deposits.ranking import load_normalized, rank
+
+        rates = load_normalized()
+        return rank(rates) if rates else []
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def last_real_index(values: list[Optional[float]]) -> Optional[int]:
@@ -410,6 +442,56 @@ def render(ctx: dict) -> str:
     watchlist_rows = "\n".join(rows) or '<tr><td colspan="6" class="na">Chưa có mã nào trong watchlist.</td></tr>'
     base_date = ctx["watchlist"].get("base_date", "?")
 
+    # --- Kế hoạch giảm tỷ trọng --------------------------------------------
+    rb = ctx.get("rebalance")
+    rebalance_section = ""
+    if rb is not None and rb.needs_action and rb.steps:
+        _rb_rows: list[str] = []
+        for s in rb.steps:
+            muc_tieu = _n(s.target_pct, 0) + "%"
+            ban = f"<b>{s.chi_to_sell} chỉ</b> ({_n(s.tael_to_sell)} lượng)"
+            thu_ve = _n(s.proceeds_trieu, 1) + " tr"
+            pct_sau = _n(s.gold_pct_after, 1) + "%"
+            thanh_khoan = _n(s.liquid_after_trieu, 0) + " tr"
+            lai_them = ("+" + _n(s.extra_interest_per_year_trieu, 1) + " tr"
+                        if s.extra_interest_per_year_trieu is not None else "—")
+            phi = _n(s.spread_cost_trieu, 1) + " tr"
+            _rb_rows.append(
+                f'<tr><td class="tk">{muc_tieu}</td><td>{ban}</td><td>{thu_ve}</td>'
+                f"<td>{pct_sau}</td><td>{thanh_khoan}</td>"
+                f'<td style="color:var(--good-text);font-weight:600">{lai_them}</td>'
+                f"<td>{phi}</td></tr>"
+            )
+        rows_rb = "\n".join(_rb_rows)
+        rate_note = (f"Tiền thu về gửi ở <b>{html.escape(rb.best_rate_bank or '')} "
+                     f"{_n(rb.best_rate_pct or 0, 2)}%/năm kỳ hạn {rb.best_rate_term} tháng</b>"
+                     + (f" (lãi suất theo snapshot {html.escape(rb.rate_as_of)} — "
+                        "kiểm tra lại trước khi gửi)" if rb.rate_as_of else "")
+                     if rb.best_rate_pct else
+                     "Chưa có lãi suất hợp lệ trong dữ liệu — cột lãi thêm để trống thay vì đoán.")
+        rebalance_section = f"""
+  <section class="card">
+    <h2 class="card-title">Kế hoạch giảm tỷ trọng vàng — bán bao nhiêu là đủ</h2>
+    <p class="card-note">Khuyến nghị <b>CHỐT BỚT</b> trả lời "làm gì" nhưng không nói "bao nhiêu" —
+      đây là phần bù. Vàng nhẫn bán theo <b>chỉ</b> (1 lượng = 10 chỉ), số bán làm tròn LÊN để chạm
+      được mục tiêu. Giá bán dùng <b>giá tiệm MUA vào</b> ({_n(rb.gold_price_sell_trieu, 2)} tr/lượng)
+      — tiền thật nhận được, không phải giá niêm yết bán ra.<br>
+      Chọn mốc nào là <b>khẩu vị của bạn</b>: mốc gần critical bán ít nhất nhưng sát mép (vàng tăng
+      vài phần trăm là vượt ngưỡng lại); mốc {_n(rb.warning_pct, 0)}% thì hết cảnh báo tập trung.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Mục tiêu</th><th>Cần bán</th><th>Thu về</th><th>% vàng sau</th>
+          <th>Thanh khoản sau</th><th>Lãi thêm/năm</th><th>Phí nếu mua lại</th></tr></thead>
+        <tbody>{rows_rb}</tbody>
+      </table>
+    </div>
+    <p class="card-note" style="margin:12px 0 0">{rate_note}<br>
+      Cột cuối là chi phí chênh lệch mua–bán
+      ({_n((rb.gold_price_buy_trieu or 0) - rb.gold_price_sell_trieu, 2)} tr/lượng) nếu sau này mua
+      lại đúng số đã bán — nêu ra để quyết định là quyết định có biết giá, chưa trừ vào tổng.</p>
+  </section>
+"""
+
     gen = ctx["generated_at"].strftime("%d/%m/%Y %H:%M")
 
     return f"""<title>Bản tin đầu tư — Duy</title>
@@ -433,6 +515,7 @@ def render(ctx: dict) -> str:
     {stacked_bar(segs)}
     {allocation_legend(segs)}
   </section>
+{rebalance_section}
 
   <section class="two-col">
     <div class="card">

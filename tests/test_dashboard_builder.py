@@ -252,3 +252,36 @@ def test_lich_su_dai_thi_nhan_truc_x_thua_ra_nhung_ve_du_diem():
     pts = re.search(r'aria-label="Tổng tài sản theo thời gian">(.*?)</svg>', out, re.S).group(1)
     so_diem = len(re.search(r'points="([^"]+)"', pts).group(1).split())
     assert so_diem == len(hist)  # vẽ đủ 20 điểm
+
+
+# --- Mục kế hoạch giảm tỷ trọng (thêm 13/8) ---------------------------------
+
+def test_dashboard_co_muc_ke_hoach_giam_ty_trong_khi_vuot_nguong():
+    out = render(build_context([_snap()]))
+    assert "Kế hoạch giảm tỷ trọng vàng" in out
+    assert "chỉ" in out and "Thu về" in out
+    assert "Lãi thêm/năm" in out
+
+
+def test_muc_ke_hoach_bien_mat_khi_khong_can_hanh_dong(monkeypatch):
+    """Tỷ trọng dưới critical -> không hiện bảng, tránh nhắc bán khi không cần."""
+    import reporting.dashboard_builder as db
+
+    class FakePort:
+        gold_quantity_tael = 0.5           # rất ít vàng
+        savings_principal_vnd = 246_000_000
+        cash_amount_vnd = 35_000_000
+        stock_market_value_vnd = 0
+        updated = "2026-08-10"
+    monkeypatch.setattr(db, "load_portfolio", lambda: FakePort())
+    out = render(build_context([_snap()]))
+    assert "Kế hoạch giảm tỷ trọng vàng" not in out
+
+
+def test_ke_hoach_dung_dung_gia_tiem_MUA_vao_nhu_networth():
+    """Giá bán trong kế hoạch phải là giá dùng để định giá danh mục — nếu lệch
+    thì kế hoạch nói một giá, tài sản tính một giá khác."""
+    ctx = build_context([_snap()])
+    rb = ctx["rebalance"]
+    assert rb is not None
+    assert rb.gold_price_sell_trieu == ctx["current"].gold_price_trieu

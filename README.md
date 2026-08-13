@@ -186,6 +186,26 @@ python3 scripts/build_dashboard.py --check   # chỉ kiểm tra, không ghi file
 - `reporting/dashboard_builder.py` — dựng cả trang; định giá lịch sử dùng **chính mô hình của `networth.py`** (có test chống lệch 2 nguồn). Hiện **toàn bộ** lịch sử, thêm 3 biểu đồ trước đây không có: tổng tài sản theo thời gian, tỷ trọng vàng vs ngưỡng critical, VN-Index
 - `analytics/advice_tracker.py` — đếm số kỳ liên tiếp vượt ngưỡng và tỷ trọng đã đi hướng nào; đẩy cảnh báo lên đầu mục rủi ro. Ra đời vì 6 bản tin liên tiếp đều khuyên CHỐT BỚT mà tỷ trọng vàng vẫn bò 74,6% → 75,1% và **không gì trong hệ thống thấy điều đó**
 
+## Kế hoạch giảm tỷ trọng — "bán bao nhiêu là đủ" (13/08/2026)
+
+Khuyến nghị **CHỐT BỚT** treo 14 kỳ trong khi tỷ trọng vàng leo 74,6% → 76,0%. Một phần lý do rất người: lời khuyên trả lời "làm gì" nhưng bỏ trống "**bao nhiêu**", nên không hành động được.
+
+```
+python3 scripts/rebalance_plan.py             # 3 mốc mục tiêu để so sánh
+python3 scripts/rebalance_plan.py --target 72 # 1 mốc cụ thể
+python3 scripts/rebalance_plan.py --json      # để nhúng
+```
+
+`decision/rebalance.py` tính đúng 3 ràng buộc thực tế thay vì làm tròn cho tiện:
+
+1. **Bán theo CHỈ** (1 lượng = 10 chỉ) — không bán được 0,516 lượng; số bán làm tròn **LÊN** vì làm tròn xuống thì không chạm mục tiêu
+2. **Giá bán = giá tiệm MUA vào**, không phải giá niêm yết bán ra — đây là tiền thật nhận được
+3. **Chi phí spread mua–bán** nếu sau này mua lại, nêu rõ nhưng không trừ vào tổng (chưa mua lại)
+
+Không mô hình thuế giao dịch vàng: cá nhân bán vàng vật chất ở VN không có thuế giao dịch riêng, chi phí thật là spread — không bịa thêm khoản phí.
+
+Kế hoạch đưa **3 mốc** thay vì áp 1 con số, vì "về mức nào" là khẩu vị của chủ danh mục chứ không phải kết luận kỹ thuật. Mục này tự ẩn khi tỷ trọng đã dưới critical, và xuất hiện trong cả dashboard lẫn bản tin (Telegram).
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```

@@ -22,7 +22,8 @@ HIST = ROOT / "data" / "history.jsonl"
 
 # Import lại các hàm section dùng chung với bản tin sáng để không lặp code
 from run_morning import (  # noqa: E402
-    bulletin_date, run_gold_decision, section_alerts, section_tai_san, section_tien_gui,
+    bulletin_date, run_gold_decision, section_alerts,
+    section_ke_hoach_giam_ty_trong, section_tai_san, section_tien_gui,
     section_tong_quan, section_vang, send_telegram_report,
 )
 
@@ -50,6 +51,7 @@ def main():
         section_tong_quan(gold_decision),
         section_tai_san({"parts": parts, "total": total}),
         section_vang(est, gold_decision),
+        section_ke_hoach_giam_ty_trong(ranked_deposits),
         section_tien_gui(ranked_deposits),
         section_alerts(),
     ]
@@ -66,7 +68,8 @@ def main():
         sections.append("## THAY ĐỔI SO VỚI BẢN TIN TRƯỚC\n\nChưa đủ 2 kỳ trong lịch sử để so sánh.")
 
     for s in sections:
-        print(s, "\n")
+        if s:  # mục rỗng (VD kế hoạch giảm tỷ trọng khi chưa cần) thì bỏ qua
+            print(s, "\n")
 
     # Hai dashboard, hai vai trò khác nhau:
     # - auto_dashboard.html: bảng chẩn đoán, mỗi số kèm badge nguồn/độ tin cậy

@@ -99,9 +99,9 @@
   <header class="top">
     <h1>Bản tin đầu tư — Duy</h1>
     <div class="sub">Kỳ chiều 10/08/2026
-      <span class="badge warn">dữ liệu cũ 2 ngày — kiểm tra routine bản tin</span></div>
+      <span class="badge warn">dữ liệu cũ 3 ngày — kiểm tra routine bản tin</span></div>
     <div class="sub gen">Trang này được <b>sinh tự động</b> từ <code>data/history.jsonl</code>
-      (19 snapshot) lúc 13/08/2026 06:50 (giờ VN) — không có số liệu nào nhập tay.</div>
+      (19 snapshot) lúc 13/08/2026 14:47 (giờ VN) — không có số liệu nào nhập tay.</div>
   </header>
 
   <section class="grid-tiles"><div class="card tile"><div class="label">Tổng tài sản (ước tính)</div><div class="value">1.172,7 tr</div><div class="delta">▲ 1,3 tr so với kỳ trước</div></div><div class="card tile"><div class="label">Vàng nhẫn — 6,5 lượng</div><div class="value">891,7 tr</div><div class="delta flag">76,0% tổng tài sản — vượt ngưỡng critical 70%</div></div><div class="card tile"><div class="label">Tiết kiệm</div><div class="value">246 tr</div><div class="delta">21,0% tổng tài sản</div></div><div class="card tile"><div class="label">Tiền mặt</div><div class="value">35 tr</div><div class="delta">3,0% tổng tài sản</div></div></section>
@@ -116,6 +116,30 @@
 </svg>
     <div class="legend"><span class="item"><span class="swatch" style="background:var(--s-yellow)"></span>Vàng nhẫn — 76,0%</span><span class="item"><span class="swatch" style="background:var(--s-blue)"></span>Tiết kiệm — 21,0%</span><span class="item"><span class="swatch" style="background:var(--s-aqua)"></span>Tiền mặt — 3,0%</span></div>
   </section>
+
+  <section class="card">
+    <h2 class="card-title">Kế hoạch giảm tỷ trọng vàng — bán bao nhiêu là đủ</h2>
+    <p class="card-note">Khuyến nghị <b>CHỐT BỚT</b> trả lời "làm gì" nhưng không nói "bao nhiêu" —
+      đây là phần bù. Vàng nhẫn bán theo <b>chỉ</b> (1 lượng = 10 chỉ), số bán làm tròn LÊN để chạm
+      được mục tiêu. Giá bán dùng <b>giá tiệm MUA vào</b> (137,19 tr/lượng)
+      — tiền thật nhận được, không phải giá niêm yết bán ra.<br>
+      Chọn mốc nào là <b>khẩu vị của bạn</b>: mốc gần critical bán ít nhất nhưng sát mép (vàng tăng
+      vài phần trăm là vượt ngưỡng lại); mốc 60% thì hết cảnh báo tập trung.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Mục tiêu</th><th>Cần bán</th><th>Thu về</th><th>% vàng sau</th>
+          <th>Thanh khoản sau</th><th>Lãi thêm/năm</th><th>Phí nếu mua lại</th></tr></thead>
+        <tbody><tr><td class="tk">69%</td><td><b>7 chỉ</b> (0,7 lượng)</td><td>96,0 tr</td><td>67,9%</td><td>377 tr</td><td style="color:var(--good-text);font-weight:600">+7,7 tr</td><td>1,9 tr</td></tr>
+<tr><td class="tk">65%</td><td><b>10 chỉ</b> (1,0 lượng)</td><td>137,2 tr</td><td>64,3%</td><td>418 tr</td><td style="color:var(--good-text);font-weight:600">+11,0 tr</td><td>2,7 tr</td></tr>
+<tr><td class="tk">60%</td><td><b>14 chỉ</b> (1,4 lượng)</td><td>192,1 tr</td><td>59,7%</td><td>473 tr</td><td style="color:var(--good-text);font-weight:600">+15,4 tr</td><td>3,8 tr</td></tr></tbody>
+      </table>
+    </div>
+    <p class="card-note" style="margin:12px 0 0">Tiền thu về gửi ở <b>VIB 8,00%/năm kỳ hạn 6 tháng</b> (lãi suất theo snapshot 2026-07-22 — kiểm tra lại trước khi gửi)<br>
+      Cột cuối là chi phí chênh lệch mua–bán
+      (2,69 tr/lượng) nếu sau này mua
+      lại đúng số đã bán — nêu ra để quyết định là quyết định có biết giá, chưa trừ vào tổng.</p>
+  </section>
+
 
   <section class="two-col">
     <div class="card">
@@ -322,7 +346,7 @@
     <h2 class="card-title">Rủi ro cần theo dõi</h2>
     <p class="card-note">Lấy nguyên văn cờ rủi ro từ snapshot — thuật ngữ pháp lý giữ đúng như nguồn,
       không quy kết khi nguồn chỉ nói đang xác minh.</p>
-    <div class="status-cards"><div class="status-card critical"><div class="tag">● Khuyến nghị treo 19 kỳ — tỷ trọng vàng chưa giảm</div><div class="body">Tỷ trọng vàng đã vượt ngưỡng critical 70% <b>19 kỳ liên tiếp</b> và vẫn TĂNG từ 74,5% lên 76,0% (tính theo số lượng đang khai báo trong <code>config/portfolio.yaml</code>). Hệ thống đã ghi 12 quyết định cho vàng trong <code>data/decisions.jsonl</code>. Hai lựa chọn dứt khoát: <b>(1)</b> thực hiện chốt bớt để đưa tỷ trọng về khẩu vị đã đặt, hoặc <b>(2)</b> nếu đã cân nhắc và chấp nhận mức tập trung này, hãy nâng ngưỡng trong <code>config/risk_limits.yaml</code> để hệ thống ngừng nhắc — giữ nguyên cả hai sẽ khiến cảnh báo mất tác dụng vì lặp mãi.</div></div></div>
+    <div class="status-cards"><div class="status-card critical"><div class="tag">● Khuyến nghị treo 19 kỳ — tỷ trọng vàng chưa giảm</div><div class="body">Tỷ trọng vàng đã vượt ngưỡng critical 70% <b>19 kỳ liên tiếp</b> và vẫn TĂNG từ 74,5% lên 76,0% (tính theo số lượng đang khai báo trong <code>config/portfolio.yaml</code>). Hệ thống đã ghi 13 quyết định cho vàng trong <code>data/decisions.jsonl</code>. Hai lựa chọn dứt khoát: <b>(1)</b> thực hiện chốt bớt để đưa tỷ trọng về khẩu vị đã đặt, hoặc <b>(2)</b> nếu đã cân nhắc và chấp nhận mức tập trung này, hãy nâng ngưỡng trong <code>config/risk_limits.yaml</code> để hệ thống ngừng nhắc — giữ nguyên cả hai sẽ khiến cảnh báo mất tác dụng vì lặp mãi.</div></div></div>
   </section>
 
   <section class="card">

@@ -89,6 +89,50 @@ def section_vang(est, gold_decision: dict | None) -> str:
     return "\n".join(lines)
 
 
+def section_ke_hoach_giam_ty_trong(ranked: list[dict]) -> str:
+    """Mục "bán bao nhiêu là đủ" — chỉ xuất hiện khi tỷ trọng vượt critical.
+
+    Khuyến nghị CHỐT BỚT treo 14 kỳ một phần vì nó không kèm con số. Mục này
+    đưa số lượng bán được (theo chỉ), tiền thu về và lãi thêm mỗi năm, để
+    khuyến nghị thành việc làm được ngay chứ không phải một hướng đi chung.
+    """
+    from decision.rebalance import plan as rebalance_plan
+    from gold.xuan_trieu_model import estimate as gold_estimate
+    from portfolio.loader import load_portfolio, load_risk_limits
+
+    est = gold_estimate()
+    if not est:
+        return ""
+    port = load_portfolio()
+    p = rebalance_plan(
+        gold_tael=port.gold_quantity_tael,
+        sell_price_trieu=est.shop_buy_trieu,
+        buy_price_trieu=est.shop_sell_trieu,
+        savings_trieu=port.savings_principal_vnd / 1_000_000,
+        cash_trieu=port.cash_amount_vnd / 1_000_000,
+        limits=load_risk_limits(), ranked_rates=ranked,
+    )
+    if not p.needs_action or not p.steps:
+        return ""
+    lines = ["## KẾ HOẠCH GIẢM TỶ TRỌNG VÀNG — BÁN BAO NHIÊU LÀ ĐỦ", ""]
+    lines.append(f"Vàng đang {p.gold_pct_now * 100:.1f}% (critical {p.critical_pct:.0f}%). "
+                 f"Giá bán dùng giá tiệm MUA vào {p.gold_price_sell_trieu:.2f} tr/lượng. "
+                 "Vàng nhẫn bán theo chỉ (1 lượng = 10 chỉ).")
+    lines.append("")
+    for s in p.steps:
+        lai = (f", lãi thêm ~{s.extra_interest_per_year_trieu:.1f} tr/năm"
+               if s.extra_interest_per_year_trieu is not None else "")
+        lines.append(f"- Về {s.target_pct:.0f}%: bán **{s.chi_to_sell} chỉ** "
+                     f"({s.tael_to_sell:.1f} lượng) → thu {s.proceeds_trieu:.1f} tr, "
+                     f"vàng còn {s.gold_pct_after:.1f}%{lai}")
+    if p.best_rate_pct:
+        lines.append(f"- Gửi ở: {p.best_rate_bank} {p.best_rate_pct:.2f}%/năm "
+                     f"kỳ hạn {p.best_rate_term} tháng (kiểm tra lại trước khi gửi)")
+    lines.append(f"- Phí nếu sau này mua lại: chênh lệch mua–bán "
+                 f"{(p.gold_price_buy_trieu or 0) - p.gold_price_sell_trieu:.2f} tr/lượng")
+    return "\n".join(lines)
+
+
 def section_tien_gui(ranked: list[dict]) -> str:
     lines = ["## TIỀN GỬI", ""]
     if not ranked:
@@ -218,11 +262,13 @@ def main():
         section_tong_quan(gold_decision),
         section_tai_san({"parts": parts, "total": total}),
         section_vang(est, gold_decision),
+        section_ke_hoach_giam_ty_trong(ranked_deposits),
         section_tien_gui(ranked_deposits),
         section_alerts(),
     ]
     for s in sections:
-        print(s, "\n")
+        if s:  # mục rỗng (VD kế hoạch giảm tỷ trọng khi chưa cần) thì bỏ qua
+            print(s, "\n")
 
     # Sinh lại dashboard tự động
     # Hai dashboard, hai vai trò khác nhau:
