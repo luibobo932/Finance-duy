@@ -206,6 +206,45 @@ Không mô hình thuế giao dịch vàng: cá nhân bán vàng vật chất ở
 
 Kế hoạch đưa **3 mốc** thay vì áp 1 con số, vì "về mức nào" là khẩu vị của chủ danh mục chứ không phải kết luận kỹ thuật. Mục này tự ẩn khi tỷ trọng đã dưới critical, và xuất hiện trong cả dashboard lẫn bản tin (Telegram).
 
+## Sai số mô hình định giá vàng — đo được, không im lặng (13/08/2026)
+
+Toàn bộ con số "vàng chiếm 76% tài sản" (thứ kích hoạt khuyến nghị CHỐT BỚT) dựa trên hệ số quy đổi lấy từ **đúng một tấm ảnh** bảng giá tiệm ngày 18/7. Một con số trông rất chắc chắn mà không ai biết nó sai bao nhiêu.
+
+`gold/calibration.py` đo sai số từ **11 quan sát thật** trong `history.jsonl`:
+
+| Đo được | Giá trị |
+|---|---|
+| k = nhẫn trong nước / thế giới quy đổi | n=11, mean 1,1368, stdev 0,0081 |
+| Lệch tối đa khỏi trung bình | 1,48% |
+| **Tương quan Pearson(XAU, k)** | **−0,753** → giá trong nước **TRỄ** so với thế giới |
+| MAE trung bình phẳng → hồi quy theo XAU | 0,55% → 0,37% (tốt hơn 32%) |
+
+**Nguyên tắc quan trọng nhất: không ngoại suy hồi quy ra ngoài vùng dữ liệu.** Khoảng đã hiệu chuẩn là XAU 3.984–4.134$; XAU hiện tại 4.340$ nằm ngoài. Ngoại suy sẽ lệch k tới −3,3% (≈29tr trên danh mục này) — sai một cách rất tự tin. Nên: trong khoảng dùng hồi quy, ngoài khoảng dùng trung bình + nới biên theo mức trôi mà độ dốc đã đo hàm ý.
+
+**Biên bất đối xứng** vì đã biết hướng sai: tương quan âm nghĩa là khi thế giới tăng nhanh, ước tính thường CAO hơn giá tiệm thật → biên dưới rộng hơn biên trên (hiện −3,7% / +1,5%). Biên đối xứng ở đây là nói dối một cách lịch sự.
+
+Phân biệt rành mạch hai thứ có số mẫu khác nhau: **MỨC giá vẫn 1 mẫu** (chỉ ảnh bảng giá mới sửa được), **BIÊN từ 11 quan sát**. `networth.py` và dashboard giờ hiện khoảng thay vì một con số.
+
+Kiểm chứng có ý nghĩa: dù giá vàng ở đáy khoảng, tỷ trọng vẫn 75,3% > ngưỡng 70% — **khuyến nghị CHỐT BỚT không phải sản phẩm của sai số mô hình** (có test khẳng định điều này).
+
+## Cảnh báo ngưỡng tự làm mới (13/08/2026)
+
+`data/alerts.json` đặt ngưỡng theo giá 18/7 rồi không cập nhật. Đo ngày 13/8: **3 trong 6 ngưỡng kích hoạt vĩnh viễn**. Rõ nhất là `gold-res` "vượt 4.060$" khi XAU đã 4.340$ — báo động ở mọi lần chạy suốt nhiều tuần, không mang thông tin nào, và làm loãng những cảnh báo thật. Cùng họ lỗi với vụ khuyến nghị lặp 14 kỳ: trạng thái cần làm mới mà không có gì làm mới nó.
+
+```
+python3 scripts/alerts.py '{"VCB":60.3,"CTD":62.4,"XAUUSD":4340}'   # quét
+python3 scripts/alerts.py --list                                     # kèm số kỳ đã chạm
+python3 scripts/alerts.py --reanchor '{...}'                         # đặt lại theo biến động thật
+```
+
+`analytics/alert_health.py`:
+
+- **Đếm số KỲ liên tiếp** chạm ngưỡng (`data/alert_state.json`). Lần đầu là TIN; quá 3 kỳ liên tiếp thì báo "ngưỡng lỗi thời, cần đặt lại" thay vì báo như tin mới. Bộ đếm tính theo **kỳ** (ngày + sáng/chiều) nên chạy lại CLI trong cùng buổi không tự đẩy ngưỡng thành lỗi thời — nó đo diễn biến thị trường, không đo số lần gõ lệnh.
+- Giá **thoát ngưỡng rồi chạm lại** là diễn biến mới → báo lại như tin. Thiếu giá thì **bỏ qua, không reset** bộ đếm (thiếu giá không phải bằng chứng đã thoát ngưỡng).
+- **`--reanchor`** đặt ngưỡng cách giá hiện tại 1,5×biến động thật của chính tài sản đó (ATR(14) từ `data/eod/` cho cổ phiếu, độ lệch chuẩn ngày từ `history.jsonl` cho vàng). Ngưỡng tôn trọng biến động của tài sản thì mới không kêu vì nhiễu. Thiếu giá hoặc thiếu dữ liệu biến động → **giữ nguyên ngưỡng cũ** và nói rõ vì sao, không đặt bằng số bịa.
+- Reanchor cũng **viết lại ghi chú**: nếu không, ghi chú tay theo mức cũ sẽ nói ngược với mức mới (đã gặp thật: ngưỡng thành 4.410$ mà ghi chú vẫn ghi "Vượt 4.060$"). Nhận định tay gốc được giữ ở `note_manual`.
+- Mục cảnh báo trong bản tin dùng **chung** module này — trước đây nó có bản sao logic riêng nên không thấy được ngưỡng lỗi thời (nguồn sự thật thứ ba cho cùng phép so sánh).
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```

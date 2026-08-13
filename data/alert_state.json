@@ -1,0 +1,20 @@
+{
+  "vcb-sup": {
+    "consecutive_fires": 0
+  },
+  "vcb-res": {
+    "consecutive_fires": 0
+  },
+  "ctd-sup": {
+    "consecutive_fires": 0
+  },
+  "ctd-res": {
+    "consecutive_fires": 0
+  },
+  "gold-sup": {
+    "consecutive_fires": 0
+  },
+  "gold-res": {
+    "consecutive_fires": 0
+  }
+}

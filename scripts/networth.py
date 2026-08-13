@@ -78,6 +78,32 @@ def compute():
     return port, limits, meta, parts, total, price, src
 
 
+def _print_gold_band(port, price: float, parts: dict, total: float) -> None:
+    """In khoảng sai số của ước tính giá vàng, đo từ dữ liệu thật.
+
+    Con số tỷ trọng vàng đang quyết định khuyến nghị CHỐT BỚT, mà mức giá lại
+    lấy từ 1 tấm ảnh bảng giá tiệm. In khoảng để người đọc biết nó lệch bao
+    nhiêu — và thấy quyết định có đổi theo sai số hay không.
+    """
+    from gold.calibration import banded_estimate
+    from gold.xuan_trieu_model import estimate as gold_estimate
+
+    est = gold_estimate()
+    if not est:
+        return
+    b = banded_estimate(price, est.xau_usd)
+    other = total - (parts.get("Vàng") or 0)
+    lo_gold = port.gold_quantity_tael * b.low_trieu
+    hi_gold = port.gold_quantity_tael * b.high_trieu
+    lo_pct = lo_gold / (lo_gold + other) * 100
+    hi_pct = hi_gold / (hi_gold + other) * 100
+    print(f"  Khoảng ước tính: {b.low_trieu:,.1f} – {b.high_trieu:,.1f} tr/lượng "
+          f"(−{b.band_low_pct:.1f}% / +{b.band_high_pct:.1f}%) "
+          f"→ vàng chiếm {lo_pct:.1f}–{hi_pct:.1f}% tài sản")
+    print(f"  MỨC giá từ {b.level_sample_size} mẫu hiệu chuẩn · BIÊN đo từ "
+          f"{b.band_sample_size} quan sát giá trong nước")
+
+
 def main():
     port, limits, meta, parts, total, price, src = compute()
     if "--json" in sys.argv:
@@ -86,6 +112,7 @@ def main():
     print(f"=== TÀI SẢN RÒNG (config/portfolio.yaml cập nhật {port.updated}) ===")
     if price:
         print(f"Vàng: {port.gold_quantity_tael} cây {meta.get('gold_type','?')} × {price:,.1f} tr/lượng ({src})")
+        _print_gold_band(port, price, parts, total)
     for name, val in parts.items():
         if val:
             print(f"  {name:<22}{val:>12,.1f} tr   {val/total*100:>5.1f}%")

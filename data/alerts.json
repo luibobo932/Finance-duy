@@ -1,11 +1,53 @@
 {
   "_comment": "Ngưỡng cảnh báo. type: below=thủng xuống, above=vượt lên. Đơn vị giá cổ phiếu: nghìn đồng; vàng: USD/oz. Bản tin/routine giữa phiên quét và cảnh báo khi chạm.",
   "alerts": [
-    {"id": "vcb-sup", "asset": "VCB", "type": "below", "level": 58.0, "note": "Thủng hỗ trợ 58.0 — cảnh giác về vùng 56-57"},
-    {"id": "vcb-res", "asset": "VCB", "type": "above", "level": 59.3, "note": "Vượt kháng cự 59.3 (đỉnh 17/7) — tín hiệu mạnh nếu kèm volume"},
-    {"id": "ctd-sup", "asset": "CTD", "type": "below", "level": 63.0, "note": "Thủng hỗ trợ sống còn 63.0 — rủi ro về 61.5-62.5"},
-    {"id": "ctd-res", "asset": "CTD", "type": "above", "level": 64.5, "note": "Lấy lại 64.5 kèm volume — tín hiệu đảo chiều thật"},
-    {"id": "gold-sup", "asset": "XAUUSD", "type": "below", "level": 3960, "note": "Thủng hỗ trợ sống còn 3.960$ — mở đường về 3.800$"},
-    {"id": "gold-res", "asset": "XAUUSD", "type": "above", "level": 4060, "note": "Vượt 4.060$ — mở đường lên 4.114$ rồi 4.300$"}
+    {
+      "id": "vcb-sup",
+      "asset": "VCB",
+      "type": "below",
+      "level": 58.17,
+      "note": "thủng xuống 58.17 — ngưỡng tự đặt 2026-08-10, cách giá 60.3 một khoảng 1.5×biến động thật (2.13)",
+      "note_manual": "Thủng hỗ trợ 58.0 — cảnh giác về vùng 56-57"
+    },
+    {
+      "id": "vcb-res",
+      "asset": "VCB",
+      "type": "above",
+      "level": 62.43,
+      "note": "vượt lên 62.43 — ngưỡng tự đặt 2026-08-10, cách giá 60.3 một khoảng 1.5×biến động thật (2.13)",
+      "note_manual": "Vượt kháng cự 59.3 (đỉnh 17/7) — tín hiệu mạnh nếu kèm volume"
+    },
+    {
+      "id": "ctd-sup",
+      "asset": "CTD",
+      "type": "below",
+      "level": 59.37,
+      "note": "thủng xuống 59.37 — ngưỡng tự đặt 2026-08-10, cách giá 62.4 một khoảng 1.5×biến động thật (3.03)",
+      "note_manual": "Thủng hỗ trợ sống còn 63.0 — rủi ro về 61.5-62.5"
+    },
+    {
+      "id": "ctd-res",
+      "asset": "CTD",
+      "type": "above",
+      "level": 65.43,
+      "note": "vượt lên 65.43 — ngưỡng tự đặt 2026-08-10, cách giá 62.4 một khoảng 1.5×biến động thật (3.03)",
+      "note_manual": "Lấy lại 64.5 kèm volume — tín hiệu đảo chiều thật"
+    },
+    {
+      "id": "gold-sup",
+      "asset": "XAUUSD",
+      "type": "below",
+      "level": 4270.62,
+      "note": "thủng xuống 4270.62 — ngưỡng tự đặt 2026-08-10, cách giá 4340.4 một khoảng 1.5×biến động thật (69.78)",
+      "note_manual": "Thủng hỗ trợ sống còn 3.960$ — mở đường về 3.800$"
+    },
+    {
+      "id": "gold-res",
+      "asset": "XAUUSD",
+      "type": "above",
+      "level": 4410.18,
+      "note": "vượt lên 4410.18 — ngưỡng tự đặt 2026-08-10, cách giá 4340.4 một khoảng 1.5×biến động thật (69.78)",
+      "note_manual": "Vượt 4.060$ — mở đường lên 4.114$ rồi 4.300$"
+    }
   ]
 }

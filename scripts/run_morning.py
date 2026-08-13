@@ -195,14 +195,27 @@ def section_alerts() -> str:
         "XAUUSD": (cur.get("gold") or {}).get("xauusd"),  # vàng: đơn vị USD thô, không quy đổi
     }
     prices = {k: v for k, v in prices.items() if v is not None}
-    hits = []
-    for a in load_alerts():
-        p = prices.get(a["asset"])
-        if p is None:
-            continue
-        if (a["type"] == "below" and p < a["level"]) or (a["type"] == "above" and p > a["level"]):
-            hits.append(f"🚨 {a['asset']} = {p} đã {'thủng xuống' if a['type']=='below' else 'vượt lên'} {a['level']} → {a['note']}")
-    lines.extend(hits if hits else ["- Không có ngưỡng nào bị chạm"])
+
+    # Dùng CHUNG analytics/alert_health với scripts/alerts.py. Trước đây mục này
+    # có bản sao riêng của logic so ngưỡng, nên bản tin không thấy được ngưỡng đã
+    # lỗi thời — nguồn sự thật thứ ba cho cùng một phép so sánh.
+    from analytics.alert_health import evaluate, load_state, save_state
+
+    period = f"{cur.get('date')}-{cur.get('ky')}"
+    results, new_state = evaluate(load_alerts(), prices, load_state(),
+                                  today=cur.get("date"), period=period)
+    save_state(new_state)
+
+    fresh = [r for r in results if r.fired and not r.is_stale]
+    stale = [r for r in results if r.fired and r.is_stale]
+    if fresh:
+        lines.extend(f"🚨 {r.headline}" for r in fresh)
+    if stale:
+        lines.append(f"🔧 {len(stale)} ngưỡng LỖI THỜI (kích hoạt liên tiếp nhiều kỳ, "
+                     "không còn là tin mới — đặt lại bằng `alerts.py --reanchor`):")
+        lines.extend(f"  - {r.headline}" for r in stale)
+    if not fresh and not stale:
+        lines.append("- Không có ngưỡng nào bị chạm")
     return "\n".join(lines)
 
 

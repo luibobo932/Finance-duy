@@ -179,10 +179,22 @@ def build_context(history: Optional[list[dict]] = None) -> dict:
         except Exception:  # noqa: BLE001 — thiếu kế hoạch không được làm sập cả trang
             rebalance = None
 
+    gold_band = None
+    if cur.gold_price_trieu:
+        try:
+            from gold.calibration import banded_estimate
+
+            xau = (latest.get("gold") or {}).get("xauusd")
+            if xau:
+                gold_band = banded_estimate(cur.gold_price_trieu, float(xau), history=history)
+        except Exception:  # noqa: BLE001 — thiếu biên không được làm sập trang
+            gold_band = None
+
     return {
         "history": history,
         "labels": labels,
         "rebalance": rebalance,
+        "gold_band": gold_band,
         "valuations": vals,
         "current": cur,
         "latest": latest,
@@ -306,13 +318,26 @@ def render(ctx: dict) -> str:
         cur.gold_pct is not None and critical is not None and cur.gold_pct * 100 >= critical
     )
 
+    # Khoảng sai số của ước tính giá vàng, đo từ dữ liệu thật — để con số 76%
+    # không trông chắc chắn hơn thực tế.
+    band = ctx.get("gold_band")
+    gold_delta = (f"{_n((cur.gold_pct or 0) * 100)}% tổng tài sản"
+                  + (f" — vượt ngưỡng critical {_n(critical, 0)}%" if over_critical else ""))
+    if band and cur.gold_trieu:
+        lo = port.gold_quantity_tael * band.low_trieu
+        hi = port.gold_quantity_tael * band.high_trieu
+        other = (cur.total_trieu or 0) - cur.gold_trieu
+        lo_pct = lo / (lo + other) * 100 if (lo + other) else 0
+        hi_pct = hi / (hi + other) * 100 if (hi + other) else 0
+        gold_delta += (f"<br><span style=\"font-weight:400;color:var(--text-muted)\">"
+                       f"khoảng {_n(lo, 0)}–{_n(hi, 0)} tr → {_n(lo_pct)}–{_n(hi_pct)}%</span>")
+
     tiles = "".join([
         _tile("Tổng tài sản (ước tính)", _n(cur.total_trieu, 1, " tr"), _delta_text(totals, 1, " tr")),
         _tile(
             f"Vàng nhẫn — {_n(port.gold_quantity_tael, 1)} lượng",
             _n(cur.gold_trieu, 1, " tr"),
-            (f"{_n((cur.gold_pct or 0) * 100)}% tổng tài sản"
-             + (f" — vượt ngưỡng critical {_n(critical, 0)}%" if over_critical else "")),
+            gold_delta,
             flag=over_critical,
         ),
         _tile("Tiết kiệm", _n(cur.savings_trieu, 0, " tr"),
@@ -603,8 +628,12 @@ def render(ctx: dict) -> str:
     <code>config/portfolio.yaml</code>, <code>config/risk_limits.yaml</code>,
     <code>data/watchlist.json</code>, <code>data/gold_model.json</code> —
     repo Finance-duy, nhánh <code>claude/investment-news-aggregator-w81l70</code>.<br>
-    Giá vàng tiệm là ƯỚC TÍNH từ XAU/USD qua mô hình hiệu chuẩn 1 mẫu (độ tin cậy LOW) —
-    gửi ảnh bảng giá mới để tăng độ chính xác.<br>
+    {(f"Giá vàng tiệm là ƯỚC TÍNH. {html.escape(ctx['gold_band'].note)} "
+      f"Gửi ảnh bảng giá tiệm mới để siết MỨC giá (hiện chỉ "
+      f"{ctx['gold_band'].level_sample_size} mẫu)."
+      if ctx.get("gold_band") else
+      "Giá vàng tiệm là ƯỚC TÍNH từ XAU/USD qua mô hình hiệu chuẩn 1 mẫu — "
+      "gửi ảnh bảng giá mới để tăng độ chính xác.")}<br>
     Đây là công cụ hỗ trợ theo dõi cá nhân, không phải khuyến nghị đầu tư từ tổ chức được cấp phép.
   </footer>
 
