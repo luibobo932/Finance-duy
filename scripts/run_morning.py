@@ -119,17 +119,56 @@ def section_ke_hoach_giam_ty_trong(ranked: list[dict]) -> str:
                  f"Giá bán dùng giá tiệm MUA vào {p.gold_price_sell_trieu:.2f} tr/lượng. "
                  "Vàng nhẫn bán theo chỉ (1 lượng = 10 chỉ).")
     lines.append("")
+    # Nối kế hoạch bán với kịch bản giá: khuyến nghị nói "bán bao nhiêu" và
+    # "được thêm bao nhiêu lãi", nhưng chưa từng nói "bán để tránh CÁI GÌ".
+    from analytics.downside import protection_from_selling
+
     for s in p.steps:
         lai = (f", lãi thêm ~{s.extra_interest_per_year_trieu:.1f} tr/năm"
                if s.extra_interest_per_year_trieu is not None else "")
         lines.append(f"- Về {s.target_pct:.0f}%: bán **{s.chi_to_sell} chỉ** "
                      f"({s.tael_to_sell:.1f} lượng) → thu {s.proceeds_trieu:.1f} tr, "
                      f"vàng còn {s.gold_pct_after:.1f}%{lai}")
+        prot = next((x for x in protection_from_selling(s.chi_to_sell, s.proceeds_trieu)
+                     if x.shock_pct == -15.0), None)
+        if prot:
+            lines.append(f"  - Nếu vàng giảm 15%, phần đã bán tránh được "
+                         f"{prot.protected_trieu:.1f} tr sụt giá "
+                         "(chưa tính lãi tiền gửi ở dòng trên — không đếm trùng)")
     if p.best_rate_pct:
         lines.append(f"- Gửi ở: {p.best_rate_bank} {p.best_rate_pct:.2f}%/năm "
                      f"kỳ hạn {p.best_rate_term} tháng (kiểm tra lại trước khi gửi)")
     lines.append(f"- Phí nếu sau này mua lại: chênh lệch mua–bán "
                  f"{(p.gold_price_buy_trieu or 0) - p.gold_price_sell_trieu:.2f} tr/lượng")
+    return "\n".join(lines)
+
+
+def section_kich_ban_gia_vang(parts: dict, total: float | None) -> str:
+    """Rủi ro tập trung quy ra TIỀN — vế còn thiếu của khuyến nghị CHỐT BỚT.
+
+    Khuyến nghị đã treo 19 kỳ với nội dung "vàng 76%, vượt ngưỡng 70%": một tỷ
+    lệ phần trăm so với một tỷ lệ phần trăm khác. Mục này nói con số đó bằng
+    bao nhiêu triệu đồng, và bày ĐỐI XỨNG cả chiều tăng lẫn chiều giảm.
+    """
+    from analytics.downside import headline, measure_volatility, scenario_table
+    from portfolio.loader import load_portfolio
+
+    gold = parts.get("Vàng") or 0
+    if not total or not gold:
+        return ""
+    rows = scenario_table(load_portfolio().gold_quantity_tael, total - gold)
+    if not rows:
+        return ""
+    lines = ["## KỊCH BẢN GIÁ VÀNG — RỦI RO QUY RA TIỀN", ""]
+    lines.append("Đây là số học \"nếu…thì\", **không phải dự báo** và không kèm xác suất nào.")
+    lines.append("")
+    for r in rows:
+        lines.append(f"- Vàng {r.shock_pct:+.0f}% (XAU {r.xau_after:,.0f}$): "
+                     f"tổng tài sản {r.total_after_trieu:,.0f} tr "
+                     f"({r.change_trieu:+,.0f} tr), vàng còn {r.gold_pct_after:.1f}%")
+    lines.append("")
+    lines.append(headline(rows))
+    lines.append(measure_volatility().caveat)
     return "\n".join(lines)
 
 
@@ -287,6 +326,7 @@ def main():
         section_tong_quan(gold_decision),
         section_tai_san({"parts": parts, "total": total}),
         section_vang(est, gold_decision),
+        section_kich_ban_gia_vang(parts, total),
         section_ke_hoach_giam_ty_trong(ranked_deposits),
         section_tien_gui(ranked_deposits),
         section_alerts(),

@@ -181,3 +181,66 @@ def test_stacked_bar_mang_rat_nho_van_nhin_thay():
     svg = stacked_bar(segs, width=620)
     widths = [float(w) for w in re.findall(r'width="(\d+\.?\d*)" height="24"', svg)]
     assert min(widths) >= 2  # có sàn 2px, không biến mất khỏi hình
+
+
+# --- diverging_bar_chart: dữ liệu CÓ DẤU ------------------------------------
+
+def test_diverging_ve_duoc_ca_cot_am():
+    """`bar_chart` kẹp chiều cao ở 0 nên mọi cột âm biến mất — đó là lý do dạng
+    này tồn tại, không phải để cho đẹp."""
+    from reporting.chart import Bar, diverging_bar_chart
+
+    svg = diverging_bar_chart([Bar("giảm", -100.0), Bar("tăng", 100.0)])
+    rects = re.findall(r'<rect [^>]*height="([\d.]+)"', svg)
+    assert len(rects) == 2
+    assert all(float(h) > 0 for h in rects)
+
+
+def test_diverging_truc_doi_xung_quanh_0():
+    """Lệch trục sẽ phóng đại một phía — với dữ liệu lãi/lỗ thì đó là bóp méo
+    câu chuyện, không chỉ là thẩm mỹ."""
+    from reporting.chart import Bar, diverging_bar_chart
+
+    svg = diverging_bar_chart([Bar("a", -178.0), Bar("b", 45.0)])
+    ticks = [float(t) for t in re.findall(r'<text class="muted" x="[\d.]+" y="[\d.]+" text-anchor="end">(-?[\d.]+)</text>', svg)]
+    assert ticks and max(ticks) == -min(ticks)
+
+
+def test_diverging_hai_cuc_khac_mau():
+    from reporting.chart import Bar, diverging_bar_chart
+
+    svg = diverging_bar_chart([Bar("a", -10.0), Bar("b", 10.0)])
+    assert "var(--s-orange)" in svg and "var(--s-blue)" in svg
+
+
+def test_diverging_KHONG_dung_cap_do_xanh_la():
+    """Cặp đỏ–xanh lá cho ΔE deutan 5,9 (validate_palette.js) — dưới cả ngưỡng
+    sàn 6, người mù màu đỏ–lục không tách được hai cực."""
+    from reporting.chart import Bar, diverging_bar_chart
+
+    svg = diverging_bar_chart([Bar("a", -10.0), Bar("b", 10.0)])
+    assert "--s-green" not in svg and "--good-text" not in svg
+
+
+def test_diverging_moi_cot_deu_co_dau_ghi_thang_tren_nhan():
+    """Nghĩa không được phụ thuộc RIÊNG vào màu."""
+    from reporting.chart import Bar, diverging_bar_chart
+
+    svg = diverging_bar_chart([Bar("a", -10.0), Bar("b", 10.0)], value_suffix=" tr")
+    assert "-10 tr" in svg and "+10 tr" in svg
+
+
+def test_diverging_nhan_am_nam_DUOI_cot_khong_de_len_truc():
+    from reporting.chart import Bar, diverging_bar_chart
+
+    svg = diverging_bar_chart([Bar("a", -100.0)])
+    rect_y = float(re.search(r'<rect [^>]*y="([\d.]+)"', svg).group(1))
+    rect_h = float(re.search(r'<rect [^>]*height="([\d.]+)"', svg).group(1))
+    label_y = float(re.search(r'<text x="[\d.]+" y="([\d.]+)" text-anchor="middle" style="font-weight:600"', svg).group(1))
+    assert label_y > rect_y + rect_h
+
+
+def test_diverging_bang_rong_khong_no():
+    from reporting.chart import diverging_bar_chart
+
+    assert diverging_bar_chart([]) == ""

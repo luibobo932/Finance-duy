@@ -341,6 +341,40 @@ Tập trung **tệ hơn** mà khuyến nghị **dịu đi**, và kết quả cò
 
 Test cũng đổi theo tinh thần đó: thay vì neo cứng `final_action == "DO_NOT_BUY_MORE"` (chính cách viết đó đã khoá một cấu hình mâu thuẫn suốt), giờ kiểm **điều thực sự được yêu cầu** — đề xuất mua bị chặn, câu "KHÔNG MUA THÊM" được nói ra, và hành động cuối không nhẹ hơn mức đó.
 
+## Rủi ro tập trung quy ra TIỀN (14/08/2026)
+
+Khuyến nghị **CHỐT BỚT** đã treo **19 kỳ** và không được thực hiện. Đọc lại nội dung nó nói thì dễ hiểu vì sao: *"vàng 76%, vượt ngưỡng critical 70%"* — một tỷ lệ phần trăm so với một tỷ lệ phần trăm khác. Không kỳ nào nói rủi ro đó **bằng bao nhiêu tiền**.
+
+`decision/rebalance.py` đã trả lời "bán bao nhiêu". `analytics/downside.py` trả lời vế còn lại: **"bán để tránh cái gì"**.
+
+| Kịch bản | XAU/USD | Tổng tài sản | Thay đổi | % vàng sau |
+|---|---|---|---|---|
+| −20% | 3.472 $ | 994 tr | **−178 tr** | 71,7% |
+| −15% | 3.689 $ | 1.039 tr | **−134 tr** | 73,0% |
+| −10% | 3.906 $ | 1.084 tr | −89 tr | 74,1% |
+| +10% | 4.774 $ | 1.262 tr | +89 tr | 77,7% |
+| +20% | 5.208 $ | 1.351 tr | +178 tr | 79,2% |
+
+Điểm phản trực giác đáng chú ý: **kịch bản xấu làm cảnh báo tập trung tự tắt** — vàng −20% thì tỷ trọng tự về 71,7%. Nhưng về bằng cách **mất tiền**, không phải bằng cách cân lại danh mục. Câu đó giờ in thẳng trong bản tin.
+
+Kế hoạch bán cũng được nối với kịch bản: *"bán 10 chỉ → nếu vàng giảm 15%, phần đã bán tránh được 20,6 tr sụt giá"* (không cộng lãi tiền gửi vào đây — lãi đã nằm ở dòng trên, cộng lần nữa là đếm trùng).
+
+Đây là chỗ dễ trượt thành hù dọa nhất trong cả dự án, nên ba ràng buộc được đóng thành test:
+
+- **Kịch bản không phải dự báo** — số học "nếu…thì", không xác suất nào gắn kèm.
+- **Đối xứng** — chạy cả hai chiều cùng biên độ. Chỉ bày kịch bản giảm là dẫn dắt bằng cách chọn dữ liệu, đúng lỗi mà `opportunity_cost.py` đã tránh ở phía ngược lại.
+- **Nói rõ mẫu KHÔNG nói được gì** — đo được lệch chuẩn 1,33%/kỳ và sụt sâu nhất 2,50% trên 19 quan sát, nhưng mẫu 3 tuần của một thị trường đang tăng không cho biết vàng có thể giảm sâu tới đâu. Trình bày mức sụt trong mẫu như kịch bản xấu nhất là hiểu sai dữ liệu một cách nguy hiểm.
+
+Thiên lệch đã biết cũng nêu thẳng: mô hình giả định tỷ lệ giá trong nước/thế giới không đổi, trong khi tương quan đo được là −0,75 — nên các mức lỗ trên **nghiêng về phía thận trọng**.
+
+### Biểu đồ có dấu (`reporting/chart.py`)
+
+`bar_chart` kẹp chiều cao ở 0 nên mọi cột âm biến mất. Thêm `diverging_bar_chart()`: cột mọc hai chiều từ đường 0, trục **đối xứng** quanh 0 (lệch trục sẽ phóng đại một phía — với dữ liệu lãi/lỗ đó là bóp méo câu chuyện, không chỉ là thẩm mỹ).
+
+Màu **không** dùng cặp đỏ–xanh lá quen thuộc: chạy `validate_palette.js` trên cặp đó ra **ΔE deutan = 5,9**, dưới cả ngưỡng sàn 6 — người mù màu đỏ–lục không tách được hai cực. Cặp **cam–xanh dương** đạt ΔE 24,7 (sáng) và 26,8 (tối). Dấu +/− vẫn ghi thẳng trên từng cột nên nghĩa không bao giờ phụ thuộc riêng vào màu.
+
+Biểu đồ nhiều cột giờ cũng **tự cuộn ngang** như bảng: ở 390px, SVG 620px co lại 55% làm chữ 11px còn ~6px — đúng thì có đúng nhưng không ai đọc được.
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```

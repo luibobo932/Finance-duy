@@ -327,6 +327,88 @@ def bar_chart(
     return "\n".join(parts)
 
 
+def diverging_bar_chart(
+    bars: Sequence[Bar],
+    *,
+    box: Optional[Box] = None,
+    decimals: int = 0,
+    value_suffix: str = "",
+    aria_label: str = "",
+    negative_color: str = "--s-orange",
+    positive_color: str = "--s-blue",
+) -> str:
+    """Cột mọc HAI CHIỀU từ đường 0 — dùng cho dữ liệu có DẤU (lãi/lỗ).
+
+    `bar_chart` thường không dùng được ở đây: nó kẹp chiều cao ở 0 nên mọi cột
+    âm biến mất. Đây là dạng *diverging*: hai cực + điểm giữa trung tính, và
+    chính vị trí so với đường 0 mới là thứ mang nghĩa.
+
+    Màu KHÔNG dùng cặp đỏ–xanh lá quen thuộc: chạy
+    `dataviz/scripts/validate_palette.js` trên cặp đó cho ΔE deutan = 5,9 —
+    dưới cả ngưỡng sàn 6, tức người mù màu đỏ–lục không tách được hai cực.
+    Cặp cam–xanh dương đạt ΔE 24,7 (light) và 26,8 (dark). Dấu +/− vẫn được
+    ghi thẳng trên từng cột nên nghĩa không bao giờ phụ thuộc riêng vào màu.
+    """
+    box = box or Box(width=620, height=260, left=44, right=20, bottom=52)
+    if not bars:
+        return ""
+    values = [b.value for b in bars]
+    span = max(abs(min(values)), abs(max(values))) or 1.0
+    step = nice_step(span * 2)
+    top = math.ceil(span / step) * step
+    bottom = -top  # đối xứng quanh 0: lệch trục sẽ phóng đại một phía
+
+    parts: list[str] = [
+        f'<svg viewBox="0 0 {box.width} {box.height}" width="100%" height="{box.height}" '
+        f'role="img" aria-label="{html.escape(aria_label or "biểu đồ cột hai chiều")}">'
+    ]
+    tick = bottom
+    while tick <= top + step / 2:
+        y = _y_for(tick, bottom, top, box)
+        is_zero = abs(tick) < step / 1000
+        parts.append(f'<line class="{"axis-line" if is_zero else "grid-line"}" '
+                      f'x1="{box.plot_left}" y1="{y:.1f}" x2="{box.plot_right}" y2="{y:.1f}"/>')
+        parts.append(f'<text class="muted" x="{box.plot_left - 6}" y="{y + 4:.1f}" '
+                      f'text-anchor="end">{_fmt(tick, decimals)}</text>')
+        tick += step
+
+    zero_y = _y_for(0.0, bottom, top, box)
+    slot = (box.plot_right - box.plot_left) / len(bars)
+    thickness = min(BAR_MAX_THICKNESS * 1.6, slot * 0.6)
+    for i, bar in enumerate(bars):
+        center = box.plot_left + slot * (i + 0.5)
+        y = _y_for(bar.value, bottom, top, box)
+        color = negative_color if bar.value < 0 else positive_color
+        # Chừa SEGMENT_GAP quanh đường 0 để cột không dính vào trục
+        if bar.value < 0:
+            rect_y, height = zero_y + SEGMENT_GAP, max(0.0, y - zero_y - SEGMENT_GAP)
+        else:
+            rect_y, height = y, max(0.0, zero_y - y - SEGMENT_GAP)
+        parts.append(
+            f'<rect x="{center - thickness / 2:.1f}" y="{rect_y:.1f}" width="{thickness:.1f}" '
+            f'height="{height:.1f}" rx="{BAR_CORNER_RADIUS}" fill="var({color})">'
+            f"<title>{html.escape(bar.label)}: {bar.value:+,.{decimals}f}{value_suffix}</title></rect>"
+        )
+        # Nhãn giá trị luôn nằm PHÍA NGOÀI cột (dưới với cột âm, trên với cột
+        # dương) nên không bao giờ đè lên đường 0 hay lên chính cột.
+        label_y = (rect_y + height + 14) if bar.value < 0 else (rect_y - 6)
+        parts.append(
+            f'<text x="{center:.1f}" y="{label_y:.1f}" text-anchor="middle" '
+            f'style="font-weight:600">{bar.value:+,.{decimals}f}{value_suffix}</text>'
+        )
+        parts.append(
+            f'<text class="muted" x="{center:.1f}" y="{box.plot_bottom + 16}" text-anchor="middle">'
+            f"{html.escape(bar.label)}</text>"
+        )
+        if bar.sublabel:
+            parts.append(
+                f'<text class="muted" x="{center:.1f}" y="{box.plot_bottom + 30}" text-anchor="middle">'
+                f"{html.escape(bar.sublabel)}</text>"
+            )
+    parts.append("</svg>")
+    return "\n".join(parts)
+
+
 def stacked_bar(segments: Sequence[Segment], *, width: int = 620, height: int = 56) -> str:
     """Thanh ngang 100% — dùng cho phân bổ tài sản.
 

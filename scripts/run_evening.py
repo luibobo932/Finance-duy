@@ -23,8 +23,8 @@ HIST = ROOT / "data" / "history.jsonl"
 # Import lại các hàm section dùng chung với bản tin sáng để không lặp code
 from run_morning import (  # noqa: E402
     bulletin_date, run_gold_decision, section_alerts,
-    section_ke_hoach_giam_ty_trong, section_tai_san, section_tien_gui,
-    section_tong_quan, section_vang, send_telegram_report,
+    section_ke_hoach_giam_ty_trong, section_kich_ban_gia_vang, section_tai_san,
+    section_tien_gui, section_tong_quan, section_vang, send_telegram_report,
 )
 
 
@@ -51,6 +51,7 @@ def main():
         section_tong_quan(gold_decision),
         section_tai_san({"parts": parts, "total": total}),
         section_vang(est, gold_decision),
+        section_kich_ban_gia_vang(parts, total),
         section_ke_hoach_giam_ty_trong(ranked_deposits),
         section_tien_gui(ranked_deposits),
         section_alerts(),

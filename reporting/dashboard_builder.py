@@ -38,6 +38,7 @@ from reporting.chart import (  # noqa: E402
     Series,
     allocation_legend,
     bar_chart,
+    diverging_bar_chart,
     legend,
     line_chart,
     stacked_bar,
@@ -233,6 +234,72 @@ def _status_card(level: str, tag: str, body: str) -> str:
         f'<div class="status-card {level}"><div class="tag">● {html.escape(tag)}</div>'
         f'<div class="body">{body}</div></div>'
     )
+
+
+def _signed(value: float, decimals: int = 0) -> str:
+    """Số có dấu, định dạng Việt (1.234,5). Cột dương phải có dấu + để khớp
+    nhãn trên biểu đồ — thiếu dấu ở một chỗ là bảng và hình nói khác nhau."""
+    return f"{value:+,.{decimals}f}".translate(str.maketrans({",": ".", ".": ","}))
+
+
+def _scenario_section(ctx: dict) -> str:
+    """Rủi ro tập trung quy ra TIỀN — vế còn thiếu của khuyến nghị CHỐT BỚT.
+
+    19 kỳ liền hệ thống nói "vàng 76%, vượt ngưỡng 70%": một tỷ lệ phần trăm so
+    với một tỷ lệ phần trăm khác. Không kỳ nào nói rủi ro đó bằng bao nhiêu tiền.
+
+    Bày ĐỐI XỨNG cả chiều tăng lẫn chiều giảm — chỉ bày kịch bản xấu là dẫn dắt
+    bằng cách chọn dữ liệu.
+    """
+    try:
+        from analytics.downside import (BIAS_NOTE, headline, measure_volatility,
+                                         scenario_table)
+        from portfolio.loader import load_portfolio
+
+        vals = ctx.get("valuations") or []
+        latest = vals[-1] if vals else None
+        if latest is None or not latest.total_trieu or latest.gold_trieu is None:
+            return ""
+        rows = scenario_table(load_portfolio().gold_quantity_tael,
+                              latest.total_trieu - latest.gold_trieu)
+        if not rows:
+            return ""
+        vol = measure_volatility(ctx.get("history") or [])
+    except Exception:  # noqa: BLE001 — thiếu mục này không được làm hỏng dashboard
+        return ""
+
+    bars = [Bar(label=f"{r.shock_pct:+.0f}%", value=r.change_trieu,
+                sublabel=f"vàng {r.gold_pct_after:.0f}%") for r in rows]
+    svg = diverging_bar_chart(bars, decimals=0, value_suffix=" tr",
+                              aria_label="Thay đổi tổng tài sản theo kịch bản giá vàng")
+    trs = "\n".join(
+        f'<tr><td class="tk">{r.shock_pct:+.0f}%</td><td>{_n(r.xau_after, 0)} $</td>'
+        f"<td>{_n(r.gold_price_after_trieu, 2)} tr</td><td>{_n(r.total_after_trieu, 0)} tr</td>"
+        f'<td style="color:var({"--s-orange" if r.change_trieu < 0 else "--s-blue"});'
+        f'font-weight:600">{_signed(r.change_trieu)} tr</td>'
+        f"<td>{_n(r.gold_pct_after, 1)}%</td></tr>"
+        for r in rows
+    )
+    return f"""
+  <section class="card">
+    <h2 class="card-title">Kịch bản giá vàng — rủi ro quy ra tiền</h2>
+    <p class="card-note">Đây là số học "nếu…thì", <b>không phải dự báo</b> và không kèm xác suất nào.
+      Bày đối xứng cả hai chiều vì chỉ bày kịch bản xấu là dẫn dắt bằng cách chọn dữ liệu.
+      Cột = thay đổi tổng tài sản (triệu đồng) so với hiện tại; dấu +/− ghi thẳng trên cột nên
+      nghĩa không phụ thuộc riêng vào màu.</p>
+    <div class="table-scroll">{svg}</div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Kịch bản</th><th>XAU/USD</th><th>Giá tiệm</th><th>Tổng tài sản</th>
+          <th>Thay đổi</th><th>% vàng sau</th></tr></thead>
+        <tbody>{trs}</tbody>
+      </table>
+    </div>
+    <p class="card-note" style="margin:12px 0 0">{html.escape(headline(rows))}<br>
+      {html.escape(vol.caveat)}<br>
+      {html.escape(BIAS_NOTE)}.</p>
+  </section>
+"""
 
 
 def _data_quality_card(history: list[dict]) -> str:
@@ -554,6 +621,8 @@ def render(ctx: dict) -> str:
   </section>
 """
 
+    scenario_section = _scenario_section(ctx)
+
     gen = ctx["generated_at"].strftime("%d/%m/%Y %H:%M")
 
     return f"""<title>Bản tin đầu tư — Duy</title>
@@ -578,6 +647,7 @@ def render(ctx: dict) -> str:
     {allocation_legend(segs)}
   </section>
 {rebalance_section}
+{scenario_section}
 
   <section class="two-col">
     <div class="card">
@@ -760,6 +830,10 @@ _CSS = """<style>
      trang cuộn ngang, cũng không bóp cột chữ thành sợi dọc trên điện thoại. */
   .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .table-scroll table { min-width: 560px; }
+  /* Biểu đồ nhiều cột cũng vậy: ở 390px, SVG 620px co lại 55% làm chữ 11px
+     còn ~6px — đúng thì có đúng nhưng không ai đọc được. Cuộn ngang giữ
+     nguyên cỡ chữ, dùng lại đúng khuôn mẫu đã áp cho bảng. */
+  .table-scroll > svg { min-width: 560px; }
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   thead th { text-align: left; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;
              text-transform: uppercase; letter-spacing: 0.02em; padding: 6px 10px;
