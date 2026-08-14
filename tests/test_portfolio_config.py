@@ -45,7 +45,18 @@ def test_load_source_priority_structure():
 
 
 def test_load_decision_rules_gold_thresholds_present():
+    """Kiểm 3 khoá TỒN TẠI và NHẤT QUÁN, không neo vào một giá trị cố định.
+
+    Neo cứng `above_critical_action == "DO_NOT_BUY_MORE"` chính là thứ đã giữ
+    một cấu hình mâu thuẫn suốt: nấc critical nhẹ hơn nấc warning ngay bên
+    dưới nó. Test phải bảo vệ tính nhất quán, không bảo vệ một hằng số.
+    """
+    from decision.risk_officer import severity
+
     rules = load_decision_rules()
-    assert rules["gold"]["above_critical_action"] == "DO_NOT_BUY_MORE"
-    assert rules["gold"]["above_warning_action"] == "TAKE_PARTIAL_PROFIT"
+    for key in ("above_critical_action", "above_warning_action", "below_warning_action"):
+        assert key in rules["gold"]
     assert rules["gold"]["below_warning_action"] == "HOLD"
+    assert (severity(rules["gold"]["above_critical_action"])
+            >= severity(rules["gold"]["above_warning_action"])
+            >= severity(rules["gold"]["below_warning_action"]))

@@ -303,7 +303,43 @@ Ba thay đổi:
 
 Kết quả trên dữ liệu thật hôm nay: **92/GOOD → 70/FAIR**, kèm lý do nêu thẳng nguồn ghìm điểm ("XAU/USD cũ 4 ngày, ngưỡng 2") và ("chỉ có 1 nhóm tín hiệu"). **Hành động không đổi** — vẫn CHỐT BỚT do Risk Officer veto; đây là sửa mức tin cậy, không phải đổi lời khuyên.
 
-Một phát hiện đi kèm, đáng sợ hơn con số: `gold/indicators.py` đọc `data/normalized/xuan_trieu_gold_history.csv`, file này có **đúng 1 dòng, ngày 18/7**. Mọi RSI/MACD/SMA trả `None` và `trend_label()` trả `TRUNG_TINH` vì **KHÔNG CÓ DỮ LIỆU**, chứ không phải vì thị trường đi ngang — hai thứ khác nhau hoàn toàn khi ra quyết định. Điều này giờ hiện thành ghi chú trong thẻ **"Chất lượng dữ liệu nền"** trên dashboard, ngay trong mục rủi ro chứ không giấu ở chân trang.
+Một phát hiện đi kèm, đáng sợ hơn con số: `gold/indicators.py` đọc `data/normalized/xuan_trieu_gold_history.csv`, file này có **đúng 1 dòng, ngày 18/7** — xử lý ở mục kế tiếp. Chất lượng dữ liệu nền giờ hiện thành một thẻ riêng trên dashboard, ngay trong mục rủi ro chứ không giấu ở chân trang.
+
+## Xu hướng đo trên dữ liệu thật + bất biến "rủi ro tệ hơn thì lời khuyên không được nhẹ đi" (14/08/2026)
+
+Ba lỗi nối nhau, cùng một gốc: **hệ thống tự tin hơn dữ liệu của nó**.
+
+### 1. Đo xu hướng trên file 1 dòng, trong khi có 19 quan sát thật
+
+`gold/indicators.py` mặc định đọc `data/normalized/xuan_trieu_gold_history.csv` — file có **đúng 1 dòng, ngày 18/7**. Mọi RSI/MACD/SMA trả `None` suốt gần một tháng. Cùng lúc đó `data/history.jsonl` có **19 quan sát XAU/USD thật** không ai dùng.
+
+Đo trên chuỗi đó ra ngay **RSI(14) = 78,3** — vùng quá mua rõ rệt, một tín hiệu hệ thống chưa từng nhìn thấy lần nào. Nay `analyze()` mặc định dùng chuỗi thế giới; chuỗi giá tiệm vẫn đo được khi cần đối chiếu.
+
+Không "lấp" file hiệu chuẩn bằng dữ liệu suy ra: `ring_sell` (giá niêm yết) và `shop_buy_trieu` (giá tiệm MUA vào) là hai đại lượng khác nhau — quy đổi qua lại sẽ là bịa số liệu hiệu chuẩn.
+
+### 2. "Chưa đo được" bị trả về thành "đi ngang"
+
+`trend_label()` trả `TRUNG_TINH` cho **cả hai** trường hợp: thiếu dữ liệu, và thị trường thật sự trung tính. Một đằng là chưa có kết luận, một đằng là kết luận — gộp lại thì bản tin in "Xu hướng kỹ thuật: TRUNG_TINH" như một phát hiện, và bộ đếm đồng thuận tính nó là 1 tín hiệu có mặt. Nay thiếu dữ liệu trả **`None`**.
+
+Kèm theo: cũ đòi có **đủ cả** RSI lẫn MACD mới chấm. MACD cần ≥26 điểm, nên với 19 điểm hiện có, RSI 78,3 vẫn bị vứt đi và báo "trung tính". Nay chấm trên chỉ báo **đang có**, và `trend_evidence()` nói rõ đã dùng cái nào — nhãn không kèm căn cứ thì không phản biện được.
+
+### 3. Rủi ro tệ hơn mà lời khuyên nhẹ đi
+
+Sửa (1) làm lộ ra một mâu thuẫn có sẵn. Đo cùng một danh mục vàng:
+
+| Tỷ trọng vàng | Tín hiệu | Khuyến nghị (trước khi sửa) |
+|---|---|---|
+| 65% (warning) | TICH_CUC | CHỐT BỚT |
+| **76% (critical)** | TICH_CUC | **KHÔNG MUA THÊM** ← nhẹ hơn |
+| 76% (critical) | TRUNG_TINH | CHỐT BỚT |
+
+Tập trung **tệ hơn** mà khuyến nghị **dịu đi**, và kết quả còn lật theo việc tín hiệu thị trường tình cờ là gì — trong khi vàng tăng giá chính là thứ làm tỷ trọng tệ thêm. Đây không phải lựa chọn khẩu vị, đây là lỗi.
+
+`decision/risk_officer.py` nay có thang `EXPOSURE_SEVERITY` và hàm `stricter()`, giữ một **bất biến có test**: tỷ trọng càng vượt ngưỡng, khuyến nghị không bao giờ nhẹ đi (`test_bat_bien_dung_o_MOI_muc_ty_trong` quét 8 mức từ 30% đến 90%). Cấu hình đặt nấc critical nhẹ hơn nấc warning sẽ được **nâng lên và nói rõ**, không âm thầm.
+
+**Yêu cầu gốc "vàng ≥70% thì KHÔNG cho phép đề xuất mua thêm" không mất**: đề xuất mua vẫn bị veto (`gold_concentration_critical`), câu "KHÔNG MUA THÊM vàng" vẫn được ghi thẳng vào cảnh báo, và CHỐT BỚT về logic đã bao hàm việc không mua thêm. Muốn quay lại hành vi cũ thì đổi `above_critical_action` trong `config/decision_rules.yaml`.
+
+Test cũng đổi theo tinh thần đó: thay vì neo cứng `final_action == "DO_NOT_BUY_MORE"` (chính cách viết đó đã khoá một cấu hình mâu thuẫn suốt), giờ kiểm **điều thực sự được yêu cầu** — đề xuất mua bị chặn, câu "KHÔNG MUA THÊM" được nói ra, và hành động cuối không nhẹ hơn mức đó.
 
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 

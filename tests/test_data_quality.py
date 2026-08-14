@@ -120,12 +120,12 @@ def test_gia_nhan_trong_nuoc_la_nguon_DOI_CHIEU_khong_phai_dinh_gia():
     assert ring.critical is False
 
 
-def test_file_hieu_chuan_it_dong_phai_duoc_canh_bao():
-    """1 dòng thì RSI/MACD/SMA đều None và trend_label ra TRUNG_TINH vì KHÔNG
-    CÓ DỮ LIỆU — khác hẳn 'thị trường đi ngang', mà điểm số không thấy được."""
+def test_file_hieu_chuan_it_mau_phai_duoc_canh_bao():
+    """MỨC giá tiệm neo vào 1 ảnh bảng giá — mà toàn bộ con số 'vàng 76%' dựa
+    trên đó. Tuổi file không nói ra điều này, số mẫu mới nói."""
     cal = [s for s in gold_sources([]) if "hiệu chuẩn" in s.name][0]
     if cal.as_of is not None:
-        assert "KHÔNG CÓ DỮ LIỆU" in cal.note
+        assert "mẫu" in cal.note and "ảnh bảng giá" in cal.note
 
 
 def test_chay_duoc_tren_du_lieu_that():

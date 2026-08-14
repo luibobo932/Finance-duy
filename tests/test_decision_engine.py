@@ -2,7 +2,7 @@
 from decision.action_mapper import Action, INSUFFICIENT_DATA_MESSAGE, is_valid_action, to_vietnamese
 from decision.confidence_score import WEIGHTS, compute_confidence, signal_agreement_from_labels
 from decision.policy_engine import DecisionInput, decide, derive_initial_action
-from decision.risk_officer import RiskContext
+from decision.risk_officer import RiskContext, severity
 from portfolio.loader import load_decision_rules, load_risk_limits
 
 LIMITS = load_risk_limits()
@@ -112,9 +112,12 @@ def test_decide_end_to_end_blocks_gold_at_real_portfolio_allocation():
                         data_completeness_pct=100, data_freshness_score=100)
     ctx = RiskContext(gold_allocation_pct=0.747)  # tài sản thật của chủ dự án
     d = decide(inp, ctx, LIMITS, RULES)
-    assert d["action"] == Action.DO_NOT_BUY_MORE.value
-    assert d["action_vi"] == "KHÔNG MUA THÊM"
+    # Đề xuất mua BỊ CHẶN — đó là yêu cầu gốc. Hành động cuối được phép nghiêm
+    # hơn KHÔNG MUA THÊM (xem tests/test_risk_officer.py, bất biến đơn điệu):
+    # ở mức critical, khuyến nghị không được nhẹ hơn ở mức warning.
     assert d["risk_veto"] is True
+    assert severity(d["action"]) >= severity(Action.DO_NOT_BUY_MORE.value)
+    assert any("KHÔNG MUA THÊM" in r for r in d["risks"])
     assert d["data_quality"] == "GOOD"
 
 

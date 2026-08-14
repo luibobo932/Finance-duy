@@ -175,6 +175,7 @@ def _log_decision_for(snap: dict) -> None:
         from decision.policy_engine import DecisionInput, decide
         from decision.risk_officer import RiskContext
         from gold.indicators import analyze as gold_analyze
+        from gold.indicators import trend_evidence as gold_trend_evidence
         from gold.indicators import trend_label as gold_trend_label
         from portfolio.loader import load_decision_rules, load_risk_limits
 
@@ -191,7 +192,7 @@ def _log_decision_for(snap: dict) -> None:
         dq = assess_gold()
         decision = decide(
             DecisionInput(asset="Vàng nhẫn", asset_class="gold",
-                          trend_label=gold_trend_label(gold_analyze()),
+                          trend_label=gold_trend_label(_gold_ta := gold_analyze()),
                           data_completeness_pct=dq.completeness_pct,
                           data_freshness_score=dq.freshness_score),
             RiskContext(gold_allocation_pct=gold_pct, data_stale=dq.data_stale,
@@ -199,6 +200,8 @@ def _log_decision_for(snap: dict) -> None:
             load_risk_limits(), load_decision_rules(),
         )
         print(dq.explain())
+        print(f"Xu hướng vàng: {gold_trend_label(_gold_ta) or 'chưa đo được'} — "
+              f"{gold_trend_evidence(_gold_ta)}")
         if append_decision(build_entry(decision, asset_class="gold", ky=snap["ky"], snapshot=snap)):
             veto = " (Risk Officer đã điều chỉnh)" if decision["risk_veto"] else ""
             print(f"Quyết định đã ghi: vàng → {decision['action_vi']} "

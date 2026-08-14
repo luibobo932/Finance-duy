@@ -8,7 +8,22 @@ gold:
   # rõ ý nghĩa hành động ứng với từng mức để dễ đọc.
   #
   # Khi tín hiệu thị trường đề xuất MUA THÊM ("có được mua thêm không?"):
-  above_critical_action: DO_NOT_BUY_MORE      # >= gold_critical (70%)
+  #
+  # ⚠️ 14/08/2026 — đổi từ DO_NOT_BUY_MORE sang TAKE_PARTIAL_PROFIT. Lý do là
+  # một MÂU THUẪN đo được, không phải đổi khẩu vị:
+  #     vàng 65% (warning)  + tín hiệu TICH_CUC → CHỐT BỚT
+  #     vàng 76% (critical) + tín hiệu TICH_CUC → KHÔNG MUA THÊM  ← NHẸ HƠN
+  #     vàng 76% (critical) + tín hiệu TRUNG_TINH → CHỐT BỚT
+  # Rủi ro tệ hơn mà lời khuyên dịu đi, và kết quả còn lật theo việc tín hiệu
+  # thị trường tình cờ là gì.
+  #
+  # Yêu cầu gốc "vàng ≥70% thì KHÔNG cho phép đề xuất mua thêm" KHÔNG mất:
+  # đề xuất mua vẫn bị veto (`gold_concentration_critical`), câu "KHÔNG MUA
+  # THÊM vàng" vẫn được ghi thẳng vào warnings, và CHỐT BỚT về logic đã bao
+  # hàm việc không mua thêm. Đổi lại DO_NOT_BUY_MORE ở đây nếu muốn hệ thống
+  # chỉ chặn mua và không tự đề xuất giảm tỷ trọng — khi đó risk_officer sẽ
+  # ghi một dòng cảnh báo vì cấu hình mâu thuẫn với nấc warning bên dưới.
+  above_critical_action: TAKE_PARTIAL_PROFIT  # >= gold_critical (70%)
   above_warning_action: TAKE_PARTIAL_PROFIT   # >= gold_warning (60%), < critical
   below_warning_action: HOLD                  # < gold_warning
   #

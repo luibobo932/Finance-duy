@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
-from .action_mapper import Action
+from .action_mapper import Action, to_vietnamese
 
 # Danh sách rule tên chuẩn theo yêu cầu gốc — dùng làm tài liệu tham chiếu,
 # veto_reasons có thể chứa thêm biến thể chi tiết hơn (VD
@@ -26,6 +26,37 @@ VETO_RULES = [
     "missing_financial_data",
     "abnormal_price_data",
 ]
+
+# Mức độ SIẾT phơi nhiễm của từng hành động, dùng để giữ một bất biến:
+# **tỷ trọng càng vượt ngưỡng, lời khuyên không bao giờ được nhẹ đi**.
+#
+# Vì sao cần: đo được ngày 14/8, cùng một danh mục vàng —
+#     vàng 65% (warning)  + tín hiệu TICH_CUC → CHỐT BỚT
+#     vàng 76% (critical) + tín hiệu TICH_CUC → KHÔNG MUA THÊM  ← NHẸ HƠN
+#     vàng 76% (critical) + tín hiệu TRUNG_TINH → CHỐT BỚT
+# Rủi ro tệ hơn mà lời khuyên dịu đi, và kết quả còn lật theo việc tín hiệu
+# thị trường tình cờ là gì. Đó không phải một lựa chọn khẩu vị, đó là lỗi.
+EXPOSURE_SEVERITY: dict[str, int] = {
+    Action.BUY_SMALL.value: 0,
+    Action.DEPOSIT.value: 1,
+    Action.HOLD.value: 1,
+    Action.WAIT_FOR_CONFIRMATION.value: 2,
+    Action.WATCH.value: 2,
+    Action.DO_NOT_BUY_MORE.value: 3,
+    Action.STAND_ASIDE.value: 4,
+    Action.TAKE_PARTIAL_PROFIT.value: 5,
+    Action.NO_DECISION.value: 6,
+}
+
+
+def severity(action: str) -> int:
+    """Hành động lạ trả -1 để `stricter()` không vô tình coi nó là nghiêm nhất."""
+    return EXPOSURE_SEVERITY.get(action, -1)
+
+
+def stricter(a: str, b: str) -> str:
+    """Hành động siết phơi nhiễm mạnh hơn trong hai hành động."""
+    return a if severity(a) >= severity(b) else b
 
 
 @dataclass
@@ -118,7 +149,24 @@ def _apply_gold_rule(proposal: ProposedAction, ctx: RiskContext, limits: dict, r
         if gold_pct >= critical:
             veto_reasons.append("gold_concentration_critical")
             conditions.append(f"Chỉ xem xét mua thêm vàng khi tỷ trọng giảm dưới {critical*100:.0f}%")
-            return gold_rules.get("above_critical_action", Action.DO_NOT_BUY_MORE.value)
+            blocked = gold_rules.get("above_critical_action", Action.DO_NOT_BUY_MORE.value)
+            # Yêu cầu gốc của chủ danh mục — "vàng ≥70% thì không cho phép đề
+            # xuất mua thêm" — được giữ nguyên: đề xuất mua ĐÃ bị veto, và câu
+            # đó nêu thẳng ở đây nên không mất đi dù hành động cuối mạnh hơn.
+            warnings.append(
+                f"Vàng đang {gold_pct*100:.0f}% (≥ critical {critical*100:.0f}%) — KHÔNG MUA THÊM vàng"
+            )
+            # ... nhưng ở mức critical, lời khuyên không được nhẹ hơn mức
+            # warning. Lấy hành động siết mạnh hơn giữa hai nấc, thay vì để
+            # nấc nặng hơn lại trả kết quả dịu hơn.
+            escalated = stricter(blocked, gold_rules.get(
+                "above_warning_action", Action.TAKE_PARTIAL_PROFIT.value))
+            if escalated != blocked:
+                warnings.append(
+                    "Ở mức critical, khuyến nghị không được nhẹ hơn ở mức warning — "
+                    f"nâng từ {to_vietnamese(blocked)} lên {to_vietnamese(escalated)}"
+                )
+            return escalated
         if gold_pct >= warning:
             veto_reasons.append("gold_concentration_warning")
             warnings.append(

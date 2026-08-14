@@ -232,6 +232,7 @@ def run_gold_decision(ky: str):
     from decision.policy_engine import DecisionInput, decide
     from decision.risk_officer import RiskContext
     from gold.indicators import analyze as gold_analyze
+    from gold.indicators import trend_evidence as gold_trend_evidence
     from gold.indicators import trend_label as gold_trend_label
     from networth import compute as compute_networth
     from portfolio.loader import load_decision_rules, load_risk_limits
@@ -240,9 +241,13 @@ def run_gold_decision(ky: str):
     limits = load_risk_limits()
     rules = load_decision_rules()
     gold_pct = (parts.get("Vàng") or 0) / total if total else None
-    trend = gold_trend_label(gold_analyze())
-
     hist = load_history()
+    # Xu hướng đo trên chuỗi XAU/USD của CHÍNH history đã nạp — không đọc lại
+    # đĩa lần nữa để hai chỗ không thể lệch nhau.
+    gold_ta = gold_analyze(history=hist)
+    trend = gold_trend_label(gold_ta)
+    print(f"- Xu hướng vàng: {trend or 'chưa đo được'} — {gold_trend_evidence(gold_ta)}")
+
     past_decisions = load_decisions()
     hist_acc = None
     if past_decisions:

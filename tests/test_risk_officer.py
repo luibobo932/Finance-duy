@@ -2,7 +2,7 @@
 thống (Phase 7). Kịch bản chính lấy TRỰC TIẾP từ tài sản thật của chủ dự án
 (vàng 74,7%) và ví dụ gốc chủ dự án đưa ra."""
 from decision.action_mapper import Action
-from decision.risk_officer import ProposedAction, RiskContext, review
+from decision.risk_officer import ProposedAction, RiskContext, review, severity
 from portfolio.loader import load_decision_rules, load_risk_limits
 
 LIMITS = load_risk_limits()
@@ -10,13 +10,60 @@ RULES = load_decision_rules()
 
 
 def test_gold_critical_blocks_buy_with_real_portfolio_allocation():
-    # Đúng tài sản thật của chủ dự án: vàng 74.7% > ngưỡng critical 70%
+    """Yêu cầu gốc của chủ dự án: vàng ≥70% thì KHÔNG cho phép đề xuất mua thêm.
+
+    Kiểm bằng thứ thực sự thể hiện điều đó — đề xuất mua bị veto và câu "KHÔNG
+    MUA THÊM" được nói ra — chứ không neo vào đúng một mã hành động, vì hành
+    động cuối được phép NGHIÊM HƠN (xem test bất biến đơn điệu bên dưới).
+    """
     proposal = ProposedAction(asset="XAUUSD", asset_class="gold", action=Action.BUY_SMALL.value)
     ctx = RiskContext(gold_allocation_pct=0.747)
     rr = review(proposal, ctx, LIMITS, RULES)
     assert rr.approved is False
-    assert rr.final_action == Action.DO_NOT_BUY_MORE.value
     assert "gold_concentration_critical" in rr.veto_reasons
+    assert any("KHÔNG MUA THÊM" in w for w in rr.warnings)
+    assert severity(rr.final_action) >= severity(Action.DO_NOT_BUY_MORE.value)
+
+
+def test_critical_KHONG_duoc_nhe_hon_warning():
+    """Bất biến: tỷ trọng càng vượt ngưỡng, khuyến nghị không bao giờ nhẹ đi.
+
+    Đo được ngày 14/8 trước khi sửa: vàng 65% ra CHỐT BỚT còn vàng 76% chỉ ra
+    KHÔNG MUA THÊM — rủi ro tệ hơn mà lời khuyên dịu đi.
+    """
+    buy = ProposedAction(asset="XAUUSD", asset_class="gold", action=Action.BUY_SMALL.value)
+    o_warning = review(buy, RiskContext(gold_allocation_pct=0.65), LIMITS, RULES)
+    o_critical = review(buy, RiskContext(gold_allocation_pct=0.76), LIMITS, RULES)
+    assert severity(o_critical.final_action) >= severity(o_warning.final_action)
+
+
+def test_bat_bien_dung_o_MOI_muc_ty_trong():
+    buy = ProposedAction(asset="XAUUSD", asset_class="gold", action=Action.BUY_SMALL.value)
+    levels = [0.30, 0.55, 0.61, 0.65, 0.69, 0.70, 0.76, 0.90]
+    sevs = [severity(review(buy, RiskContext(gold_allocation_pct=p), LIMITS, RULES).final_action)
+            for p in levels]
+    assert sevs == sorted(sevs), f"khuyến nghị dịu đi khi tỷ trọng tăng: {list(zip(levels, sevs))}"
+
+
+def test_tin_hieu_thi_truong_KHONG_duoc_lam_nhe_khuyen_nghi_o_critical():
+    """Cùng một tỷ trọng critical, tín hiệu tăng giá không được ra lời khuyên
+    nhẹ hơn tín hiệu đi ngang — vàng tăng chính là thứ làm tập trung tệ thêm."""
+    ctx = RiskContext(gold_allocation_pct=0.76)
+    from_buy = review(ProposedAction("XAUUSD", "gold", Action.BUY_SMALL.value), ctx, LIMITS, RULES)
+    from_hold = review(ProposedAction("XAUUSD", "gold", Action.HOLD.value), ctx, LIMITS, RULES)
+    assert severity(from_buy.final_action) >= severity(from_hold.final_action)
+
+
+def test_cau_hinh_mau_thuan_duoc_nang_len_VA_noi_ro():
+    """Cấu hình đặt nấc critical nhẹ hơn nấc warning thì phải được nâng lên,
+    và việc nâng phải hiện ra chứ không âm thầm."""
+    rules = {**RULES, "gold": {**RULES.get("gold", {}),
+                               "above_critical_action": Action.DO_NOT_BUY_MORE.value,
+                               "above_warning_action": Action.TAKE_PARTIAL_PROFIT.value}}
+    rr = review(ProposedAction("XAUUSD", "gold", Action.BUY_SMALL.value),
+                RiskContext(gold_allocation_pct=0.76), LIMITS, rules)
+    assert rr.final_action == Action.TAKE_PARTIAL_PROFIT.value
+    assert any("không được nhẹ hơn" in w for w in rr.warnings)
 
 
 def test_gold_warning_downgrades_to_take_partial_profit():
@@ -205,7 +252,9 @@ def test_co_the_TAT_nhanh_nang_cap_bang_config():
 def test_hanh_dong_doc_tu_config_khong_hard_code():
     """3 khoá trong decision_rules.yaml trước đây KHÔNG được code nào đọc.
     Đổi giá trị trong config phải đổi được kết quả thật."""
-    rules = {**RULES, "gold": {**RULES.get("gold", {}), "above_critical_action": Action.STAND_ASIDE.value}}
+    rules = {**RULES, "gold": {**RULES.get("gold", {}),
+                               "above_critical_action": Action.STAND_ASIDE.value,
+                               "above_warning_action": Action.WATCH.value}}
     proposal = ProposedAction(asset="XAUUSD", asset_class="gold", action=Action.BUY_SMALL.value)
     rr = review(proposal, RiskContext(gold_allocation_pct=0.90), LIMITS, rules)
     assert rr.final_action == Action.STAND_ASIDE.value

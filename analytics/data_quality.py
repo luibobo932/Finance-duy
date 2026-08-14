@@ -155,9 +155,10 @@ def gold_sources(history: Optional[Sequence[dict]] = None) -> list[Source]:
     """Đúng những nguồn mà một quyết định vàng đang dựa vào, không thêm bớt.
 
     Trọng yếu:
-      - XAU/USD từ snapshot: đầu vào định giá vàng của `scripts/networth.py`
-      - lịch sử hiệu chuẩn giá tiệm: nguồn DUY NHẤT của `gold/indicators.py`,
-        tức là toàn bộ `trend_label` — thành phần 25% trọng số
+      - XAU/USD từ snapshot: đầu vào định giá vàng của `scripts/networth.py`,
+        đồng thời là chuỗi mà `gold/indicators.py` đo xu hướng
+      - lịch sử hiệu chuẩn giá tiệm: neo MỨC giá tiệm (hệ số quy đổi từ giá
+        thế giới sang giá nhẫn thực tế) — sai ở đây thì sai toàn bộ tỷ trọng
     Đối chiếu (không kéo điểm):
       - giá nhẫn trong nước từ snapshot: dùng để kiểm chứng mô hình quy đổi,
         không phải đầu vào định giá chính
@@ -204,21 +205,22 @@ def _latest_calibration_date() -> Optional[date]:
 
 
 def _calibration_note() -> str:
-    """Số DÒNG của file hiệu chuẩn, vì tuổi không nói hết vấn đề.
+    """Số MẪU của file hiệu chuẩn, vì tuổi không nói hết vấn đề.
 
-    File 1 dòng thì dù mới tinh cũng không tính được RSI/MACD/SMA — chỉ báo trả
-    None và `trend_label()` ra TRUNG_TINH vì KHÔNG CÓ DỮ LIỆU, chứ không phải vì
-    thị trường đi ngang. Hai thứ đó khác nhau hoàn toàn khi ra quyết định.
+    Đây là nguồn neo MỨC giá tiệm. Với 1 mẫu, con số "vàng chiếm 76% tài sản"
+    — thứ kích hoạt toàn bộ khuyến nghị CHỐT BỚT — dựa trên đúng một tấm ảnh
+    bảng giá. `gold/calibration.py` đo được BIÊN từ 11 quan sát, nhưng MỨC thì
+    chỉ ảnh bảng giá mới siết được.
     """
     path = ROOT / "data" / "normalized" / "xuan_trieu_gold_history.csv"
     if not path.exists():
         return ""
     with path.open(encoding="utf-8") as f:
         n = sum(1 for _ in csv.DictReader(f))
-    if n >= 20:
+    if n >= 5:
         return ""
-    return (f"chỉ {n} dòng — chưa đủ tính RSI/MACD/SMA, nên 'TRUNG_TINH' nghĩa là "
-            "KHÔNG CÓ DỮ LIỆU chứ không phải thị trường đi ngang")
+    return (f"chỉ {n} mẫu — MỨC giá tiệm neo vào đúng {n} ảnh bảng giá; "
+            "gửi ảnh mới để siết (biên đã đo được từ 11 quan sát, riêng mức thì chưa)")
 
 
 def _parse(value: object) -> Optional[date]:
