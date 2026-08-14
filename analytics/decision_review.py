@@ -65,6 +65,13 @@ def _price_from(snapshot: dict, asset_class: str, field: str) -> Optional[float]
     return None
 
 
+def price_from_snapshot(snapshot: dict, asset_class: str, field: str) -> Optional[float]:
+    """API công khai của `_price_from` — để module khác (VD analytics/
+    opportunity_cost.py) đọc giá theo ĐÚNG cách review đọc, thay vì tự viết lại
+    một bản hơi khác rồi hai nơi so giá lệch nhau."""
+    return _price_from(snapshot, asset_class, field)
+
+
 def review_one(decision: dict, snapshots: list[dict]) -> dict:
     """Đánh giá 1 quyết định. Trả dict: decision gốc + change_pct + verdict
     + compared_with (kỳ snapshot đã dùng để so)."""

@@ -40,7 +40,7 @@ Windows Task Scheduler task `FinanceDuy-BanTinChieu` chạy `scripts/daily_eveni
 3. `fetch_market_snapshot.py chieu` — **XAU/USD thật** (api.gold-api.com) + **tỷ giá USD/VND thật** (portal VCB) + đóng cửa VCB/CTD, ghi vào `data/history.jsonl`
 4. `watchlist.py update` — giá thật 11 mã Buffett-list
 5. `run_evening.py` — tổng hợp bản tin, chạy Decision Engine, **tự gửi Telegram**
-6. `health_check.py` — kiểm tra freshness + an ninh
+6. `health_check.py --alert` — kiểm tra freshness + an ninh, FAIL thì báo Telegram; `.bat` kiểm exit code ngay sau bước này
 7. commit + push `data/` (không rebase — nếu push thất bại chỉ log cảnh báo, KHÔNG tự động merge/rebase để tránh lặp lại sự cố kẹt ở trên)
 
 **Vẫn CHƯA có nguồn tự động** (trung thực để trống trong bản tin, không bịa số) cho: VN-Index, khối ngoại mua/bán ròng, giá SJC/vàng nhẫn tại tiệm trong nước, lãi suất tiết kiệm, tin tức pháp lý/quản trị doanh nghiệp. Những phần này cần nhắn trực tiếp trong phiên chat (WebSearch) khi cần, hoặc `scripts/trend.py append` nhập tay.
@@ -70,7 +70,7 @@ Windows Task Scheduler task `FinanceDuy-BanTinChieu` chạy `scripts/daily_eveni
 | `watchlist.py` + `data/watchlist.json` | Theo dõi hiệu suất danh mục giả lập Buffett-list |
 | `networth.py` + `data/assets.json` | Tài sản ròng thực tế (vàng/tiết kiệm/mặt/cổ phiếu) + phân bổ + cảnh báo tập trung |
 | `gold_price.py` + `data/gold_model.json` | Ước tính giá vàng nhẫn tại tiệm theo XAU/USD real-time (hiệu chuẩn từ 1 ảnh bảng giá); networth tự dùng để định giá vàng động |
-| `health_check.py` | Health check (Phase 10): freshness dữ liệu + vệ sinh an ninh (.env, quét secret); exit 1 khi FAIL — dùng được trong automation |
+| `health_check.py` | Health check (Phase 10): freshness dữ liệu + vệ sinh an ninh (.env, quét secret); dữ liệu tự động cũ quá 3× ngưỡng thì leo thang WARN → FAIL; exit 1 khi FAIL; `--alert` gửi Telegram (chống spam qua `data/health_state.json`) |
 
 Xem `docs/ROADMAP.md` cho trạng thái toàn bộ 12 hạng mục phát triển và việc cần người dùng cung cấp.
 
@@ -151,6 +151,20 @@ Số lượng tài sản và hạn mức rủi ro **không còn hard-code trong 
 - Exit code 1 khi có FAIL → gắn được vào automation/routine như một guard.
 
 Security review 20/07/2026: `.env` sạch (không track, đã ignore), 100 file được track không chứa secret, log chỉ ghi message_id (không ghi token).
+
+### Cảnh báo phải LEO THANG và phải ĐẾN NƠI (14/08/2026)
+
+Health check đúng nhưng vô hiệu: ngày 13/8 nó báo WARN vì `data/eod/VCB.csv` đã cũ **7 ngày** — automation EOD đứng suốt một tuần mà không ai biết. Hai lỗ hổng cộng lại:
+
+1. WARN **không bao giờ leo thang** — cũ 3 ngày hay 30 ngày đều cùng một chữ WARN, nên "cũ quá lâu" không phân biệt được với "cuối tuần nên chưa có".
+2. `scripts/daily_evening.bat` gọi health check nhưng `if errorlevel 1` lại nằm sau `git push` — **exit code của health check không bao giờ được đọc**. Guard có mà không ai kiểm.
+
+Nay:
+
+- **Leo thang**: cũ quá `STALE_ESCALATE_FACTOR = 3` lần ngưỡng → **FAIL** (exit 1), không còn WARN vĩnh viễn.
+- **Chỉ leo thang nguồn TỰ ĐỘNG**: mỗi mục có cờ `automated`. Lãi suất và hiệu chuẩn vàng tiệm là **nhập tay** — bắt chúng FAIL hằng ngày chỉ tái tạo đúng cái bệnh alert fatigue đã sửa ở mục cảnh báo ngưỡng. Nguồn tay ở lại WARN.
+- **`--alert`** gửi Telegram khi FAIL, chống spam bằng `data/health_state.json`: chỉ gửi khi **đổi trạng thái**, hoặc khi vẫn FAIL sau `REALERT_AFTER_DAYS = 3` ngày. Cảnh báo im lặng thì bằng không có; cảnh báo mỗi ngày thì bị bỏ qua.
+- `.bat` kiểm errorlevel **ngay sau** health check, ghi rõ vào `logs/daily_task.log`.
 
 ## Decision review & backtest nâng cấp (Phase 9)
 
@@ -244,6 +258,25 @@ python3 scripts/alerts.py --reanchor '{...}'                         # đặt l�
 - **`--reanchor`** đặt ngưỡng cách giá hiện tại 1,5×biến động thật của chính tài sản đó (ATR(14) từ `data/eod/` cho cổ phiếu, độ lệch chuẩn ngày từ `history.jsonl` cho vàng). Ngưỡng tôn trọng biến động của tài sản thì mới không kêu vì nhiễu. Thiếu giá hoặc thiếu dữ liệu biến động → **giữ nguyên ngưỡng cũ** và nói rõ vì sao, không đặt bằng số bịa.
 - Reanchor cũng **viết lại ghi chú**: nếu không, ghi chú tay theo mức cũ sẽ nói ngược với mức mới (đã gặp thật: ngưỡng thành 4.410$ mà ghi chú vẫn ghi "Vượt 4.060$"). Nhận định tay gốc được giữ ở `note_manual`.
 - Mục cảnh báo trong bản tin dùng **chung** module này — trước đây nó có bản sao logic riêng nên không thấy được ngưỡng lỗi thời (nguồn sự thật thứ ba cho cùng phép so sánh).
+
+## Phí cơ hội của khuyến nghị phòng thủ (14/08/2026)
+
+Decision review chấm đúng/sai cho quyết định **có định hướng giá**, còn GIỮ/CHỐT BỚT/KHÔNG MUA THÊM ghi "quản trị rủi ro — không chấm". Đúng nguyên tắc, nhưng hệ quả đo được: **11/13 quyết định thật không bao giờ được đánh giá**, accuracy vĩnh viễn `None`, thành phần "lịch sử" (15% trọng số) của confidence score mãi dùng giá trị trung tính — hệ thống không học được gì mà vẫn hiện điểm tin cậy cao.
+
+`analytics/opportunity_cost.py` đo thứ đo được, và đóng khung đúng bản chất: **phí bảo hiểm**, không phải "lời khuyên sai". Bảo hiểm không sai khi nhà không cháy — nhưng người mua có quyền biết đã trả bao nhiêu.
+
+```
+python3 scripts/review.py     # decision review + mục PHÍ CƠ HỘI ở cuối
+```
+
+Kết quả thật trên `data/decisions.jsonl` (14/08): 3 khuyến nghị CHỐT BỚT, trung bình **+3,49%** bỏ lỡ, xấu nhất +5,48%.
+
+Hai vấn đề đo lường phải xử lý cho tử tế:
+
+- **Trường giá gốc ngừng thu thập.** Quyết định 22/7 neo vào `ring_sell`, mà giá vàng trong nước dừng từ 27/7 → so trường gốc ra +0,00%, đúng kỹ thuật mà vô dụng. Nay có `FALLBACK_FIELDS`, và chọn phép đo có **nhiều thời gian trôi qua nhất** thay vì "ưu tiên trường gốc" — nhưng luôn neo giá ở **cả hai đầu bằng cùng một trường** (không bao giờ so `ring_sell` 147,5 với `xauusd` 4.340). Kết quả xấp xỉ được **đánh dấu `[xấp xỉ]` kèm mức sai số đã đo** (~2,3%/6 ngày, từ `gold/calibration.py`).
+- **Phải nêu cả hai vế.** `premium_in_vnd()` trừ lãi tiền gửi thu được vào phần tăng giá bỏ lỡ: chốt bớt mất phần tăng NHƯNG tiền về ngân hàng sinh lãi. Nêu vế mất mà giấu vế được là dẫn dắt chứ không phải tư vấn — nên cảnh báo "khuyến nghị treo" trên dashboard giờ hiện **cùng lúc** cả rủi ro tập trung lẫn cái giá đã trả.
+
+Chống look-ahead dùng **đúng** `later_snapshots()` của decision_review — không mở đường tắt thứ hai.
 
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 

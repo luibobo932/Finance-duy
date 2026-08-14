@@ -75,6 +75,7 @@ def summarize_pending(history: Sequence[dict], valuations: Sequence) -> dict:
         direction = f"gần như không đổi ({_vi(from_pct)}% → {_vi(to_pct)}%)"
 
     advised = _count_repeated_advice("gold")
+    cost_note = _opportunity_cost_note(history)
     advice_note = (
         f" Hệ thống đã ghi {advised} quyết định cho vàng trong "
         "<code>data/decisions.jsonl</code>."
@@ -91,13 +92,38 @@ def summarize_pending(history: Sequence[dict], valuations: Sequence) -> dict:
         "message": (
             f"Tỷ trọng vàng đã vượt ngưỡng critical {_vi(threshold, 0)}% "
             f"<b>{periods} kỳ liên tiếp</b> và {direction} "
-            f"(tính theo số lượng đang khai báo trong <code>config/portfolio.yaml</code>).{advice_note} "
+            f"(tính theo số lượng đang khai báo trong <code>config/portfolio.yaml</code>).{advice_note}"
+            f"{cost_note} "
             "Hai lựa chọn dứt khoát: <b>(1)</b> thực hiện chốt bớt để đưa tỷ trọng về khẩu vị đã đặt, "
             "hoặc <b>(2)</b> nếu đã cân nhắc và chấp nhận mức tập trung này, hãy nâng ngưỡng trong "
             "<code>config/risk_limits.yaml</code> để hệ thống ngừng nhắc — "
             "giữ nguyên cả hai sẽ khiến cảnh báo mất tác dụng vì lặp mãi."
         ),
     }
+
+
+def _opportunity_cost_note(history: Sequence[dict]) -> str:
+    """Phí cơ hội tới nay của các khuyến nghị phòng thủ đã ra.
+
+    Ghép vào cảnh báo "khuyến nghị treo" vì hai vế này phải đọc cùng nhau: chủ
+    danh mục cần biết CẢ rủi ro của việc không làm gì, LẪN cái giá của việc làm.
+    Nêu một vế mà giấu vế kia là dẫn dắt chứ không phải tư vấn.
+    """
+    try:
+        from analytics.opportunity_cost import measure_all, summarize
+        from decision.decision_log import load_decisions
+
+        s = summarize(measure_all(load_decisions(), list(history)))
+    except Exception:  # noqa: BLE001 — thiếu phần này không được chặn cảnh báo chính
+        return ""
+    if s.n_measured == 0 or s.avg_premium_pct is None:
+        return ""
+    if s.avg_premium_pct > 0:
+        return (f" Mặt khác, {s.n_measured} khuyến nghị phòng thủ đã ra tới nay bỏ lỡ trung bình "
+                f"<b>{_vi(s.avg_premium_pct)}%</b> tăng giá — đó là phí phải trả để giảm rủi ro "
+                "tập trung, cần cân nhắc cùng lúc chứ không chỉ nhìn một vế.")
+    return (f" Ngược lại, {s.n_measured} khuyến nghị phòng thủ đã ra tới nay tránh được trung bình "
+            f"<b>{_vi(abs(s.avg_premium_pct))}%</b> giảm giá.")
 
 
 def _count_repeated_advice(asset_class: str) -> int:

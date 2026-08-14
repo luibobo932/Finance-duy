@@ -30,7 +30,17 @@ git reset --hard origin/%BRANCH% >> logs\daily_task.log 2>&1
 "%PY%" scripts\fetch_market_snapshot.py chieu >> logs\daily_task.log 2>&1
 "%PY%" scripts\watchlist.py update >> logs\daily_task.log 2>&1
 "%PY%" scripts\run_evening.py >> logs\daily_task.log 2>&1
-"%PY%" scripts\health_check.py >> logs\daily_task.log 2>&1
+rem Health check voi --alert: gui Telegram khi FAIL (chong spam: chi gui khi
+rem VUA chuyen sang FAIL hoac da 3 ngay ke tu lan nhac truoc).
+rem QUAN TRONG: phai kiem tra errorlevel NGAY SAU lenh nay. Truoc 13/8 khong
+rem ai doc ket qua health check, va WARN khong bao gio leo thang thanh FAIL -
+rem do la co che khien automation ket 7 ngay (20-26/7) van "thanh cong" moi
+rem lan chay va khong ai biet.
+"%PY%" scripts\health_check.py --alert >> logs\daily_task.log 2>&1
+if errorlevel 1 (
+    echo [LOI] HEALTH CHECK FAIL - du lieu qua cu hoac co van de an ninh. >> logs\daily_task.log
+    echo Da gui canh bao Telegram neu da cau hinh. Xem chi tiet o tren. >> logs\daily_task.log
+)
 
 git add data dashboard\auto_dashboard.html >> logs\daily_task.log 2>&1
 git diff --cached --quiet && goto nochange

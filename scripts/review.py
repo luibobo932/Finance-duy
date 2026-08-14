@@ -67,6 +67,39 @@ def main() -> None:
         print("Accuracy: chưa tính được — chưa có quyết định định hướng nào đủ dữ liệu chấm điểm.")
     if s["scored"] < 5:
         print("(Cần ≥5 quyết định đã chấm điểm thì accuracy mới được nạp vào confidence score.)")
+    _print_opportunity_cost(decisions)
+
+
+def _print_opportunity_cost(decisions: list[dict]) -> None:
+    """Phí cơ hội của các khuyến nghị phòng thủ — phần decision review bỏ trống.
+
+    GIỮ/CHỐT BỚT không phải dự báo giá nên không chấm đúng/sai được, nhưng
+    "nghe theo thì tới giờ mất/được bao nhiêu" thì đo được, và đó mới là câu
+    chủ danh mục thực sự hỏi.
+    """
+    from analytics.opportunity_cost import measure_all, summarize
+
+    entries = measure_all(decisions, load_history())
+    s = summarize(entries)
+    if s.n_defensive == 0:
+        return
+    print(f"\n=== PHÍ CƠ HỘI CỦA KHUYẾN NGHỊ PHÒNG THỦ ({s.n_defensive} quyết định) ===\n")
+    for e in entries:
+        if e.premium_pct is None:
+            continue
+        if abs(e.premium_pct) < 0.005:
+            dau = "giá chưa đổi"
+        else:
+            dau = "trả phí" if e.premium_pct > 0 else "tránh được lỗ"
+        xx = " [xấp xỉ]" if e.approximated else ""
+        print(f"  {e.date} ({e.ky}) {e.action_vi}{xx}: {e.premium_pct:+.2f}% — {dau}")
+    if s.avg_premium_pct is not None:
+        print(f"\n  Trung bình: {s.avg_premium_pct:+.2f}% · xấu nhất: {s.worst_premium_pct:+.2f}%")
+    print(f"\n{s.verdict}")
+    if any(e.approximated for e in entries):
+        from analytics.opportunity_cost import APPROXIMATION_NOTE
+
+        print(f"\n[xấp xỉ] {APPROXIMATION_NOTE}.")
 
 
 if __name__ == "__main__":
