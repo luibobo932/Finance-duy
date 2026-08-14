@@ -250,10 +250,17 @@ def run_gold_decision(ky: str):
 
     gold_decision = None
     if gold_pct is not None:
+        from analytics.data_quality import assess_gold
+
+        dq = assess_gold(hist)
         gold_decision = decide(
             DecisionInput(asset="Vàng nhẫn", asset_class="gold", trend_label=trend,
-                          historical_accuracy_pct=hist_acc),
-            RiskContext(gold_allocation_pct=gold_pct), limits, rules,
+                          historical_accuracy_pct=hist_acc,
+                          data_completeness_pct=dq.completeness_pct,
+                          data_freshness_score=dq.freshness_score),
+            RiskContext(gold_allocation_pct=gold_pct, data_stale=dq.data_stale,
+                        data_missing_critical=dq.data_missing_critical),
+            limits, rules,
         )
         if hist:
             append_decision(build_entry(gold_decision, asset_class="gold", ky=ky, snapshot=hist[-1]))

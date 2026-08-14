@@ -35,7 +35,11 @@ TELEGRAM_TOKEN_RE = re.compile(r"\b\d{8,12}:[A-Za-z0-9_-]{30,}\b")
 # Trễ quá ngưỡng bao nhiêu LẦN thì WARN leo thang thành FAIL. Chọn 3 vì ngưỡng
 # đã nới cho cuối tuần/nghỉ lễ: trễ gấp 3 lần mức đó thì không còn giải thích
 # được bằng lịch nghỉ, mà là automation hỏng.
-STALE_ESCALATE_FACTOR = 3
+#
+# Import (không định nghĩa lại) để dùng CHUNG với analytics/data_quality.py —
+# nơi cùng mốc này là điểm mà độ mới dữ liệu tụt về 0. Hệ thống chỉ được có
+# MỘT định nghĩa "quá cũ"; hai bản sao sẽ lặng lẽ trôi khỏi nhau.
+from analytics.data_quality import STALE_ESCALATE_FACTOR  # noqa: E402
 
 # (tên, đường dẫn, tuổi tối đa ngày, loại, CÓ nguồn tự động?)
 #

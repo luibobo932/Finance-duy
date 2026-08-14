@@ -57,9 +57,15 @@ def build_context() -> dict:
     gold_trend = gold_trend_label(gold_analyze())
     gold_decision = None
     if gold_pct is not None:
+        from analytics.data_quality import assess_gold
+
+        dq = assess_gold()
         gold_decision = decide(
-            DecisionInput(asset="Vàng nhẫn", asset_class="gold", trend_label=gold_trend),
-            RiskContext(gold_allocation_pct=gold_pct), limits, rules,
+            DecisionInput(asset="Vàng nhẫn", asset_class="gold", trend_label=gold_trend,
+                          data_completeness_pct=dq.completeness_pct,
+                          data_freshness_score=dq.freshness_score),
+            RiskContext(gold_allocation_pct=gold_pct, data_stale=dq.data_stale,
+                        data_missing_critical=dq.data_missing_critical), limits, rules,
         )
 
     est = gold_estimate()

@@ -278,6 +278,33 @@ Hai vấn đề đo lường phải xử lý cho tử tế:
 
 Chống look-ahead dùng **đúng** `later_snapshots()` của decision_review — không mở đường tắt thứ hai.
 
+## Điểm tin cậy phải ĐO được (14/08/2026)
+
+Cả **13/13 quyết định** trong `data/decisions.jsonl` từ 20/7 đến 10/8 đều ghi đúng một con số: `confidence: 92`, `data_quality: GOOD`. Không kỳ nào khác kỳ nào — kể cả những kỳ mà giá vàng nhẫn trong nước đã ngừng thu thập 23 ngày, `history.jsonl` cũ 4 ngày, và mô hình định giá vàng đang ngoại suy ngoài vùng hiệu chuẩn.
+
+Mổ ra thì 92 là phép cộng, không phải bằng chứng — **3 trong 6 thành phần là hằng số**:
+
+| Thành phần | Trọng số | Thực tế trước khi sửa |
+|---|---|---|
+| Độ đầy đủ dữ liệu | 25% | mặc định **100**, không caller nào truyền giá trị khác |
+| Độ mới dữ liệu | 20% | mặc định **100**, như trên |
+| Đồng thuận tín hiệu | 25% | chỉ nối được `trend_label`; công thức tính 1/1 = **100% đồng thuận** |
+| Lịch sử chính xác | 15% | 50 trung tính (đã xử lý ở mục phí cơ hội) |
+| Xung đột nguồn | 10% | 100 |
+| Rủi ro | 5% | 100 |
+
+Hệ quả kép: nhánh hạ cấp `data_quality = "FAIR"` (khi hai chỉ số dữ liệu < 80) **không bao giờ chạy được**, và `RiskContext.data_stale` tồn tại nhưng chưa caller nào set.
+
+Ba thay đổi:
+
+- **`analytics/data_quality.py`** đo thật độ đầy đủ + độ mới từ các nguồn mà quyết định *thực sự* dựa vào. Ngưỡng tuổi **dùng lại đúng ngưỡng của health check** (`STALE_ESCALATE_FACTOR` giờ định nghĩa ở đây, health check import về) — một hệ thống không được có hai định nghĩa "quá cũ". Điểm lấy **MIN trên nguồn trọng yếu**, không lấy trung bình (trung bình cho một nguồn tươi che một nguồn mục); nguồn **đối chiếu** cũ thì ghi chú rõ nhưng không kéo điểm. **Thiếu hẳn ≠ cũ**: thiếu tính vào completeness, cũ tính vào freshness — không phạt chồng một sự việc.
+- **Mặc định đổi từ `100.0` sang `None` = "chưa đo"**, quy về trung tính 50 kèm dòng lý do. Quên đo phải làm giảm điểm, không được thưởng điểm tuyệt đối — "chưa kiểm tra" không bao giờ được đọc thành "đã kiểm tra và hoàn hảo".
+- **Một tín hiệu không phải là đồng thuận.** `signal_agreement_from_labels` giờ cần ≥2 tín hiệu mới chấm; dưới ngưỡng trả 50 trung tính, giống hệt cách xử lý khi không có tín hiệu nào.
+
+Kết quả trên dữ liệu thật hôm nay: **92/GOOD → 70/FAIR**, kèm lý do nêu thẳng nguồn ghìm điểm ("XAU/USD cũ 4 ngày, ngưỡng 2") và ("chỉ có 1 nhóm tín hiệu"). **Hành động không đổi** — vẫn CHỐT BỚT do Risk Officer veto; đây là sửa mức tin cậy, không phải đổi lời khuyên.
+
+Một phát hiện đi kèm, đáng sợ hơn con số: `gold/indicators.py` đọc `data/normalized/xuan_trieu_gold_history.csv`, file này có **đúng 1 dòng, ngày 18/7**. Mọi RSI/MACD/SMA trả `None` và `trend_label()` trả `TRUNG_TINH` vì **KHÔNG CÓ DỮ LIỆU**, chứ không phải vì thị trường đi ngang — hai thứ khác nhau hoàn toàn khi ra quyết định. Điều này giờ hiện thành ghi chú trong thẻ **"Chất lượng dữ liệu nền"** trên dashboard, ngay trong mục rủi ro chứ không giấu ở chân trang.
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```

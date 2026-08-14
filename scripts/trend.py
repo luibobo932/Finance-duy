@@ -185,13 +185,20 @@ def _log_decision_for(snap: dict) -> None:
         if not total:
             print("Chưa ghi được quyết định: chưa định giá được danh mục.")
             return
+        from analytics.data_quality import assess_gold
+
         gold_pct = (parts.get("Vàng") or 0) / total
+        dq = assess_gold()
         decision = decide(
             DecisionInput(asset="Vàng nhẫn", asset_class="gold",
-                          trend_label=gold_trend_label(gold_analyze())),
-            RiskContext(gold_allocation_pct=gold_pct),
+                          trend_label=gold_trend_label(gold_analyze()),
+                          data_completeness_pct=dq.completeness_pct,
+                          data_freshness_score=dq.freshness_score),
+            RiskContext(gold_allocation_pct=gold_pct, data_stale=dq.data_stale,
+                        data_missing_critical=dq.data_missing_critical),
             load_risk_limits(), load_decision_rules(),
         )
+        print(dq.explain())
         if append_decision(build_entry(decision, asset_class="gold", ky=snap["ky"], snapshot=snap)):
             veto = " (Risk Officer đã điều chỉnh)" if decision["risk_veto"] else ""
             print(f"Quyết định đã ghi: vàng → {decision['action_vi']} "

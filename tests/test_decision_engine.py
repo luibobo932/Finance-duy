@@ -108,7 +108,8 @@ def test_derive_initial_action_equity_negative_trend_waits():
 
 
 def test_decide_end_to_end_blocks_gold_at_real_portfolio_allocation():
-    inp = DecisionInput(asset="XAUUSD", asset_class="gold", trend_label="TICH_CUC")
+    inp = DecisionInput(asset="XAUUSD", asset_class="gold", trend_label="TICH_CUC",
+                        data_completeness_pct=100, data_freshness_score=100)
     ctx = RiskContext(gold_allocation_pct=0.747)  # tài sản thật của chủ dự án
     d = decide(inp, ctx, LIMITS, RULES)
     assert d["action"] == Action.DO_NOT_BUY_MORE.value

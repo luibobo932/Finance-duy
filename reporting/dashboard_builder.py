@@ -235,6 +235,40 @@ def _status_card(level: str, tag: str, body: str) -> str:
     )
 
 
+def _data_quality_card(history: list[dict]) -> str:
+    """Thẻ "tin số trên trang này tới mức nào" — đo, không tự nhận.
+
+    Đặt ngay trong mục rủi ro chứ không giấu ở chân trang: mọi con số phía dưới
+    (tỷ trọng vàng, khuyến nghị, điểm tin cậy) đều thừa hưởng chất lượng của
+    những nguồn này. Trước đây điểm tin cậy 92/100 hiện trong bản tin mà không
+    có chỗ nào cho người đọc kiểm lại nó dựa trên dữ liệu cũ tới đâu.
+    """
+    try:
+        from analytics.data_quality import assess_gold
+
+        a = assess_gold(history)
+    except Exception:  # noqa: BLE001 — thiếu thẻ này không được làm hỏng dashboard
+        return ""
+    level = "good" if a.freshness_score >= 80 else ("warning" if a.freshness_score > 0 else "critical")
+    parts = [
+        f"Độ đầy đủ <b>{a.completeness_pct:.0f}/100</b> · độ mới <b>{a.freshness_score:.0f}/100</b>."
+    ]
+    if a.binding and a.freshness_score < 100:
+        parts.append(f"Bị ghìm bởi {html.escape(a.binding)}.")
+    # Mỗi nguồn nói MỘT lần. Nguồn ghìm điểm đã nêu ở câu trên, và nguồn đối
+    # chiếu cũ đã có ghi chú đầy đủ hơn — liệt kê lại chỉ làm thẻ dài mà không
+    # thêm thông tin, và thẻ dài thì người ta ngừng đọc.
+    covered = (a.binding or "") + " ".join(a.notes)
+    for item in a.stale:
+        if item.split(":")[0] not in covered:
+            parts.append(f"• {html.escape(item)}")
+    for note in a.notes:
+        parts.append(f"• {html.escape(note)}")
+    parts.append("Điểm này đi thẳng vào <b>tin cậy</b> của khuyến nghị — dữ liệu cũ thì "
+                 "điểm tin cậy phải giảm theo, không được giữ nguyên.")
+    return _status_card(level, "Chất lượng dữ liệu nền", "<br>".join(parts))
+
+
 def _ranked_deposit_rates() -> list[dict]:
     """Lãi suất đã xếp hạng, [] nếu chưa có — không để lỗi đọc file phá cả trang."""
     try:
@@ -427,6 +461,9 @@ def render(ctx: dict) -> str:
     pending = ctx["pending"]
     if pending.get("message"):
         risk_cards.append(_status_card("critical", pending["tag"], pending["message"]))
+    dq_card = _data_quality_card(ctx.get("history") or [])
+    if dq_card:
+        risk_cards.append(dq_card)
     for key, tag, level in [
         ("war", "Địa chính trị / chiến sự", "warning"),
         ("trump", "Động thái Trump / thuế quan", "warning"),

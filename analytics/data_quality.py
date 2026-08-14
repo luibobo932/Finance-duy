@@ -1,0 +1,230 @@
+"""Đo ĐỘ ĐẦY ĐỦ và ĐỘ MỚI của dữ liệu mà một quyết định thực sự dựa vào.
+
+Vì sao cần — bằng chứng chứ không phải lo xa: cả **13/13 quyết định** trong
+`data/decisions.jsonl` (20/7 → 10/8) đều ghi đúng một con số `confidence: 92`
+và `data_quality: GOOD`. Không kỳ nào khác kỳ nào, kể cả những kỳ mà:
+
+- `gold.ring_sell` (giá vàng nhẫn trong nước) ngừng thu thập từ **22/7**;
+- `data/normalized/xuan_trieu_gold_history.csv` — nguồn DUY NHẤT của
+  `gold/indicators.py` — chỉ có **1 dòng, ngày 18/7**, nên mọi chỉ báo trả
+  `None` và `trend_label()` trả `TRUNG_TINH` vì không có gì để tính;
+- `data/history.jsonl` cũ 4 ngày.
+
+Lý do 92 là hằng số: `DecisionInput.data_completeness_pct` và
+`data_freshness_score` mặc định **100.0** và **không caller nào truyền giá trị
+khác** — 45% trọng số điểm tin cậy là số cứng. Nhánh hạ cấp chất lượng
+(`data_quality = "FAIR"` khi hai chỉ số này < 80) vì thế không bao giờ chạy
+được. Điểm tin cậy đang là phép cộng, không phải bằng chứng.
+
+Module này đo hai chỉ số đó từ dữ liệu thật trên đĩa.
+
+Ba quyết định thiết kế, nêu rõ để về sau đọc lại còn cãi được:
+
+1. **Ngưỡng tuổi dùng lại đúng ngưỡng của health check**, không đặt ngưỡng mới.
+   Tươi trong ngưỡng = 100; giảm TUYẾN TÍNH về 0 ở mốc `STALE_ESCALATE_FACTOR`
+   lần ngưỡng — cùng mốc mà health check leo thang WARN → FAIL. Một hệ thống
+   không nên có hai định nghĩa "quá cũ".
+2. **Freshness lấy MIN trên các nguồn TRỌNG YẾU, không lấy trung bình.** Trung
+   bình cho phép một nguồn tươi che một nguồn mục. Nguồn không trọng yếu (đối
+   chiếu, tham khảo) có cũ thì ghi chú rõ nhưng không kéo điểm — điểm phải phản
+   ánh đúng thứ quyết định phụ thuộc vào.
+3. **Thiếu hẳn ≠ cũ.** Thiếu tính vào `completeness`, cũ tính vào `freshness`.
+   Trừ một lần vào đúng một chỗ, không phạt chồng.
+"""
+from __future__ import annotations
+
+import csv
+import json
+from dataclasses import dataclass, field
+from datetime import date, datetime
+from pathlib import Path
+from typing import Optional, Sequence
+
+ROOT = Path(__file__).resolve().parent.parent
+
+# Trễ quá ngưỡng bao nhiêu LẦN thì coi như hết giá trị (điểm 0). Dùng chung với
+# scripts/health_check.py — nó import hằng số này để hai nơi không trôi khỏi nhau.
+STALE_ESCALATE_FACTOR = 3
+
+
+@dataclass
+class Source:
+    """Một nguồn dữ liệu mà quyết định dựa vào."""
+
+    name: str
+    as_of: Optional[date]  # None = KHÔNG có dữ liệu nào (thiếu hẳn, khác với cũ)
+    max_age_days: int
+    critical: bool = True  # False = nguồn đối chiếu, cũ thì ghi chú chứ không kéo điểm
+    note: str = ""
+
+    def age_days(self, today: date) -> Optional[int]:
+        return None if self.as_of is None else (today - self.as_of).days
+
+    def freshness(self, today: date) -> Optional[float]:
+        """100 khi còn trong ngưỡng, giảm tuyến tính về 0 ở mốc leo thang.
+
+        Trả None khi thiếu hẳn — thiếu không phải "cũ vô hạn", nó là chuyện
+        khác và được tính ở completeness.
+        """
+        age = self.age_days(today)
+        if age is None:
+            return None
+        if age <= self.max_age_days:
+            return 100.0
+        limit = self.max_age_days * STALE_ESCALATE_FACTOR
+        if age >= limit:
+            return 0.0
+        return round((limit - age) / (limit - self.max_age_days) * 100, 1)
+
+
+@dataclass
+class Assessment:
+    completeness_pct: float
+    freshness_score: float
+    missing: list[str] = field(default_factory=list)
+    missing_critical: list[str] = field(default_factory=list)
+    stale: list[str] = field(default_factory=list)
+    binding: Optional[str] = None  # nguồn ép freshness xuống thấp nhất
+    notes: list[str] = field(default_factory=list)
+
+    @property
+    def data_stale(self) -> bool:
+        """Đủ cũ để KHÔNG nên tin quyết định — một nguồn trọng yếu đã về 0 điểm."""
+        return self.freshness_score <= 0.0
+
+    @property
+    def data_missing_critical(self) -> bool:
+        return bool(self.missing_critical)
+
+    def explain(self) -> str:
+        """Một câu nói vì sao điểm như vậy — con số không kèm lý do thì lại
+        thành một con số 92 nữa."""
+        bits = [f"đầy đủ {self.completeness_pct:.0f}/100", f"độ mới {self.freshness_score:.0f}/100"]
+        if self.binding and self.freshness_score < 100:
+            bits.append(f"bị ghìm bởi {self.binding}")
+        if self.missing:
+            bits.append("thiếu: " + ", ".join(self.missing))
+        return "Chất lượng dữ liệu: " + " · ".join(bits)
+
+
+def assess(sources: Sequence[Source], today: Optional[date] = None) -> Assessment:
+    """Chấm điểm một bộ nguồn. Bộ rỗng trả 0 điểm chứ không trả 100.
+
+    Không có nguồn nào để kiểm tra là lý do để KHÔNG tin, không phải lý do để
+    tin tuyệt đối — mặc định 100 khi rỗng chính là cái bẫy đang phải sửa.
+    """
+    today = today or date.today()
+    if not sources:
+        return Assessment(0.0, 0.0, notes=["không khai báo nguồn nào để kiểm tra"])
+
+    present = [s for s in sources if s.as_of is not None]
+    missing = [s.name for s in sources if s.as_of is None]
+    missing_critical = [s.name for s in sources if s.as_of is None and s.critical]
+    completeness = len(present) / len(sources) * 100
+
+    scored = [(s, s.freshness(today)) for s in present if s.critical]
+    if scored:
+        binding_src, freshness = min(scored, key=lambda p: p[1])
+        binding = f"{binding_src.name} (cũ {binding_src.age_days(today)} ngày, ngưỡng {binding_src.max_age_days})"
+    else:
+        # Không còn nguồn trọng yếu nào có dữ liệu — không có cơ sở nào để chấm
+        # độ mới, và đó là tin xấu chứ không phải tin trung tính.
+        freshness, binding = 0.0, None
+
+    stale, notes = [], []
+    for s in present:
+        age = s.age_days(today)
+        if age is not None and age > s.max_age_days:
+            label = f"{s.name}: cũ {age} ngày (ngưỡng {s.max_age_days})"
+            stale.append(label)
+            if not s.critical:
+                notes.append(f"{label} — nguồn đối chiếu, không kéo điểm nhưng mất khả năng kiểm chứng chéo")
+        if s.note:
+            notes.append(f"{s.name}: {s.note}")
+
+    return Assessment(
+        completeness_pct=round(completeness, 1), freshness_score=float(freshness),
+        missing=missing, missing_critical=missing_critical, stale=stale,
+        binding=binding, notes=notes,
+    )
+
+
+# --- Bộ nguồn thật cho quyết định VÀNG --------------------------------------
+
+def gold_sources(history: Optional[Sequence[dict]] = None) -> list[Source]:
+    """Đúng những nguồn mà một quyết định vàng đang dựa vào, không thêm bớt.
+
+    Trọng yếu:
+      - XAU/USD từ snapshot: đầu vào định giá vàng của `scripts/networth.py`
+      - lịch sử hiệu chuẩn giá tiệm: nguồn DUY NHẤT của `gold/indicators.py`,
+        tức là toàn bộ `trend_label` — thành phần 25% trọng số
+    Đối chiếu (không kéo điểm):
+      - giá nhẫn trong nước từ snapshot: dùng để kiểm chứng mô hình quy đổi,
+        không phải đầu vào định giá chính
+    """
+    hist = list(history) if history is not None else _load_history()
+    return [
+        Source("XAU/USD (history.jsonl)", _latest_gold_field(hist, "xauusd"), 2, critical=True),
+        Source("Lịch sử giá tiệm (hiệu chuẩn)", _latest_calibration_date(), 30, critical=True,
+               note=_calibration_note()),
+        Source("Giá nhẫn trong nước (history.jsonl)", _latest_gold_field(hist, "ring_sell"), 7,
+               critical=False),
+    ]
+
+
+def assess_gold(history: Optional[Sequence[dict]] = None, today: Optional[date] = None) -> Assessment:
+    return assess(gold_sources(history), today)
+
+
+def _load_history() -> list[dict]:
+    path = ROOT / "data" / "history.jsonl"
+    if not path.exists():
+        return []
+    return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+
+
+def _latest_gold_field(history: Sequence[dict], field_name: str) -> Optional[date]:
+    dates = [
+        _parse(row.get("date"))
+        for row in history
+        if isinstance(row.get("gold"), dict) and row["gold"].get(field_name)
+    ]
+    real = [d for d in dates if d]
+    return max(real) if real else None
+
+
+def _latest_calibration_date() -> Optional[date]:
+    path = ROOT / "data" / "normalized" / "xuan_trieu_gold_history.csv"
+    if not path.exists():
+        return None
+    with path.open(encoding="utf-8") as f:
+        dates = [_parse(r.get("date")) for r in csv.DictReader(f)]
+    real = [d for d in dates if d]
+    return max(real) if real else None
+
+
+def _calibration_note() -> str:
+    """Số DÒNG của file hiệu chuẩn, vì tuổi không nói hết vấn đề.
+
+    File 1 dòng thì dù mới tinh cũng không tính được RSI/MACD/SMA — chỉ báo trả
+    None và `trend_label()` ra TRUNG_TINH vì KHÔNG CÓ DỮ LIỆU, chứ không phải vì
+    thị trường đi ngang. Hai thứ đó khác nhau hoàn toàn khi ra quyết định.
+    """
+    path = ROOT / "data" / "normalized" / "xuan_trieu_gold_history.csv"
+    if not path.exists():
+        return ""
+    with path.open(encoding="utf-8") as f:
+        n = sum(1 for _ in csv.DictReader(f))
+    if n >= 20:
+        return ""
+    return (f"chỉ {n} dòng — chưa đủ tính RSI/MACD/SMA, nên 'TRUNG_TINH' nghĩa là "
+            "KHÔNG CÓ DỮ LIỆU chứ không phải thị trường đi ngang")
+
+
+def _parse(value: object) -> Optional[date]:
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.strptime(value[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None

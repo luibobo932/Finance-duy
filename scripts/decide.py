@@ -31,11 +31,18 @@ def decide_gold(trend_label: str = "TRUNG_TINH") -> dict:
 
     limits = load_risk_limits()
     rules = load_decision_rules()
-    inp = DecisionInput(asset="XAUUSD (vàng nhẫn)", asset_class="gold", trend_label=trend_label)
-    ctx = RiskContext(gold_allocation_pct=gold_pct)
+    from analytics.data_quality import assess_gold
+
+    dq = assess_gold()
+    inp = DecisionInput(asset="XAUUSD (vàng nhẫn)", asset_class="gold", trend_label=trend_label,
+                        data_completeness_pct=dq.completeness_pct,
+                        data_freshness_score=dq.freshness_score)
+    ctx = RiskContext(gold_allocation_pct=gold_pct, data_stale=dq.data_stale,
+                      data_missing_critical=dq.data_missing_critical)
     d = decide(inp, ctx, limits, rules)
     d["_context"] = {"gold_allocation_pct": round(gold_pct * 100, 1) if gold_pct else None,
-                      "gold_price_trieu": price, "total_assets_trieu": round(total, 1)}
+                      "gold_price_trieu": price, "total_assets_trieu": round(total, 1),
+                      "data_quality": dq.explain()}
     return d
 
 

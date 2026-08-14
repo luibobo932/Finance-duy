@@ -49,14 +49,31 @@ def _clamp(v: float) -> float:
     return max(0.0, min(100.0, v))
 
 
+# Cần ít nhất bằng này tín hiệu thì "đồng thuận" mới là một phép đo. Một mình
+# thì luôn nhất trí với chính mình.
+MIN_SIGNALS_FOR_AGREEMENT = 2
+
+
 def signal_agreement_from_labels(*labels: Optional[str]) -> float:
     """% đồng thuận giữa các nhãn xu hướng (VD kỹ thuật + cơ bản + dòng tiền).
 
-    Bỏ qua nhãn None (thiếu tín hiệu đó). Trả 50 (trung tính) nếu không có
-    nhãn nào — không bịa đồng thuận khi hoàn toàn thiếu dữ liệu.
+    Bỏ qua nhãn None (thiếu tín hiệu đó). Trả 50 (trung tính) nếu có DƯỚI
+    `MIN_SIGNALS_FOR_AGREEMENT` nhãn.
+
+    Vì sao ngưỡng 2 chứ không phải 1: với đúng một nhãn, công thức cũ tính
+    1/1 = **100% đồng thuận** — nghe như ba nguồn độc lập cùng xác nhận, trong
+    khi thực tế chỉ có một nguồn và không có gì kiểm chứng nó. Đây không phải
+    giả định: hệ thống chỉ nối được `trend_label` cho vàng (`fundamental_label`
+    và `flow_label` luôn None), nên thành phần đồng thuận — **25% trọng số** —
+    được chấm tuyệt đối 100 ở cả 13 quyết định đã ghi, góp phần khoá điểm tin
+    cậy ở đúng con số 92 suốt từ 20/7 đến 10/8.
+
+    Đồng thuận là phép đo giữa NHIỀU nguồn. Thiếu nguồn thứ hai thì phép đo
+    không tồn tại, và trung tính 50 là câu trả lời trung thực — giống hệt cách
+    xử lý khi không có nhãn nào.
     """
     present = [l for l in labels if l]
-    if not present:
+    if len(present) < MIN_SIGNALS_FOR_AGREEMENT:
         return 50.0
     from collections import Counter
 
