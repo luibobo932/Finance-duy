@@ -236,6 +236,82 @@ def _status_card(level: str, tag: str, body: str) -> str:
     )
 
 
+def _deposit_holding_section(ranked: list[dict]) -> str:
+    """Khoản tiết kiệm ĐANG NẮM — 21% tài sản, và sẽ thành ~35% nếu thực hiện
+    kế hoạch giảm tỷ trọng vàng.
+
+    Trang này liệt kê lãi suất thị trường từ đầu nhưng chưa lần nào nói về
+    chính khoản tiền của chủ danh mục: đang ở ngân hàng nào, lãi bao nhiêu,
+    bao giờ đáo hạn. Hệ thống tối ưu tiền SẮP có mà không nhìn tiền ĐANG có.
+    """
+    try:
+        from deposits.holding import (from_portfolio, maturity_alert, rate_gap_table,
+                                      undeclared_note)
+
+        port = load_portfolio()
+        h = from_portfolio(port, deposit_cfg=port.savings_raw)
+    except Exception:  # noqa: BLE001 — thiếu thẻ này không được làm hỏng trang
+        return ""
+    if not h.principal_vnd:
+        return ""
+    best = ranked[0]["rate_pct"] if ranked else None
+
+    if not h.is_declared:
+        gaps = rate_gap_table(h.principal_vnd, best)
+        note = undeclared_note(h.principal_vnd, gaps)
+        table = ""
+        if gaps:
+            # Bảng nằm ở SECTION rộng chứ không nhét vào thẻ rủi ro: thẻ rủi ro
+            # rộng ~300px nên cột "chênh mỗi năm" — đúng con số duy nhất đáng
+            # xem ở đây — sẽ bị đẩy ra ngoài khung.
+            rows = "\n".join(
+                f'<tr><td class="tk">{_n(g.assumed_rate_pct, 1)}%/năm</td>'
+                f"<td>{_n(g.best_rate_pct, 2)}%/năm</td><td>{_n(g.gap_pct, 2)}%</td>"
+                f'<td style="color:var(--st-warning-text);font-weight:600">'
+                f"{_n(g.gap_per_year_vnd / 1_000_000, 1)} tr/năm</td></tr>"
+                for g in gaps
+            )
+            table = f"""
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Nếu đang ở</th><th>Mức tốt nhất đo được</th><th>Chênh</th>
+          <th>Trên {_n(h.principal_vnd / 1_000_000, 0)} tr</th></tr></thead>
+        <tbody>{rows}</tbody>
+      </table>
+    </div>
+    <p class="card-note" style="margin:12px 0 0">Mỗi dòng là một <b>giả định</b> để đo khoảng
+      chưa biết — không phải phán đoán về mức thật của bạn. Điền
+      <code>bank / rate_pct / term_months / start_date</code> trong
+      <code>config/portfolio.yaml</code> là mục này chuyển thành theo dõi thật.</p>"""
+        return f"""
+  <section class="card">
+    <h2 class="card-title">Khoản tiết kiệm đang gửi — chưa khai báo</h2>
+    <p class="card-note">{note}</p>{table}
+  </section>
+"""
+
+    bits = [f"<b>{_n(h.principal_vnd / 1_000_000, 0)} tr</b> @ "
+            f"<b>{_n(h.rate_pct, 2)}%/năm</b>"
+            + (f" · {html.escape(h.bank)}" if h.bank else "")
+            + (f" · kỳ hạn {h.term_months} tháng" if h.term_months else "") + "."]
+    lai = h.accrued_interest_vnd()
+    if lai is not None:
+        bits.append(f"Lãi tích lũy tới nay: <b>{_n(lai / 1_000_000, 1)} tr</b>.")
+    if best and h.rate_pct < best:
+        gap = (best - h.rate_pct) / 100 * h.principal_vnd / 1_000_000
+        bits.append(f"⚠️ Thấp hơn mức tốt nhất đang đo được ({_n(best, 2)}%/năm) — "
+                    f"chênh <b>{_n(gap, 1)} tr/năm</b>.")
+    alert = maturity_alert(h)
+    if alert:
+        bits.append(("🔴 " if alert.level == "critical" else "⚠️ ") + html.escape(alert.message))
+    return f"""
+  <section class="card">
+    <h2 class="card-title">Khoản tiết kiệm đang gửi</h2>
+    <p class="card-note">{"<br>".join(bits)}</p>
+  </section>
+"""
+
+
 def _signed(value: float, decimals: int = 0) -> str:
     """Số có dấu, định dạng Việt (1.234,5). Cột dương phải có dấu + để khớp
     nhãn trên biểu đồ — thiếu dấu ở một chỗ là bảng và hình nói khác nhau."""
@@ -622,6 +698,7 @@ def render(ctx: dict) -> str:
 """
 
     scenario_section = _scenario_section(ctx)
+    deposit_section = _deposit_holding_section(_ranked_deposit_rates())
 
     gen = ctx["generated_at"].strftime("%d/%m/%Y %H:%M")
 
@@ -648,6 +725,7 @@ def render(ctx: dict) -> str:
   </section>
 {rebalance_section}
 {scenario_section}
+{deposit_section}
 
   <section class="two-col">
     <div class="card">

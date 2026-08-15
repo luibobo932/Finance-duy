@@ -13,6 +13,28 @@ assets:
 
   savings:
     principal_vnd: 246000000
+    # Khoản tiết kiệm là ~21% tài sản, và sẽ thành ~35% nếu thực hiện kế hoạch
+    # giảm tỷ trọng vàng — nhưng hệ thống chỉ biết mỗi con số gốc ở trên.
+    #
+    # Điền 4 trường dưới đây thì mở được 3 việc mà hiện KHÔNG làm được:
+    #   1. Tính lãi tích lũy → tổng tài sản hết bị báo THẤP hơn thực tế, và
+    #      đường "tổng tài sản theo thời gian" không còn gán mọi biến động
+    #      cho riêng vàng.
+    #   2. Cảnh báo trước ngày đáo hạn. Sổ đến hạn không tất toán thường tự
+    #      quay vòng theo lãi suất NIÊM YẾT TẠI QUẦY — thường thấp hơn hẳn mức
+    #      online đã ký. Không có ngày gửi + kỳ hạn thì không cảnh báo được.
+    #   3. So mức đang hưởng với mức tốt nhất đang đo được. Chênh 1%/năm trên
+    #      246tr là 2,46 tr/năm — cùng cỡ với phần lãi thêm của cả kế hoạch
+    #      bán vàng, mà chưa kỳ bản tin nào nhắc tới.
+    #
+    # Để null thì hệ thống KHÔNG đoán: nó báo "chưa khai báo" và tính tài sản
+    # theo phần gốc (thấp hơn thực tế — hướng sai an toàn).
+    bank: null            # VD: "VIB"
+    rate_pct: null        # %/năm, VD: 6.5
+    term_months: null     # VD: 12
+    start_date: null      # "YYYY-MM-DD", ngày gửi/ngày tái ký gần nhất
+    channel: null         # "online" | "counter"
+    auto_renew: null      # true nếu sổ được đặt tự động quay vòng
 
   cash:
     amount_vnd: 35000000

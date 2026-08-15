@@ -48,6 +48,9 @@ class PortfolioConfig:
     gold_quantity_tael: float
     savings_principal_vnd: float
     cash_amount_vnd: float
+    # Khối `savings` thô, giữ nguyên để deposits/holding.py đọc thêm lãi
+    # suất/kỳ hạn/ngày gửi mà không phải nạp lại YAML lần hai.
+    savings_raw: dict[str, Any] = field(default_factory=dict)
     stock_positions: list[StockPosition] = field(default_factory=list)
     watchlist: list[str] = field(default_factory=list)
 
@@ -80,6 +83,7 @@ def load_portfolio(path: Optional[Path] = None) -> PortfolioConfig:
         gold_quantity_tael=gold.get("quantity_tael", 0.0),
         savings_principal_vnd=savings.get("principal_vnd", 0.0),
         cash_amount_vnd=cash.get("amount_vnd", 0.0),
+        savings_raw=savings,
         stock_positions=positions,
         watchlist=raw.get("watchlist", []) or [],
     )

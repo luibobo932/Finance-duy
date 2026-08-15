@@ -174,12 +174,48 @@ def section_kich_ban_gia_vang(parts: dict, total: float | None) -> str:
 
 def section_tien_gui(ranked: list[dict]) -> str:
     lines = ["## TIỀN GỬI", ""]
+    lines.append(_khoan_dang_gui(ranked))
+    lines.append("")
     if not ranked:
         lines.append("- Chưa có dữ liệu lãi suất chuẩn hóa (data/normalized/deposit_rates.jsonl)")
         return "\n".join(lines)
+    lines.append("Mức tốt nhất đang đo được:")
     for r in ranked[:5]:
         lines.append(f"- {r['bank']} {r['term_months']}T: {r['rate_pct']:.2f}%/năm ({r['channel']})")
     return "\n".join(lines)
+
+
+def _khoan_dang_gui(ranked: list[dict]) -> str:
+    """Khoản tiết kiệm ĐANG NẮM — trước giờ bản tin chỉ liệt kê lãi suất thị
+    trường mà chưa lần nào nói về chính khoản tiền của chủ danh mục."""
+    from deposits.holding import (from_portfolio, maturity_alert, rate_gap_table,
+                                  undeclared_note)
+    from portfolio.loader import load_portfolio
+
+    port = load_portfolio()
+    h = from_portfolio(port, deposit_cfg=port.savings_raw)
+    if not h.principal_vnd:
+        return ""
+    best = ranked[0]["rate_pct"] if ranked else None
+    if not h.is_declared:
+        note = undeclared_note(h.principal_vnd, rate_gap_table(h.principal_vnd, best))
+        return "⚠️ " + note.replace("<code>", "`").replace("</code>", "`")
+
+    out = [f"Khoản đang gửi: **{h.principal_vnd / 1e6:,.0f} tr** "
+           f"@ {h.rate_pct:.2f}%/năm"
+           + (f" · {h.bank}" if h.bank else "")
+           + (f" · kỳ hạn {h.term_months} tháng" if h.term_months else "")]
+    lai = h.accrued_interest_vnd()
+    if lai is not None:
+        out.append(f"- Lãi tích lũy tới nay: {lai / 1e6:,.1f} tr")
+    if best and h.rate_pct < best:
+        gap = (best - h.rate_pct) / 100 * h.principal_vnd / 1e6
+        out.append(f"- ⚠️ Thấp hơn mức tốt nhất đang đo được ({best:.2f}%/năm) "
+                   f"— chênh {gap:,.1f} tr/năm")
+    alert = maturity_alert(h)
+    if alert:
+        out.append(f"- {'🔴' if alert.level == 'critical' else '⚠️'} {alert.message}")
+    return "\n".join(out)
 
 
 def send_telegram_report(text: str) -> None:

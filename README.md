@@ -375,6 +375,46 @@ Màu **không** dùng cặp đỏ–xanh lá quen thuộc: chạy `validate_pale
 
 Biểu đồ nhiều cột giờ cũng **tự cuộn ngang** như bảng: ở 390px, SVG 620px co lại 55% làm chữ 11px còn ~6px — đúng thì có đúng nhưng không ai đọc được.
 
+## Khoản tiết kiệm — 21% tài sản mà hệ thống chưa biết gì (14/08/2026)
+
+`config/portfolio.yaml` khai báo khoản tiết kiệm bằng **đúng một dòng**:
+
+```yaml
+savings:
+  principal_vnd: 246000000
+```
+
+Không lãi suất, không ngân hàng, không kỳ hạn, không ngày gửi. Ba hệ quả, không cái nào nhỏ:
+
+1. **Hệ thống tối ưu tiền SẮP có mà không nhìn tiền ĐANG có.** `decision/rebalance.py` tính "bán vàng thu 137tr, gửi 8,0%/năm → lãi thêm 11,0 tr/năm" và nhắc 19 kỳ liền. Nhưng 246tr đang nằm sẵn thì hưởng mức nào? Không ai biết — và khoảng chưa biết đó đáng **1,2–8,6 tr/năm**, đầu trên còn lớn hơn phần lãi thêm của cả kế hoạch bán vàng về 69% (7,7 tr/năm).
+2. **Định giá lịch sử coi tiết kiệm là tài sản không sinh lãi**, nên đường "tổng tài sản theo thời gian" gán toàn bộ biến động cho vàng.
+3. **Không có ngày đáo hạn thì không cảnh báo được tái tục.** Sổ đến hạn không tất toán thường tự quay vòng theo lãi suất **niêm yết tại quầy** — thường thấp hơn hẳn mức online đã ký. Đây là khoản rò rỉ tiền phổ biến và im lặng.
+
+`deposits/holding.py` xử lý cả hai trạng thái, và **không bịa số ở trạng thái nào**:
+
+**Khi chưa khai báo** — bảng lượng hóa chính khoảng chưa biết, để việc xin số liệu là đề nghị có căn cứ chứ không phải lời nhắc chung chung (loại đã bị bỏ qua 19 kỳ ở chỗ khác):
+
+| Nếu đang ở | Mức tốt nhất đo được | Chênh | Trên 246 tr |
+|---|---|---|---|
+| 4,5%/năm | 8,00%/năm | 3,50% | **8,6 tr/năm** |
+| 5,5%/năm | 8,00%/năm | 2,50% | **6,2 tr/năm** |
+| 6,5%/năm | 8,00%/năm | 1,50% | 3,7 tr/năm |
+| 7,5%/năm | 8,00%/năm | 0,50% | 1,2 tr/năm |
+
+Mỗi dòng là một **giả định** để đo khoảng chưa biết — không phải phán đoán về mức thật. Chưa khai báo thì tài sản tính theo phần gốc: thấp hơn thực tế, và đó là hướng sai **an toàn**.
+
+**Khi đã khai báo** (điền `bank / rate_pct / term_months / start_date`) — lãi tích lũy, so sánh với mức tốt nhất đang đo được, và cảnh báo trước 14 ngày:
+
+```
+Khoản đang gửi: 246 tr @ 6,50%/năm · VIB · kỳ hạn 12 tháng
+- Lãi tích lũy tới nay: 15,6 tr
+- ⚠️ Thấp hơn mức tốt nhất đang đo được (8,00%/năm) — chênh 3,7 tr/năm
+- ⚠️ Còn 5 ngày tới hạn (20/08/2026). Để tự quay vòng thường rơi vào lãi
+     suất tại quầy, thấp hơn mức online.
+```
+
+Thiếu dữ liệu trả `None`, **không trả 0** — 0 sẽ bị đọc thành "chưa sinh lãi đồng nào", khác hẳn "chưa biết".
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```
