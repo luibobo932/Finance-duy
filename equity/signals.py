@@ -117,12 +117,27 @@ def analyze(ticker: str, rows: Optional[list[dict]] = None) -> TickerSignal:
     )
 
 
+def valuation_for(signal: TickerSignal):
+    """Biên an toàn từ giá mục tiêu CTCK — None khi chưa có dữ liệu định giá."""
+    if not signal.has_data or signal.close is None:
+        return None
+    from equity.target_prices import view_for
+
+    view = view_for(signal.ticker, signal.close)
+    return view if view.targets else None
+
+
 def decide_for(signal: TickerSignal, *, has_position: bool = False,
                governance_status: Optional[str] = None) -> Optional[dict]:
     """Chạy Decision Engine THẬT cho một mã — nhánh equity trước nay chưa từng chạy.
 
     Trả None khi chưa có dữ liệu: không có tín hiệu thì không ra quyết định,
     chứ không ra quyết định "trung tính" cho có.
+
+    `margin_of_safety_pct` nay được TRUYỀN THẬT. Trước đây không caller
+    production nào truyền trường này, nên điều kiện duy nhất dẫn tới MUA THĂM
+    DÒ không bao giờ thoả — nhánh cổ phiếu về cấu trúc không thể khuyến nghị
+    mua, mọi mã vĩnh viễn dừng ở ĐỨNG NGOÀI.
     """
     if not signal.has_data:
         return None
@@ -130,15 +145,28 @@ def decide_for(signal: TickerSignal, *, has_position: bool = False,
     from decision.risk_officer import RiskContext
     from portfolio.loader import load_decision_rules, load_risk_limits
 
+    view = valuation_for(signal)
+    mos = view.margin_of_safety_pct if view else None
+
+    # Định giá đi mượn từ CTCK KHÔNG được coi ngang dữ liệu đo được. Khi các
+    # CTCK lệch nhau lớn, chính sự lệch đó là tín hiệu "không ai thực sự biết"
+    # — hạ độ đầy đủ dữ liệu để điểm tin cậy phản ánh đúng điều đó.
+    completeness = 100.0 if signal.sessions >= 15 else 50.0
+    if view is None:
+        completeness = min(completeness, 70.0)  # thiếu hẳn tầng định giá
+    elif view.high_dispersion:
+        completeness = min(completeness, 80.0)
+
     return decide(
         DecisionInput(
             asset=signal.ticker, asset_class="equity",
             trend_label=signal.trend_label,
+            margin_of_safety_pct=mos,
             governance_status=governance_status,
             has_position=has_position,
             # Chất lượng dữ liệu của cổ phiếu đo riêng: chuỗi EOD là nguồn tự
             # động thật, khác hẳn tình trạng dữ liệu vàng.
-            data_completeness_pct=100.0 if signal.sessions >= 15 else 50.0,
+            data_completeness_pct=completeness,
             data_freshness_score=100.0,
         ),
         RiskContext(governance_status=governance_status),

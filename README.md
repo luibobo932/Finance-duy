@@ -554,6 +554,52 @@ Telegram hiển thị tin nhắn bằng font **tỷ lệ**, nên mọi bảng ca
 
 Nhãn phân loại trong bảng rút thành ký hiệu ngắn (✅/⚠️/❌) kèm chú giải đầy đủ bên dưới — bảng nhãn dài rộng ~118 ký tự, trong `<pre>` phải cuộn ngang trên điện thoại.
 
+## Khuyến nghị MUA cổ phiếu: từ "không thể" thành "có điều kiện" (15/08/2026)
+
+### Lỗi cấu trúc: hệ thống KHÔNG THỂ khuyến nghị mua
+
+`derive_initial_action` cho equity chỉ ra `BUY_SMALL` khi `margin_of_safety_pct > 20`. Nhưng grep toàn repo cho thấy **không caller production nào truyền trường đó** — nó luôn `None`. Nghĩa là nhánh cổ phiếu, dù đã nối vào bản tin và dashboard, **về mặt cấu trúc không thể nói "mua"**: mọi mã vĩnh viễn dừng ở ĐỨNG NGOÀI. Một hệ thống theo dõi cổ phiếu không bao giờ nói được "mua" thì chỉ là cái đồng hồ báo giá.
+
+### Biên an toàn từ giá mục tiêu — và ba ràng buộc chống lạc quan
+
+`data/valuations.jsonl` chứa 13 giá mục tiêu từ 11 công ty chứng khoán, mỗi dòng kèm nguồn và ngày. `equity/target_prices.py` áp ba ràng buộc:
+
+- **Dùng mục tiêu THẤP NHẤT.** Với VCB dải mục tiêu là 61,9–80,7: biên an toàn tính theo mức thấp nhất là **2,6%**, theo mức cao nhất là **25,3%**. Cùng một mã, hai kết luận trái ngược. Chọn mức thấp nhất là chọn kết luận khó chịu hơn khi không có cơ sở để tin bên nào.
+- **Báo cáo độ phân tán.** Các CTCK lệch nhau 30% thì bản thân sự lệch đó là thông tin: không ai thực sự biết. Độ phân tán cao còn **hạ điểm tin cậy** của quyết định.
+- **Loại mục tiêu quá cũ** (>180 ngày) và nói rõ đã loại gì; mục tiêu không rõ ngày vẫn dùng nhưng được cảnh báo riêng.
+
+Mỗi lần nêu, hệ thống nhắc: đây là **phán đoán đi mượn** từ CTCK, không phải giá trị đo được — dự án không đo được thành tích dự báo của họ.
+
+### Mua bao nhiêu, giá nào, sai thì thoát ở đâu
+
+`decision/rebalance.py` trả lời "bán bao nhiêu" cho vàng, và chính con số đó biến CHỐT BỚT thành việc làm được. Phía cổ phiếu chưa có gì tương đương — `decision/position_size.py` bổ sung, với **bốn chốt chặn**:
+
+| Chốt chặn | Nguồn |
+|---|---|
+| Hạn mức 1 mã ≤10%, tổng ≤20% | `config/risk_limits.yaml` |
+| **Rào lợi suất**: phải thắng tiền gửi 8,0%/năm KHÔNG rủi ro | đo được từ `deposit_rates.jsonl` |
+| **Lợi nhuận/rủi ro ≥ 2:1**, cắt lỗ dưới hỗ trợ thật | `equity/technical.py` |
+| Cỡ lệnh sao cho một lần sai ≤1% tài sản ròng | rủi ro tính từ khoảng cách tới cắt lỗ |
+
+Kết quả thật trên hai mã đang theo dõi:
+
+```
+VCB 60,30 → ĐỨNG NGOÀI
+   CHƯA MUA — tiềm năng 2,7% không vượt được tiền gửi 8,00%/năm KHÔNG rủi ro;
+   lợi nhuận/rủi ro 1,2:1 dưới mức tối thiểu 2:1 — doanh nghiệp có thể tốt
+   nhưng ĐIỂM VÀO xấu
+
+CTD 62,40 → MUA THĂM DÒ
+   Mua tối đa 83 tr · cắt lỗ dưới 53,61 (rủi ro 14,1%) · mục tiêu 93,00
+   (+49,0%) · lợi nhuận/rủi ro 3,5:1
+```
+
+**VCB bị chặn bởi hai lý do độc lập** dù kết quả kinh doanh rất tốt — đó chính là điều một bộ chặn phải làm được: phân biệt "doanh nghiệp tốt" với "điểm vào tốt".
+
+Và một ràng buộc về nguồn tiền: chủ danh mục có 35 tr tiền mặt với quỹ khẩn cấp tối thiểu 30 tr, nên chỉ 5 tr dùng được. Hệ thống nói thẳng **tiền mua phải đến từ giảm tỷ trọng vàng, không phải từ rút quỹ khẩn cấp** — thay vì đưa một con số không có nguồn tiền.
+
+Rule quản trị doanh nghiệp vẫn **thắng cả biên an toàn**: có test khẳng định cờ đỏ quản trị đè được mọi mức chiết khấu, đúng tình huống PNJ (giá rơi 48,5% nên "rẻ", nhưng nghĩa vụ mua lại chưa định lượng được).
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```

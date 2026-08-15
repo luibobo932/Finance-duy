@@ -323,15 +323,20 @@ def section_chung_khoan() -> str:
     Decision Engine, rule quản trị của Risk Officer) và chạy được ngay trên 43
     phiên EOD thật của VCB/CTD — chỉ chưa ai gọi.
     """
+    from decision.position_size import plan_position
     from equity.signals import analyze as eq_analyze
-    from equity.signals import decide_for
-    from portfolio.loader import load_portfolio
+    from equity.signals import decide_for, valuation_for
+    from equity.target_prices import undated_warning
+    from portfolio.loader import load_portfolio, load_risk_limits
 
     port = load_portfolio()
+    limits = load_risk_limits()
     held = {p.ticker.upper(): p for p in port.stock_positions if p.quantity}
     tickers = [t.upper() for t in (port.watchlist or [])]
     if not tickers:
         return ""
+    hurdle = _best_deposit_rate()
+    net = _net_worth_trieu()
 
     lines = ["## CHỨNG KHOÁN", ""]
     if not held:
@@ -359,7 +364,37 @@ def section_chung_khoan() -> str:
             lines.append(f"  - ⚠️ {s.tech['breakout']}")
         if s.volume_flag:
             lines.append(f"  - ⚠️ {s.volume_flag}")
+
+        # Biên an toàn + kế hoạch vào lệnh. Một khuyến nghị mua thiếu "bao
+        # nhiêu / giá nào / sai thì thoát ở đâu" thì không thực hiện được.
+        view = valuation_for(s)
+        if view:
+            lines.append(f"  - {view.note()}")
+            w = undated_warning(view)
+            if w:
+                lines.append(f"  - ⚠️ {w}")
+        if net:
+            plan = plan_position(
+                t, s.close, net, limits=limits,
+                support=s.tech.get("support"), resistance=s.tech.get("resistance"),
+                target=view.lowest.target_nghin_dong if view and view.lowest else None,
+                hurdle_pct=hurdle,
+                available_cash_trieu=port.cash_amount_vnd / 1e6,
+                min_cash_buffer_trieu=(limits.get("minimum_cash_buffer_vnd") or 0) / 1e6,
+            )
+            lines.append(f"  - **{plan.summary()}**")
+            for n in plan.notes:
+                lines.append(f"    - ⚠️ {n}")
     return "\n".join(lines)
+
+
+def _net_worth_trieu() -> float | None:
+    try:
+        from networth import compute
+
+        return compute()[4]
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def section_alerts() -> str:

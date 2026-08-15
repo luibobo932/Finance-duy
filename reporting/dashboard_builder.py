@@ -467,8 +467,15 @@ def _equity_section(port) -> str:
         # `getattr` chứ không truy cập thẳng: mục này chỉ là phần thêm, không
         # được phép làm sập cả trang khi ngữ cảnh thiếu trường (test dùng port
         # giả đã bắt đúng trường hợp đó).
+        from decision.position_size import plan_position
+        from equity.signals import valuation_for
+
         held = {p.ticker.upper() for p in getattr(port, "stock_positions", []) if p.quantity}
         watch = [x.upper() for x in (getattr(port, "watchlist", None) or [])]
+        limits = load_risk_limits() or {}
+        ranked = _ranked_deposit_rates()
+        hurdle = ranked[0]["rate_pct"] if ranked else None
+        net = getattr(port, "_net_trieu", None)
     except Exception:  # noqa: BLE001 — thiếu mục này không được làm hỏng trang
         return ""
     rows = []
@@ -477,19 +484,27 @@ def _equity_section(port) -> str:
         if not s.has_data:
             continue
         d = decide_for(s, has_position=t in held)
+        view = valuation_for(s)
+        plan = plan_position(
+            t, s.close, net or 0.0, limits=limits,
+            support=s.tech.get("support"), resistance=s.tech.get("resistance"),
+            target=view.lowest.target_nghin_dong if view and view.lowest else None,
+            hurdle_pct=hurdle,
+        ) if net else None
         flags = []
         if s.tech.get("breakout") and s.tech["breakout"] != "NONE":
             flags.append(html.escape(s.tech["breakout"]))
         if s.volume_flag:
             flags.append("KLGD bất thường")
+        mos = view.margin_of_safety_pct if view else None
         rows.append(
             f'<tr><td class="tk">{html.escape(t)}</td>'
             f"<td>{_n(s.close, 2)}</td>"
             f"<td>{_n(s.tech.get('rsi14'), 1) if s.tech.get('rsi14') is not None else '—'}</td>"
-            f"<td>{_signed((s.tech.get('macd') or {}).get('hist') or 0, 2)}</td>"
             f"<td>{_n(s.tech.get('support'), 2) if s.tech.get('support') is not None else '—'}</td>"
-            f"<td>{_n(s.tech.get('resistance'), 2) if s.tech.get('resistance') is not None else '—'}</td>"
+            f"<td>{(_n(mos, 1) + '%') if mos is not None else '—'}</td>"
             f"<td><b>{html.escape(d['action_vi'])}</b></td>"
+            f'<td>{html.escape(plan.summary()) if plan else "—"}</td>'
             f'<td class="na">{" · ".join(flags) if flags else "—"}</td></tr>'
         )
     if not rows:
@@ -507,8 +522,8 @@ def _equity_section(port) -> str:
       không viết tay. Giá nghìn đồng.</p>
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Mã</th><th>Giá</th><th>RSI(14)</th><th>MACD hist</th>
-          <th>Hỗ trợ</th><th>Kháng cự</th><th>Khuyến nghị</th><th>Cờ</th></tr></thead>
+        <thead><tr><th>Mã</th><th>Giá</th><th>RSI(14)</th><th>Hỗ trợ</th>
+          <th>Biên an toàn</th><th>Khuyến nghị</th><th>Kế hoạch vào lệnh</th><th>Cờ</th></tr></thead>
         <tbody>{"".join(rows)}</tbody>
       </table>
     </div>
@@ -903,6 +918,13 @@ def render(ctx: dict) -> str:
 
     scenario_section = _scenario_section(ctx)
     deposit_section = _deposit_holding_section(_ranked_deposit_rates())
+    # Gắn tài sản ròng vào port để mục cổ phiếu tính được cỡ lệnh theo hạn mức.
+    _vals = ctx.get("valuations") or []
+    if _vals and _vals[-1].total_trieu:
+        try:
+            ctx["portfolio"]._net_trieu = _vals[-1].total_trieu
+        except Exception:  # noqa: BLE001
+            pass
     equity_section = _equity_section(ctx["portfolio"])
     power_section = _purchasing_power_section(ctx)
     goal_section = _goal_section(ctx)
