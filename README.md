@@ -40,8 +40,9 @@ Windows Task Scheduler task `FinanceDuy-BanTinChieu` chạy `scripts/daily_eveni
 3. `fetch_market_snapshot.py chieu` — **XAU/USD thật** (api.gold-api.com) + **tỷ giá USD/VND thật** (portal VCB) + đóng cửa VCB/CTD, ghi vào `data/history.jsonl`
 4. `watchlist.py update` — giá thật 11 mã Buffett-list
 5. `run_evening.py` — tổng hợp bản tin, chạy Decision Engine, **tự gửi Telegram**
-6. `health_check.py --alert` — kiểm tra freshness + an ninh, FAIL thì báo Telegram; `.bat` kiểm exit code ngay sau bước này
-7. commit + push `data/` (không rebase — nếu push thất bại chỉ log cảnh báo, KHÔNG tự động merge/rebase để tránh lặp lại sự cố kẹt ở trên)
+6. `send_report.py plan` — **thứ Hai hằng tuần**: gửi báo cáo kế hoạch (sức mua sau lạm phát + mục tiêu 10 tỷ). Không gửi hằng ngày vì nội dung chỉ đổi khi giá tài sản đổi — gửi mỗi ngày sẽ thành nhiễu và bị bỏ qua, đúng bệnh "cảnh báo lặp mãi" đã sửa ở `alert_health.py`
+7. `health_check.py --alert` — kiểm tra freshness + an ninh, FAIL thì báo Telegram; `.bat` kiểm exit code ngay sau bước này
+8. commit + push `data/` (không rebase — nếu push thất bại chỉ log cảnh báo, KHÔNG tự động merge/rebase để tránh lặp lại sự cố kẹt ở trên)
 
 **Vẫn CHƯA có nguồn tự động** (trung thực để trống trong bản tin, không bịa số) cho: VN-Index, khối ngoại mua/bán ròng, giá SJC/vàng nhẫn tại tiệm trong nước, lãi suất tiết kiệm, tin tức pháp lý/quản trị doanh nghiệp. Những phần này cần nhắn trực tiếp trong phiên chat (WebSearch) khi cần, hoặc `scripts/trend.py append` nhập tay.
 

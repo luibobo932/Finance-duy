@@ -36,6 +36,16 @@ rem QUAN TRONG: phai kiem tra errorlevel NGAY SAU lenh nay. Truoc 13/8 khong
 rem ai doc ket qua health check, va WARN khong bao gio leo thang thanh FAIL -
 rem do la co che khien automation ket 7 ngay (20-26/7) van "thanh cong" moi
 rem lan chay va khong ai biet.
+rem Bao cao KE HOACH (suc mua sau lam phat + muc tieu 10 ty) - gui THU HAI
+rem hang tuan. Khong gui hang ngay: noi dung chi doi khi gia tai san doi hoac
+rem khi chu danh muc sua config/plan.yaml, gui moi ngay se thanh nhieu va bi
+rem bo qua - dung cai benh "canh bao lap mai" da sua o alert_health.py.
+for /f %%d in ('powershell -NoProfile -Command "(Get-Date).DayOfWeek.value__"') do set DOW=%%d
+if "%DOW%"=="1" (
+    "%PY%" scripts\send_report.py plan >> logs\daily_task.log 2>&1
+    if errorlevel 1 echo [CANH BAO] Khong gui duoc bao cao ke hoach. >> logs\daily_task.log
+)
+
 "%PY%" scripts\health_check.py --alert >> logs\daily_task.log 2>&1
 if errorlevel 1 (
     echo [LOI] HEALTH CHECK FAIL - du lieu qua cu hoac co van de an ninh. >> logs\daily_task.log

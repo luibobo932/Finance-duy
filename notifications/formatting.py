@@ -39,6 +39,12 @@ def to_telegram_html(text: str) -> str:
     seen_section = False
     for raw in text.splitlines():
         line = html.escape(raw, quote=False)
+        # `### Tiểu mục` — reporting/diff_report.py sinh ra mức này. Trước đây
+        # không xử lý nên nó hiện NGUYÊN VĂN "### Thị trường" trong tin nhắn
+        # (nhìn thấy trong ảnh chụp màn hình của chủ danh mục ngày 15/8).
+        if raw.startswith("### "):
+            lines_out.append(f"<b>{html.escape(raw[4:].strip(), quote=False)}</b>")
+            continue
         if raw.startswith("## "):
             title = raw[3:].strip()
             icon = SECTION_ICONS.get(title, DEFAULT_ICON)

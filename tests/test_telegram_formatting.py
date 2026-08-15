@@ -173,3 +173,21 @@ def test_bao_cao_that_cat_va_boc_dung():
         assert len(p) <= TELEGRAM_LIMIT
         assert p.count("<pre>") == p.count("</pre>")
         assert p.count("<b>") == p.count("</b>")
+
+
+def test_tieu_muc_ba_dau_thang_khong_hien_nguyen_van():
+    """Lỗi thật, nhìn thấy trong ảnh chụp màn hình của chủ danh mục (15/8):
+    "### Thị trường" hiện nguyên văn trong tin nhắn vì to_telegram_html chỉ
+    xử lý `#` và `##`. reporting/diff_report.py sinh ra mức `###`."""
+    from notifications.formatting import to_telegram_html
+
+    out = to_telegram_html("### Thị trường\n- VCB: 59700đ → 60300đ")
+    assert "###" not in out
+    assert "<b>Thị trường</b>" in out
+
+
+def test_ba_muc_tieu_de_deu_thanh_dam():
+    from notifications.formatting import to_telegram_html
+
+    out = to_telegram_html("# Tiêu đề\n## Mục\n### Tiểu mục")
+    assert out.count("<b>") == 3 and "#" not in out
