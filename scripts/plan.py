@@ -21,6 +21,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from planning.feasibility import (  # noqa: E402
+    GoalReality, best_lever, horizon_table,
+)
 from planning.plan import (  # noqa: E402
     check_goal, emergency_fund_months, load_plan, sensitivity,
 )
@@ -97,14 +100,30 @@ def build() -> dict:
     }
     for g in plan.goals:
         c = check_goal(g, total, plan, date.today().year)
-        out["goals"].append({
-            "name": c.goal.name, "years": c.years,
+        item = {
+            "name": c.goal.name, "years": c.years, "has_deadline": g.has_deadline,
+            "basis": g.basis,
             "target_today_trieu": c.target_today_trieu,
             "target_nominal_trieu": c.target_nominal_trieu,
             "required_nominal_pct": c.required_nominal_pct,
             "required_real_pct": c.required_real_pct,
             "note": c.reachable_note,
-        })
+        }
+        # Chưa chốt thời hạn thì câu trả lời KHÔNG phải một con số lợi suất mà
+        # là bảng "cần gì ở từng thời hạn" — chính bảng đó giúp chọn thời hạn.
+        rows = horizon_table(total, g.target_vnd / 1_000_000, plan.inflation_pct,
+                             risk_free_pct=best)
+        item["horizons"] = [
+            {"years": r.years, "required_return_pct": r.required_return_pct,
+             "required_real_return_pct": r.required_real_return_pct,
+             "required_monthly_trieu": r.required_monthly_trieu,
+             "value_from_current_trieu": r.value_from_current_trieu,
+             "band": r.band, "band_label": r.band_label}
+            for r in rows
+        ]
+        item["best_lever"] = best_lever(rows)
+        item["reality_20y"] = GoalReality(g.target_vnd / 1_000_000, 20, plan.inflation_pct).note
+        out["goals"].append(item)
     return out
 
 
@@ -160,12 +179,24 @@ def main() -> None:
           "Khai giả định của anh vào config/plan.yaml để thu về một dòng.)")
 
     if d["goals"]:
-        print("\n=== MỤC TIÊU ===")
         for g in d["goals"]:
-            print(f"\n{g['name']} — còn {g['years']} năm")
-            print(f"  Cần {_vi(g['target_today_trieu'], 0)} tr theo sức mua hôm nay "
-                  f"= {_vi(g['target_nominal_trieu'], 0)} tr danh nghĩa tại thời điểm đó")
+            print(f"\n=== MỤC TIÊU: {g['name'].upper()} ===")
+            gap = g["target_nominal_trieu"] / d["total_trieu"]
+            print(f"Hiện có {_vi(d['total_trieu'], 0)} tr → cần "
+                  f"{_vi(g['target_nominal_trieu'], 0)} tr = gấp {_vi(gap, 2)} lần")
             print(f"  {g['note']}")
+            if g.get("horizons"):
+                print(f"\n{'Thời hạn':>9}{'Lợi suất cần':>14}{'(thực)':>10}"
+                      f"{'Hoặc gửi thêm':>16}{'   Phân loại'}")
+                print(f"{'':>9}{'nếu KHÔNG gửi thêm':>24}{'ở lãi tiền gửi':>16}")
+                for h in g["horizons"]:
+                    print(f"{str(h['years']) + ' năm':>9}"
+                          f"{_vi(h['required_return_pct'], 2) + '%':>14}"
+                          f"{'(' + _vi(h['required_real_return_pct'], 2) + '%)':>10}"
+                          f"{(_vi(h['required_monthly_trieu'], 1) + ' tr/th') if h['required_monthly_trieu'] else 'không cần':>16}"
+                          f"   {h['band_label']}")
+                print(f"\n{g['best_lever']}")
+            print(f"\nLƯU Ý VỀ SỨC MUA: {g['reality_20y']}")
     else:
         print("\n=== MỤC TIÊU ===\nChưa khai mục tiêu nào trong config/plan.yaml.")
         print("Thiếu mục tiêu thì mọi ngưỡng rủi ro đều là con số tuỳ tiện: "

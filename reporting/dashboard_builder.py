@@ -312,6 +312,72 @@ def _deposit_holding_section(ranked: list[dict]) -> str:
 """
 
 
+def _goal_section(ctx: dict) -> str:
+    """Mục tiêu 10 tỷ — và **cần gì** để nó khả thi.
+
+    Đây là mục đứng đầu trang từ nay: mọi ngưỡng rủi ro phía dưới ("vàng ≥70%")
+    chỉ có nghĩa khi neo vào một mục tiêu. Trước khi có mục này, "70%" là con số
+    tuỳ tiện, và khuyến nghị tuỳ tiện thì bị bỏ qua — đã xảy ra suốt 19 kỳ.
+    """
+    try:
+        from planning.feasibility import GoalReality, best_lever, horizon_table
+        from planning.plan import load_plan
+
+        plan = load_plan()
+        vals = ctx.get("valuations") or []
+        latest = vals[-1] if vals else None
+        if not plan.goals or latest is None or not latest.total_trieu:
+            return ""
+        goal = plan.goals[0]
+        total = latest.total_trieu
+        target = goal.target_vnd / 1_000_000
+        ranked = _ranked_deposit_rates()
+        safe = ranked[0]["rate_pct"] if ranked else None
+        rows = horizon_table(total, target, plan.inflation_pct, risk_free_pct=safe)
+    except Exception:  # noqa: BLE001 — thiếu mục này không được làm hỏng trang
+        return ""
+
+    band_class = {"risk_free": "good", "moderate": "good",
+                  "aggressive": "warning", "unrealistic": "critical"}
+    band_color = {"risk_free": "--good-text", "moderate": "--good-text",
+                  "aggressive": "--st-warning-text", "unrealistic": "--st-critical"}
+    trs = "\n".join(
+        f'<tr><td class="tk">{r.years} năm</td>'
+        f"<td>{_n(r.required_return_pct, 2)}%</td>"
+        f'<td class="na">{_n(r.required_real_return_pct, 2)}%</td>'
+        f"<td><b>{(_n(r.required_monthly_trieu, 1) + ' tr/tháng') if r.required_monthly_trieu else 'không cần'}</b></td>"
+        f"<td>{_n(r.value_from_current_trieu, 0)} tr</td>"
+        f'<td style="color:var({band_color.get(r.band, "--text-secondary")});font-weight:600">'
+        f"{html.escape(r.band_label)}</td></tr>"
+        for r in rows
+    )
+    reality = GoalReality(target, 20, plan.inflation_pct)
+    lever = best_lever(rows)
+    return f"""
+  <section class="card">
+    <h2 class="card-title">Mục tiêu: {html.escape(goal.name)}</h2>
+    <p class="card-note">Hiện có <b>{_n(total, 0)} tr</b> → cần <b>{_n(target, 0)} tr</b>,
+      tức gấp <b>{_n(target / total, 2)} lần</b>. Thời hạn <b>chưa chốt</b> — và đó là biến quyết
+      định tất cả, nên bảng dưới đây là câu trả lời thay cho một con số lợi suất duy nhất.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Thời hạn</th><th>Lợi suất cần<br><span style="font-weight:400">nếu KHÔNG gửi thêm</span></th>
+          <th>(thực)</th><th>Hoặc gửi thêm<br><span style="font-weight:400">chỉ với lãi tiền gửi</span></th>
+          <th>Tài sản hiện có<br><span style="font-weight:400">tự lên tới</span></th><th>Phân loại</th></tr></thead>
+        <tbody>{trs}</tbody>
+      </table>
+    </div>
+    <div class="status-cards" style="margin-top:16px">
+      {_status_card("good", "Đòn bẩy mạnh nhất", html.escape(lever))}
+      {_status_card("warning", "Danh nghĩa hay sức mua?", html.escape(reality.note))}
+    </div>
+    <p class="card-note" style="margin:14px 0 0">Mốc phân loại thấp nhất neo vào
+      <b>lãi suất tiền gửi tốt nhất đang đo được</b> (số thật). Hai mốc 12% và 20% là
+      <b>nhận định</b> về mức bền vững, không phải số đo — nêu rõ để không bị đọc nhầm thành dự báo.</p>
+  </section>
+"""
+
+
 def _purchasing_power_section(ctx: dict) -> str:
     """Sức mua — tầng mà cả hệ thống đang thiếu cho tới hôm nay.
 
@@ -839,6 +905,7 @@ def render(ctx: dict) -> str:
     deposit_section = _deposit_holding_section(_ranked_deposit_rates())
     equity_section = _equity_section(ctx["portfolio"])
     power_section = _purchasing_power_section(ctx)
+    goal_section = _goal_section(ctx)
 
     gen = ctx["generated_at"].strftime("%d/%m/%Y %H:%M")
 
@@ -863,6 +930,7 @@ def render(ctx: dict) -> str:
     {stacked_bar(segs)}
     {allocation_legend(segs)}
   </section>
+{goal_section}
 {power_section}
 {rebalance_section}
 {scenario_section}

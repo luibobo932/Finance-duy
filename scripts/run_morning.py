@@ -285,6 +285,23 @@ def section_suc_mua(parts: dict, total: float | None) -> str:
         lines.append("")
         lines.append("⚠️ Chưa khai mục tiêu tài chính trong `config/plan.yaml`. Thiếu mục tiêu thì "
                      "mọi ngưỡng rủi ro đều là con số tuỳ tiện — \"vàng ≥70%\" là 70% so với cái gì?")
+        return "\n".join(lines)
+
+    # Có mục tiêu rồi thì mọi ngưỡng phía trên mới có chỗ neo.
+    from planning.feasibility import best_lever, horizon_table
+
+    goal = plan.goals[0]
+    target = goal.target_vnd / 1_000_000
+    rows = horizon_table(total, target, plan.inflation_pct, risk_free_pct=best)
+    lines.append("")
+    lines.append(f"**Mục tiêu: {goal.name}** — cần gấp {target / total:.2f} lần tài sản hiện có."
+                 + ("" if goal.has_deadline else " Thời hạn **chưa chốt**, mà đó là biến quyết định tất cả:"))
+    for h in rows:
+        thm = (f"{h.required_monthly_trieu:.1f} tr/tháng" if h.required_monthly_trieu
+               else "không cần gửi thêm")
+        lines.append(f"  - {h.years} năm: cần {h.required_return_pct:.2f}%/năm nếu không gửi thêm, "
+                     f"**hoặc** {thm} với lãi tiền gửi — {h.band_label}")
+    lines.append(f"- {best_lever(rows)}")
     return "\n".join(lines)
 
 

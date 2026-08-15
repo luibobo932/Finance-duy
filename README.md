@@ -504,6 +504,35 @@ python3 scripts/plan.py           # bảng đầy đủ
 python3 scripts/plan.py --json    # để nhúng
 ```
 
+## Mục tiêu 10 tỷ: cần GÌ để khả thi (15/08/2026)
+
+Chủ danh mục đặt mục tiêu **nâng tổng tài sản lên 10 tỷ**. Hiện có 1.173 tr → cần gấp **8,53 lần**. Nhưng thiếu một biến quyết định tất cả: **thời hạn**. Không chốt thời hạn thì "10 tỷ" là hai bài toán hoàn toàn khác nhau, nên `planning/feasibility.py` không đoán hộ mà giải cho cả dải:
+
+| Thời hạn | Lợi suất cần<br>*nếu không gửi thêm* | Hoặc gửi thêm<br>*chỉ với lãi tiền gửi 8%* | Phân loại |
+|---|---|---|---|
+| 5 năm | 53,52%/năm | 112,6 tr/tháng | **không phải mục tiêu đầu tư** |
+| 10 năm | 23,90%/năm | 40,8 tr/tháng | **không phải mục tiêu đầu tư** |
+| 15 năm | 15,36%/năm | 18,1 tr/tháng | đòi hỏi rất cao |
+| **20 năm** | 11,31%/năm | **7,7 tr/tháng** | khả thi, cần có cổ phiếu |
+| 25 năm | 8,95%/năm | 2,1 tr/tháng | khả thi |
+| 30 năm | 7,41%/năm | **không cần gửi thêm** | đạt được bằng **tiền gửi** |
+
+### Kết luận có sức nặng hơn mọi khuyến nghị cổ phiếu
+
+**Gấp đôi thời hạn — từ 10 lên 20 năm — làm mức tiết kiệm cần thiết giảm 5,3 lần** (40,8 → 7,7 tr/tháng). Không cách chọn cổ phiếu nào tạo ra được độ chênh đó. Đòn bẩy mạnh nhất là **thời hạn** và **tỷ lệ tích luỹ**, không phải chọn mã.
+
+Ở mốc 20 năm, riêng 1.173 tr hiện có đã tự lên **5.466 tr** chỉ với lãi tiền gửi — hơn nửa quãng đường, không cần làm gì thêm.
+
+### Danh nghĩa hay sức mua — hai mục tiêu khác nhau
+
+"10 tỷ" gần như luôn được hiểu là con số **nhìn thấy trong tài khoản**. Nhưng sau 20 năm lạm phát 4,39%, 10 tỷ đó chỉ mua được lượng hàng hoá của **~4,2 tỷ hôm nay**. Muốn 10 tỷ **theo sức mua hôm nay** thì con số danh nghĩa phải là **23,6 tỷ**. `config/plan.yaml` có trường `basis: nominal | today` để phân biệt, và hệ thống luôn trả cả hai.
+
+### Mốc phân loại: cái nào là số đo, cái nào là nhận định
+
+Mốc thấp nhất neo vào **lãi suất tiền gửi tốt nhất đang đo được** — số thật. Hai mốc 12% và 20% là **nhận định** về mức bền vững, không phải số đo; `BAND_NOTE` nói rõ điều đó để không ai đọc nhầm thành dự báo.
+
+Hàm `required_years()` trả `None` khi kế hoạch **không bao giờ** tới đích — trả một con số khổng lồ ở đó sẽ bị đọc thành "rồi cũng tới", trong khi sự thật là kế hoạch không hoạt động.
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```

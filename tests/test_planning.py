@@ -151,7 +151,7 @@ def _plan(goals=()):
 def test_muc_tieu_khai_theo_suc_mua_HOM_NAY_duoc_quy_len_danh_nghia():
     """'3 tỷ năm 2041' vô nghĩa nếu không nói 3 tỷ đó mua được gì. So thẳng
     số hôm nay với tài sản tương lai là so hai đơn vị khác nhau."""
-    g = Goal("Hưu trí", 3_000_000_000, 2041)
+    g = Goal("Hưu trí", 3_000_000_000, 2041, basis="today")
     c = check_goal(g, 1172.7, _plan(), 2026)
     assert c.years == 15
     assert c.target_today_trieu == 3000.0
@@ -159,19 +159,19 @@ def test_muc_tieu_khai_theo_suc_mua_HOM_NAY_duoc_quy_len_danh_nghia():
 
 
 def test_loi_suat_can_thiet_tinh_ca_hai_thang():
-    c = check_goal(Goal("X", 3_000_000_000, 2041), 1172.7, _plan(), 2026)
+    c = check_goal(Goal("X", 3_000_000_000, 2041, basis="today"), 1172.7, _plan(), 2026)
     assert c.required_nominal_pct > c.required_real_pct
     assert real_pct(c.required_nominal_pct, INFL) == pytest.approx(c.required_real_pct)
 
 
 def test_da_du_tai_san_thi_khong_doi_loi_suat_duong():
-    c = check_goal(Goal("X", 100_000_000, 2041), 1172.7, _plan(), 2026)
+    c = check_goal(Goal("X", 100_000_000, 2041, basis="today"), 1172.7, _plan(), 2026)
     assert c.required_nominal_pct <= 0
     assert "Đã đủ" in c.reachable_note
 
 
 def test_thieu_hut_tinh_theo_suc_mua_hom_nay():
-    c = check_goal(Goal("X", 3_000_000_000, 2041), 1172.7, _plan(), 2026)
+    c = check_goal(Goal("X", 3_000_000_000, 2041, basis="today"), 1172.7, _plan(), 2026)
     assert c.shortfall_today_trieu == pytest.approx(3000.0 - 1172.7, abs=0.1)
 
 
@@ -204,8 +204,31 @@ def test_loi_suat_ky_vong_de_null_va_KHONG_bi_dien_ho():
     assert p.expected_for("cash") == 0.0  # tiền mặt 0% là sự thật, không phải giả định
 
 
-def test_chua_khai_muc_tieu_thi_bao_ro_thay_vi_bia_mot_cai():
-    assert load_plan().has_goals is False
+def test_muc_tieu_that_da_duoc_ghi_vao_config():
+    """Chủ danh mục nêu mục tiêu 10 tỷ ngày 15/08/2026."""
+    p = load_plan()
+    assert p.has_goals is True
+    g = p.goals[0]
+    assert g.target_vnd == 10_000_000_000
+    assert g.basis == "nominal"  # "nhìn thấy 10 tỷ", không phải sức mua hôm nay
+
+
+def test_muc_tieu_chua_chot_thoi_han_thi_KHONG_bia_ra_loi_suat_can_thiet():
+    """Thời hạn là biến quyết định tất cả: 10 năm đòi 23,90%/năm còn 30 năm chỉ
+    đòi 7,41%/năm. Đoán hộ thời hạn là đoán hộ kết luận."""
+    g = Goal("10 tỷ", 10_000_000_000)
+    assert g.has_deadline is False
+    c = check_goal(g, 1172.7, _plan(), 2026)
+    assert c.required_nominal_pct is None
+    assert "Chưa chốt thời hạn" in c.reachable_note
+
+
+def test_basis_nominal_va_today_la_HAI_muc_tieu_khac_nhau():
+    """Sau 20 năm lạm phát 4,39%, 10 tỷ danh nghĩa chỉ mua được ~4,2 tỷ hôm nay."""
+    nom = Goal("A", 10_000_000_000, 2046, basis="nominal")
+    tod = Goal("B", 10_000_000_000, 2046, basis="today")
+    assert nom.nominal_target_trieu(INFL, 20) == 10_000.0
+    assert tod.nominal_target_trieu(INFL, 20) > 23_000.0
 
 
 def test_chay_duoc_tren_danh_muc_that():

@@ -40,13 +40,13 @@ cash_flow:
 # Mỗi mục tiêu cần: tên, số tiền (theo SỨC MUA HÔM NAY), năm cần tới.
 # Ghi theo sức mua hôm nay là cố ý: "2 tỷ năm 2036" mơ hồ vì 2 tỷ năm 2036
 # không mua được thứ 2 tỷ mua được hôm nay. Hệ thống tự quy đổi theo lạm phát.
-goals: []
-  # Ví dụ cấu trúc khi điền:
-  # - name: "Quỹ hưu trí"
-  #   target_today_vnd: 3000000000
-  #   target_year: 2041
-  #   priority: 1
-  # - name: "Mua nhà"
-  #   target_today_vnd: 2000000000
-  #   target_year: 2031
-  #   priority: 2
+goals:
+  - name: "Nâng tổng tài sản lên 10 tỷ"
+    target_vnd: 10000000000   # chủ danh mục nêu 15/08/2026
+    basis: nominal            # "nominal" = nhìn thấy 10 tỷ; "today" = 10 tỷ theo SỨC MUA HÔM NAY
+    target_year: null         # CHƯA CHỐT — hệ thống bày bảng "cần gì ở từng thời hạn"
+    priority: 1
+  # Vì sao để trống target_year thay vì đoán: thời hạn là biến quyết định tất
+  # cả. Không gửi thêm đồng nào thì 10 năm đòi 23,90%/năm (bất khả thi bền
+  # vững) còn 30 năm chỉ đòi 7,41%/năm. Đoán hộ một con số ở đây là đoán hộ
+  # kết luận.

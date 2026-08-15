@@ -36,12 +36,27 @@ SENSITIVITY_NOMINAL_PCT: tuple[float, ...] = (0.0, 3.0, 5.0, 7.0, 9.0, 12.0)
 @dataclass
 class Goal:
     name: str
-    target_today_vnd: float
-    target_year: int
+    target_vnd: float
+    target_year: Optional[int] = None  # None = CHƯA CHỐT thời hạn
+    # "nominal" = con số nhìn thấy trong tài khoản; "today" = theo sức mua hôm nay.
+    # Hai cách hiểu này là HAI MỤC TIÊU khác nhau, không phải hai cách nói: sau
+    # 20 năm lạm phát 4,39%, 10 tỷ danh nghĩa chỉ mua được ~4,2 tỷ hôm nay.
+    basis: str = "nominal"
     priority: int = 1
 
+    @property
+    def has_deadline(self) -> bool:
+        return self.target_year is not None
+
     def years_from(self, current_year: int) -> int:
-        return max(0, self.target_year - current_year)
+        return 0 if self.target_year is None else max(0, self.target_year - current_year)
+
+    def nominal_target_trieu(self, inflation_pct: float, years: int) -> float:
+        """Số tiền DANH NGHĨA cần có tại thời điểm đích."""
+        base = self.target_vnd / 1_000_000
+        if self.basis == "today":
+            return base * (1 + inflation_pct / 100) ** years
+        return base
 
 
 @dataclass
@@ -72,12 +87,23 @@ def load_plan(path: Optional[Path] = None) -> Plan:
     cf = raw.get("cash_flow") or {}
     goals = []
     for g in raw.get("goals") or []:
-        if not g or g.get("target_today_vnd") is None or g.get("target_year") is None:
+        # Chấp nhận cả `target_vnd` (mới) lẫn `target_today_vnd` (cũ, ngầm hiểu
+        # theo sức mua hôm nay) để config cũ không gãy.
+        if not g:
             continue
+        amount = g.get("target_vnd")
+        basis = str(g.get("basis") or "nominal")
+        if amount is None:
+            amount = g.get("target_today_vnd")
+            basis = "today"
+        if amount is None:
+            continue
+        year = g.get("target_year")
         goals.append(Goal(
             name=str(g.get("name") or "Mục tiêu"),
-            target_today_vnd=float(g["target_today_vnd"]),
-            target_year=int(g["target_year"]),
+            target_vnd=float(amount),
+            target_year=int(year) if year is not None else None,
+            basis=basis,
             priority=int(g.get("priority", 1)),
         ))
     return Plan(
@@ -87,7 +113,7 @@ def load_plan(path: Optional[Path] = None) -> Plan:
         expected_returns=dict(raw.get("expected_returns_nominal_pct") or {}),
         monthly_surplus_vnd=cf.get("monthly_surplus_vnd"),
         monthly_expense_vnd=cf.get("monthly_expense_vnd"),
-        goals=sorted(goals, key=lambda x: (x.priority, x.target_year)),
+        goals=sorted(goals, key=lambda x: (x.priority, x.target_year or 9999)),
     )
 
 
@@ -154,8 +180,15 @@ class GoalCheck:
 
     @property
     def reachable_note(self) -> str:
+        if not self.goal.has_deadline:
+            # Chưa chốt thời hạn thì KHÔNG có "lợi suất cần thiết" — câu trả lời
+            # là bảng "cần gì ở từng thời hạn" (planning/feasibility.py).
+            return ("Chưa chốt thời hạn — xem bảng \"cần gì ở từng thời hạn\" "
+                    "thay vì một con số lợi suất duy nhất.")
         if self.required_nominal_pct is None:
             return "Chưa tính được — thiếu dữ liệu."
+        if self.required_nominal_pct == float("inf"):
+            return "Không đạt được trong thời hạn này bằng tài sản hiện có."
         if self.required_nominal_pct <= 0:
             return "Đã đủ bằng tài sản hiện có, không cần lợi suất dương."
         return (f"Cần {self.required_nominal_pct:.2f}%/năm danh nghĩa "
@@ -172,11 +205,15 @@ def check_goal(goal: Goal, current_trieu: float, plan: Plan, current_year: int) 
     from planning.real_return import real_pct
 
     years = goal.years_from(current_year)
-    target_today = goal.target_today_vnd / 1_000_000
-    target_nominal = target_today * (1 + plan.inflation_pct / 100) ** years
+    target_nominal = goal.nominal_target_trieu(plan.inflation_pct, years)
+    # Quy NGƯỢC về sức mua hôm nay để so được với tài sản hiện tại — so thẳng
+    # con số danh nghĩa tương lai với tài sản hôm nay là so hai đơn vị khác nhau.
+    target_today = target_nominal / (1 + plan.inflation_pct / 100) ** years
 
     required_nom: Optional[float] = None
-    if current_trieu > 0 and years > 0:
+    if not goal.has_deadline:
+        required_nom = None  # không có thời hạn thì không có lợi suất cần thiết
+    elif current_trieu > 0 and years > 0:
         required_nom = ((target_nominal / current_trieu) ** (1 / years) - 1) * 100
     elif current_trieu > 0 and years == 0:
         required_nom = 0.0 if current_trieu >= target_nominal else float("inf")
