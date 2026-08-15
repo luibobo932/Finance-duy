@@ -312,6 +312,81 @@ def _deposit_holding_section(ranked: list[dict]) -> str:
 """
 
 
+def _purchasing_power_section(ctx: dict) -> str:
+    """Sức mua — tầng mà cả hệ thống đang thiếu cho tới hôm nay.
+
+    Mọi con số trên trang này (và trong mọi bản tin đã gửi) đều là DANH NGHĨA.
+    Với CPI 7 tháng 2026 +4,39%, "tiền mặt 35 tr không đổi" thực ra là đang mất
+    1,47 tr sức mua mỗi năm — và chưa kỳ nào nói điều đó.
+    """
+    try:
+        from planning.plan import load_plan, sensitivity
+        from planning.real_return import (doubling_years, erosion_trieu,
+                                          purchasing_power_trieu, real_pct)
+
+        plan = load_plan()
+        vals = ctx.get("valuations") or []
+        latest = vals[-1] if vals else None
+        if not plan.inflation_pct or latest is None or not latest.total_trieu:
+            return ""
+        total = latest.total_trieu
+        cash = latest.cash_trieu
+        rows10 = sensitivity(total, plan.inflation_pct, 10)
+        ranked = _ranked_deposit_rates()
+        best = ranked[0]["rate_pct"] if ranked else None
+    except Exception:  # noqa: BLE001 — thiếu mục này không được làm hỏng trang
+        return ""
+
+    pp10 = purchasing_power_trieu(total, plan.inflation_pct, 10)
+    cash_real = real_pct(0.0, plan.inflation_pct)
+    tiles = [
+        _tile("Lạm phát tham chiếu", f"{_n(plan.inflation_pct, 2)}%/năm", "CPI bình quân 7 tháng 2026"),
+        _tile("Tiền mặt — lợi suất THỰC", f"{_signed(cash_real, 2)}%",
+              f"bào mòn {_n(erosion_trieu(cash, plan.inflation_pct), 2)} tr/năm", flag=True),
+    ]
+    if best:
+        rr = real_pct(best, plan.inflation_pct)
+        dbl = doubling_years(rr)
+        tiles.append(_tile("Gửi tốt nhất — lợi suất THỰC", f"{_signed(rr, 2)}%",
+                           f"danh nghĩa {_n(best, 2)}%"
+                           + (f" · gấp đôi sau ~{dbl:.0f} năm" if dbl else "")))
+    tiles.append(_tile("Không sinh lời, sau 10 năm", f"{_n(pp10, 0)} tr",
+                       f"theo sức mua hôm nay — mất {_n(total - pp10, 0)} tr", flag=True))
+
+    trs = "\n".join(
+        f'<tr><td class="tk">{_n(rate, 1)}%</td><td>{_n(nom, 0)} tr</td>'
+        f"<td><b>{_n(real, 0)} tr</b></td>"
+        # Phần MẤT sức mua phải nổi bật hơn, không phải mờ đi — dùng đúng cặp
+        # màu đã kiểm CVD ở biểu đồ kịch bản, để cả trang nói cùng một ngôn ngữ.
+        f'<td style="color:var({"--s-orange" if real < total else "--s-blue"});'
+        f'font-weight:600">{_signed(real - total, 0)} tr</td></tr>'
+        for rate, nom, real in rows10
+    )
+    goal_note = ("" if plan.has_goals else
+                 '<p class="card-note" style="margin:12px 0 0">⚠️ Chưa khai mục tiêu tài chính trong '
+                 '<code>config/plan.yaml</code>. Thiếu mục tiêu thì mọi ngưỡng rủi ro đều là con số '
+                 'tuỳ tiện — "vàng ≥70%" là 70% so với cái gì?</p>')
+    return f"""
+  <section class="card">
+    <h2 class="card-title">Sức mua — không phải số dư</h2>
+    <p class="card-note">Mọi con số phía trên là <b>danh nghĩa</b>. Sau lạm phát
+      {_n(plan.inflation_pct, 2)}%/năm ({html.escape(plan.inflation_source)}), bức tranh khác đi.
+      Lợi suất thực tính theo Fisher chính xác <code>(1+n)/(1+i)−1</code>, không phải phép trừ —
+      phép trừ luôn lệch về phía lạc quan.</p>
+    <div class="grid-tiles" style="margin-bottom:16px">{"".join(tiles)}</div>
+    <p class="card-note">Toàn bộ <b>{_n(total, 0)} tr</b> sau 10 năm, ở từng mức lợi suất danh nghĩa.
+      Đây là <b>bảng độ nhạy, không phải dự báo</b> — hệ thống không dự báo lợi suất.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Lợi suất/năm</th><th>Danh nghĩa</th><th>Sức mua hôm nay</th>
+          <th>So với hiện tại</th></tr></thead>
+        <tbody>{trs}</tbody>
+      </table>
+    </div>{goal_note}
+  </section>
+"""
+
+
 def _equity_section(port) -> str:
     """Mục theo dõi kỹ thuật cho các mã trong `config/portfolio.yaml: watchlist`.
 
@@ -763,6 +838,7 @@ def render(ctx: dict) -> str:
     scenario_section = _scenario_section(ctx)
     deposit_section = _deposit_holding_section(_ranked_deposit_rates())
     equity_section = _equity_section(ctx["portfolio"])
+    power_section = _purchasing_power_section(ctx)
 
     gen = ctx["generated_at"].strftime("%d/%m/%Y %H:%M")
 
@@ -787,6 +863,7 @@ def render(ctx: dict) -> str:
     {stacked_bar(segs)}
     {allocation_legend(segs)}
   </section>
+{power_section}
 {rebalance_section}
 {scenario_section}
 {deposit_section}

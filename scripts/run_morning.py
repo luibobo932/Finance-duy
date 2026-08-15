@@ -249,6 +249,55 @@ def send_telegram_report(text: str) -> None:
         logger.warning(f"Gửi Telegram thất bại: {e}")
 
 
+def section_suc_mua(parts: dict, total: float | None) -> str:
+    """Sức mua, không phải số dư.
+
+    Mọi con số hệ thống nói cho tới nay đều là DANH NGHĨA. Với CPI 7 tháng 2026
+    là +4,39%, "tiền mặt 35 tr không đổi" thực ra là đang mất 1,47 tr sức mua
+    mỗi năm — và chưa kỳ bản tin nào nói điều đó.
+    """
+    from planning.plan import load_plan
+    from planning.real_return import (RealReturn, doubling_years, erosion_trieu,
+                                      purchasing_power_trieu, real_pct)
+
+    plan = load_plan()
+    if not plan.inflation_pct or not total:
+        return ""
+    lines = ["## SỨC MUA (sau lạm phát)", ""]
+    lines.append(f"Lạm phát tham chiếu **{plan.inflation_pct:.2f}%/năm** — {plan.inflation_source}.")
+    lines.append("")
+
+    cash = parts.get("Tiền mặt") or 0.0
+    if cash:
+        r = RealReturn("Tiền mặt", 0.0, plan.inflation_pct, cash)
+        lines.append(f"- Tiền mặt {cash:,.0f} tr: danh nghĩa 0% → **thực {r.real_pct:+.2f}%/năm**, "
+                     f"bào mòn **{erosion_trieu(cash, plan.inflation_pct):.2f} tr/năm**")
+    best = _best_deposit_rate()
+    if best:
+        rr = real_pct(best, plan.inflation_pct)
+        dbl = doubling_years(rr)
+        lines.append(f"- Mức gửi tốt nhất đo được {best:.2f}%/năm → **thực {rr:+.2f}%/năm**"
+                     + (f" (gấp đôi sức mua sau ~{dbl:.0f} năm)" if dbl else ""))
+    pp = purchasing_power_trieu(total, plan.inflation_pct, 10)
+    lines.append(f"- Nếu toàn bộ {total:,.0f} tr không sinh lời, sau 10 năm chỉ còn mua được "
+                 f"lượng hàng hoá tương đương **{pp:,.0f} tr hôm nay** (mất {total - pp:,.0f} tr sức mua)")
+    if not plan.has_goals:
+        lines.append("")
+        lines.append("⚠️ Chưa khai mục tiêu tài chính trong `config/plan.yaml`. Thiếu mục tiêu thì "
+                     "mọi ngưỡng rủi ro đều là con số tuỳ tiện — \"vàng ≥70%\" là 70% so với cái gì?")
+    return "\n".join(lines)
+
+
+def _best_deposit_rate() -> float | None:
+    try:
+        from deposits.ranking import load_normalized, rank
+
+        ranked = rank(load_normalized())
+        return ranked[0]["rate_pct"] if ranked else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def section_chung_khoan() -> str:
     """Mục CHỨNG KHOÁN — mục mà `section_tong_quan()` đã trỏ tới ở mọi kỳ bản
     tin trong khi nó KHÔNG TỒN TẠI.
@@ -408,6 +457,7 @@ def main():
         f"# BẢN TIN ĐẦU TƯ SÁNG — {bulletin_date(load_history())}",
         section_tong_quan(gold_decision),
         section_tai_san({"parts": parts, "total": total}),
+        section_suc_mua(parts, total),
         section_vang(est, gold_decision),
         section_kich_ban_gia_vang(parts, total),
         section_ke_hoach_giam_ty_trong(ranked_deposits),

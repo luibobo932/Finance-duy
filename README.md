@@ -70,6 +70,7 @@ Windows Task Scheduler task `FinanceDuy-BanTinChieu` chạy `scripts/daily_eveni
 | `watchlist.py` + `data/watchlist.json` | Theo dõi hiệu suất danh mục giả lập Buffett-list |
 | `networth.py` + `data/assets.json` | Tài sản ròng thực tế (vàng/tiết kiệm/mặt/cổ phiếu) + phân bổ + cảnh báo tập trung |
 | `gold_price.py` + `data/gold_model.json` | Ước tính giá vàng nhẫn tại tiệm theo XAU/USD real-time (hiệu chuẩn từ 1 ảnh bảng giá); networth tự dùng để định giá vàng động |
+| `plan.py` + `config/plan.yaml` | **Tầng kế hoạch**: lợi suất THỰC sau lạm phát, bào mòn sức mua, bảng độ nhạy 10 năm, đối chiếu mục tiêu tài chính |
 | `health_check.py` | Health check (Phase 10): freshness dữ liệu + vệ sinh an ninh (.env, quét secret); dữ liệu tự động cũ quá 3× ngưỡng thì leo thang WARN → FAIL; exit 1 khi FAIL; `--alert` gửi Telegram (chống spam qua `data/health_state.json`) |
 
 Xem `docs/ROADMAP.md` cho trạng thái toàn bộ 12 hạng mục phát triển và việc cần người dùng cung cấp.
@@ -460,6 +461,48 @@ Bốn phát hiện đáng ghi lại:
 - **CTD** — backlog **51.600 tỷ** cao nhất lịch sử, nhưng biên LNST chỉ **~2,3%** (788/34.340). Backlog là doanh thu tương lai, chưa phải lợi nhuận tương lai.
 
 Giới hạn đã nêu thẳng trong báo cáo: chỉ VCB/CTD có chuỗi EOD nên chỉ 2 mã đó có chỉ báo kỹ thuật thật; các bội số P/E là **của công ty chứng khoán**, trích lại kèm nguồn chứ không tự tính (chưa nhập EPS/giá trị sổ sách); số cơ bản lấy từ tin BCTC công bố, **chưa đối chiếu BCTC gốc**.
+
+## Tầng kế hoạch: sức mua, không phải số dư (15/08/2026)
+
+Đây là tầng biến dự án từ **theo dõi giá** thành **quản lý tài sản**, và nó bắt đầu từ một dữ kiện mà hệ thống chưa từng nhắc tới lần nào trong toàn bộ lịch sử bản tin: **lạm phát**.
+
+Mọi con số đã nói với chủ danh mục cho tới nay đều là **danh nghĩa** — "tiền gửi 8,0%/năm", "lãi thêm 11 tr/năm", "danh mục 1.173 tr". Với **CPI bình quân 7 tháng 2026 là +4,39%** (Tổng cục Thống kê), khoảng cách giữa hai cách nói là khoảng cách giữa hai kết luận trái ngược:
+
+| Khoản | Danh nghĩa | **THỰC** | Nhận định |
+|---|---|---|---|
+| Tiền mặt 35 tr | 0,00% | **−4,21%/năm** | đang **mất 1,47 tr/năm** sức mua |
+| Tiết kiệm nếu ở 4,5% | +4,50% | **+0,11%/năm** | gần như đứng yên |
+| Tiết kiệm ở mức tốt nhất 8,0% | +8,00% | **+3,46%/năm** | gấp đôi sức mua sau ~20 năm |
+
+Nói "gửi 4,5%/năm" nghe như đang sinh lời. Nói "thực +0,11%/năm" mới là sự thật.
+
+### Con số đắt nhất trong cả dự án
+
+```
+Để yên 1.173 tr không sinh lời → sau 10 năm còn 763 tr theo sức mua hôm nay.
+                                  Mất 410 tr, không cần thị trường sập lần nào.
+```
+
+Để so sánh: kịch bản vàng **giảm 20%** làm mất 178 tr. Việc **không làm gì trong 10 năm** tốn gấp hơn hai lần thế — và im lặng.
+
+### Ba quy tắc kỹ thuật
+
+- **Fisher chính xác, không phải phép trừ.** Lợi suất thực là `(1+n)/(1+i)−1`, không phải `n−i`. Ở 8,00% và 4,39%, phép trừ cho 3,61% còn công thức đúng cho 3,46% — và sai số 0,15 điểm % **luôn lệch về phía lạc quan**.
+- **Hệ thống KHÔNG dự báo lợi suất.** Lạm phát là số liệu công bố (có nguồn); lãi suất tiền gửi là số đo được. Lợi suất kỳ vọng của vàng/cổ phiếu là **giả định của chủ danh mục**, khai trong `config/plan.yaml`. Chưa khai thì chạy **bảng độ nhạy** chứ không chọn hộ một con số rồi trình bày nó như sự thật.
+- **Chưa khai báo ≠ bằng 0.** Hiện 97% danh mục (vàng 892 tr + tiết kiệm 246 tr) chưa có giả định lợi suất; phần đó được tách riêng và báo rõ tỷ trọng, không bị gán 0% rồi kéo tụt kết quả một cách bịa đặt.
+
+### Mục tiêu: "vàng ≥70%" là 70% so với cái gì?
+
+Mọi ngưỡng trong hệ thống cho tới nay đều **rời rạc**. Không có mục tiêu thì ngưỡng nào cũng cảm giác tuỳ tiện, và khuyến nghị cảm giác tuỳ tiện thì bị bỏ qua — đúng như đã xảy ra suốt 19 kỳ.
+
+`config/plan.yaml` nhận mục tiêu theo **sức mua hôm nay** ("3 tỷ năm 2041" là câu vô nghĩa nếu không nói 3 tỷ đó mua được gì — sau 15 năm lạm phát 4,39% nó chỉ còn mua được lượng hàng của ~1,57 tỷ). Hệ thống tự quy lên danh nghĩa rồi tính lợi suất cần thiết ở **cả hai thang**.
+
+Quỹ khẩn cấp cũng được sửa cùng logic: `risk_limits.yaml` đang đặt mức tối thiểu **30 tr** — một con số tuyệt đối không neo vào chi tiêu thật. 30 tr là 6 tháng với người tiêu 5 tr/tháng và là 1 tháng với người tiêu 30 tr/tháng. `emergency_fund_months()` quy về **số tháng**, và trả `None` khi chưa khai chi tiêu thay vì đoán.
+
+```
+python3 scripts/plan.py           # bảng đầy đủ
+python3 scripts/plan.py --json    # để nhúng
+```
 
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 

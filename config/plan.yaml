@@ -1,0 +1,52 @@
+# Tầng KẾ HOẠCH — thứ biến "theo dõi giá" thành "quản lý tài sản".
+#
+# Cho tới nay mọi ngưỡng trong hệ thống đều là ngưỡng RỜI: "vàng ≥70% thì cảnh
+# báo". Câu hỏi chưa ai trả lời là 70% SO VỚI CÁI GÌ. Không có mục tiêu thì mọi
+# ngưỡng đều cảm giác tuỳ tiện, và một khuyến nghị cảm giác tuỳ tiện thì bị bỏ
+# qua — đúng như đã xảy ra suốt 19 kỳ.
+#
+# QUY TẮC CỨNG của file này: mọi con số ở đây là GIẢ ĐỊNH CỦA CHỦ DANH MỤC
+# hoặc SỐ LIỆU CÓ NGUỒN. Hệ thống KHÔNG tự dự báo lợi suất tương lai và không
+# điền hộ. Để null thì phần phân tích tương ứng báo "chưa khai báo" kèm khoảng
+# nhạy cảm, chứ không đoán.
+
+# --- Lạm phát: SỐ LIỆU THẬT, có nguồn -------------------------------------
+inflation:
+  annual_pct: 4.39
+  core_pct: 4.19
+  source: "CPI bình quân 7 tháng đầu 2026 so cùng kỳ — Tổng cục Thống kê (qua VOV, Vietstock)"
+  as_of: "2026-07-31"
+  note: >
+    Mục tiêu Quốc hội đặt cho 2026 là CPI bình quân khoảng 4,5%. Dùng con số
+    đã CÔNG BỐ (4,39%) làm mặc định, không dùng mục tiêu — mục tiêu là mong
+    muốn chính sách, không phải số đo.
+
+# --- Lợi suất kỳ vọng: GIẢ ĐỊNH, không phải dự báo của hệ thống ------------
+# Để null thì:
+#   - savings: hệ thống dùng lãi suất THẬT tốt nhất đang đo được
+#   - gold/equity: báo "chưa khai báo" và chạy bảng độ nhạy thay vì đoán
+expected_returns_nominal_pct:
+  gold: null        # kỳ vọng của anh về giá vàng dài hạn, %/năm
+  savings: null     # null = dùng mức tốt nhất đo được trong deposit_rates.jsonl
+  equity: null      # kỳ vọng cho danh mục cổ phiếu, %/năm
+  cash: 0.0         # tiền mặt không sinh lãi — đây là sự thật, không phải giả định
+
+# --- Dòng tiền: tiết kiệm thêm mỗi tháng ----------------------------------
+cash_flow:
+  monthly_surplus_vnd: null   # thu nhập trừ chi tiêu, phần dư gửi thêm
+  monthly_expense_vnd: null   # dùng để kiểm quỹ khẩn cấp đủ mấy tháng
+
+# --- Mục tiêu tài chính ----------------------------------------------------
+# Mỗi mục tiêu cần: tên, số tiền (theo SỨC MUA HÔM NAY), năm cần tới.
+# Ghi theo sức mua hôm nay là cố ý: "2 tỷ năm 2036" mơ hồ vì 2 tỷ năm 2036
+# không mua được thứ 2 tỷ mua được hôm nay. Hệ thống tự quy đổi theo lạm phát.
+goals: []
+  # Ví dụ cấu trúc khi điền:
+  # - name: "Quỹ hưu trí"
+  #   target_today_vnd: 3000000000
+  #   target_year: 2041
+  #   priority: 1
+  # - name: "Mua nhà"
+  #   target_today_vnd: 2000000000
+  #   target_year: 2031
+  #   priority: 2
