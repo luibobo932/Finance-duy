@@ -71,6 +71,7 @@ Windows Task Scheduler task `FinanceDuy-BanTinChieu` chạy `scripts/daily_eveni
 | `networth.py` + `data/assets.json` | Tài sản ròng thực tế (vàng/tiết kiệm/mặt/cổ phiếu) + phân bổ + cảnh báo tập trung |
 | `gold_price.py` + `data/gold_model.json` | Ước tính giá vàng nhẫn tại tiệm theo XAU/USD real-time (hiệu chuẩn từ 1 ảnh bảng giá); networth tự dùng để định giá vàng động |
 | `plan.py` + `config/plan.yaml` | **Tầng kế hoạch**: lợi suất THỰC sau lạm phát, bào mòn sức mua, bảng độ nhạy 10 năm, đối chiếu mục tiêu tài chính |
+| `send_report.py` | Gửi báo cáo qua Telegram (`plan`/`morning`/`evening`), `--preview` để xem trước mà không gửi |
 | `health_check.py` | Health check (Phase 10): freshness dữ liệu + vệ sinh an ninh (.env, quét secret); dữ liệu tự động cũ quá 3× ngưỡng thì leo thang WARN → FAIL; exit 1 khi FAIL; `--alert` gửi Telegram (chống spam qua `data/health_state.json`) |
 
 Xem `docs/ROADMAP.md` cho trạng thái toàn bộ 12 hạng mục phát triển và việc cần người dùng cung cấp.
@@ -532,6 +533,25 @@ Chủ danh mục đặt mục tiêu **nâng tổng tài sản lên 10 tỷ**. Hi
 Mốc thấp nhất neo vào **lãi suất tiền gửi tốt nhất đang đo được** — số thật. Hai mốc 12% và 20% là **nhận định** về mức bền vững, không phải số đo; `BAND_NOTE` nói rõ điều đó để không ai đọc nhầm thành dự báo.
 
 Hàm `required_years()` trả `None` khi kế hoạch **không bao giờ** tới đích — trả một con số khổng lồ ở đó sẽ bị đọc thành "rồi cũng tới", trong khi sự thật là kế hoạch không hoạt động.
+
+## Gửi báo cáo qua Telegram — và lỗi cắt cụt đã âm thầm chạy bấy lâu (15/08/2026)
+
+```
+python3 scripts/send_report.py --preview plan   # xem trước, chạy được mọi nơi
+python3 scripts/send_report.py plan             # gửi thật (cần mạng tới api.telegram.org)
+```
+
+### Lỗi thật phát hiện khi làm phần này
+
+`send_message()` **cắt cụt ở 4.000 ký tự** rồi ghi *"…(cắt bớt, xem đầy đủ trong bản tin gốc)"*. Bản tin hiện dài **7.438 ký tự** — nghĩa là **mọi bản tin automation đã gửi đều mất gần một nửa**. Tệ hơn, câu "xem đầy đủ trong bản tin gốc" là lời khuyên không thực hiện được: người đọc đang cầm điện thoại, không có bản gốc nào để mở.
+
+Nay `split_for_telegram()` cắt thành **nhiều tin**, luôn ở **ranh giới dòng** — cắt giữa dòng sẽ xé đôi cặp `<b>…</b>` và Telegram từ chối **cả tin** vì HTML không hợp lệ. Mỗi phần được đánh số `(phần k/n)`. Có test khẳng định mọi phần đều dưới giới hạn cứng 4.096 và mọi thẻ đều cân bằng.
+
+### Bảng canh cột phải giữ được cột
+
+Telegram hiển thị tin nhắn bằng font **tỷ lệ**, nên mọi bảng canh cột bằng dấu cách (bảng thời hạn, bảng độ nhạy — phần đáng đọc nhất của báo cáo) sẽ vỡ hàng trên điện thoại. `wrap_aligned_blocks()` tự phát hiện khối bảng và bọc vào `<pre>`; thẻ `<b>` bị gỡ bên trong vì Telegram xử lý định dạng lồng trong khối mã không nhất quán, và một thẻ hỏng làm hỏng cả tin.
+
+Nhãn phân loại trong bảng rút thành ký hiệu ngắn (✅/⚠️/❌) kèm chú giải đầy đủ bên dưới — bảng nhãn dài rộng ~118 ký tự, trong `<pre>` phải cuộn ngang trên điện thoại.
 
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 

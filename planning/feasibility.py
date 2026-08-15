@@ -45,6 +45,15 @@ BAND_LABELS = {
     "aggressive": "đòi hỏi rất cao; rất ít danh mục cá nhân giữ được mức này nhiều năm liền",
     "unrealistic": "KHÔNG phải mục tiêu đầu tư — cần đổi thời hạn hoặc tăng tích luỹ",
 }
+# Nhãn NGẮN cho bảng, nhãn dài cho phần chú giải bên dưới. Lý do rất cụ thể:
+# bảng đầy đủ nhãn dài rộng ~118 ký tự, trong khối <pre> của Telegram nó phải
+# cuộn ngang trên điện thoại — mà bảng này là phần đáng đọc nhất của báo cáo.
+BAND_SHORT = {
+    "risk_free": "✅ tiền gửi là đủ",
+    "moderate": "✅ khả thi",
+    "aggressive": "⚠️ đòi hỏi rất cao",
+    "unrealistic": "❌ không khả thi",
+}
 MODERATE_CEILING_PCT = 12.0
 AGGRESSIVE_CEILING_PCT = 20.0
 BAND_NOTE = ("Mốc dưới cùng là lãi suất tiền gửi tốt nhất ĐANG ĐO ĐƯỢC (số thật). "
@@ -64,6 +73,10 @@ class HorizonRow:
     @property
     def band_label(self) -> str:
         return BAND_LABELS.get(self.band, self.band)
+
+    @property
+    def band_short(self) -> str:
+        return BAND_SHORT.get(self.band, self.band)
 
 
 def required_return_pct(current_trieu: float, target_trieu: float, years: int) -> Optional[float]:

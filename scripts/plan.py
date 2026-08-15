@@ -22,7 +22,7 @@ if str(ROOT) not in sys.path:
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from planning.feasibility import (  # noqa: E402
-    GoalReality, best_lever, horizon_table,
+    BAND_LABELS, BAND_SHORT, GoalReality, best_lever, horizon_table,
 )
 from planning.plan import (  # noqa: E402
     check_goal, emergency_fund_months, load_plan, sensitivity,
@@ -118,7 +118,8 @@ def build() -> dict:
              "required_real_return_pct": r.required_real_return_pct,
              "required_monthly_trieu": r.required_monthly_trieu,
              "value_from_current_trieu": r.value_from_current_trieu,
-             "band": r.band, "band_label": r.band_label}
+             "band": r.band, "band_label": r.band_label,
+             "band_short": r.band_short}
             for r in rows
         ]
         item["best_lever"] = best_lever(rows)
@@ -194,7 +195,11 @@ def main() -> None:
                           f"{_vi(h['required_return_pct'], 2) + '%':>14}"
                           f"{'(' + _vi(h['required_real_return_pct'], 2) + '%)':>10}"
                           f"{(_vi(h['required_monthly_trieu'], 1) + ' tr/th') if h['required_monthly_trieu'] else 'không cần':>16}"
-                          f"   {h['band_label']}")
+                          f"   {h['band_short']}")
+                print("\n" + "\n".join(
+                    f"  {s}  =  {BAND_LABELS[k]}"
+                    for k, s in BAND_SHORT.items()
+                    if any(h["band"] == k for h in g["horizons"])))
                 print(f"\n{g['best_lever']}")
             print(f"\nLƯU Ý VỀ SỨC MUA: {g['reality_20y']}")
     else:

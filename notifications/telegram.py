@@ -77,17 +77,37 @@ def find_latest_chat_id(updates: list[dict]) -> int | None:
 
 
 def send_message(token: str, chat_id: int | str, text: str, parse_mode: str | None = None) -> dict:
-    # Telegram giới hạn 4096 ký tự/tin nhắn — cắt bớt an toàn nếu vượt
-    if len(text) > 4000:
-        text = text[:3990] + "\n\n…(cắt bớt, xem đầy đủ trong bản tin gốc)"
+    """Gửi tin; nội dung dài được CẮT THÀNH NHIỀU TIN, không cắt cụt.
+
+    Trước đây hàm này cắt cụt ở 4000 ký tự rồi ghi "…(cắt bớt, xem đầy đủ
+    trong bản tin gốc)". Bản tin hiện dài 7.438 ký tự, nên MỌI bản tin đã gửi
+    đều mất gần một nửa — và câu "xem đầy đủ trong bản tin gốc" là lời khuyên
+    không thực hiện được: người đọc đang cầm điện thoại, không có bản gốc nào
+    để mở.
+
+    Trả về kết quả của tin CUỐI CÙNG để giữ nguyên hợp đồng cũ với các caller
+    đang đọc `message_id`; dùng `send_message_parts` nếu cần đủ mọi phần.
+    """
+    return send_message_parts(token, chat_id, text, parse_mode)[-1]
+
+
+def send_message_parts(
+    token: str, chat_id: int | str, text: str, parse_mode: str | None = None
+) -> list[dict]:
+    """Gửi (nhiều) tin và trả kết quả từng phần, theo đúng thứ tự."""
+    from notifications.formatting import split_for_telegram
+
     # Mặc định KHÔNG dùng parse_mode: nội dung bản tin luôn chứa ký tự đặc
     # biệt không kiểm soát được (VD nhãn "TRUNG_TINH", "DO_NOT_BUY_MORE") —
     # Markdown (legacy) của Telegram coi "_"/"*" lẻ cặp là lỗi cú pháp và từ
     # chối gửi cả tin. Gửi trung thực nội dung > định dạng đẹp.
-    params = {"chat_id": chat_id, "text": text}
-    if parse_mode:
-        params["parse_mode"] = parse_mode
-    return _call(token, "sendMessage", params)
+    results = []
+    for part in split_for_telegram(text):
+        params = {"chat_id": chat_id, "text": part}
+        if parse_mode:
+            params["parse_mode"] = parse_mode
+        results.append(_call(token, "sendMessage", params))
+    return results
 
 
 def _save_chat_id(chat_id: int) -> None:
