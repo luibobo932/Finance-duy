@@ -312,6 +312,69 @@ def _deposit_holding_section(ranked: list[dict]) -> str:
 """
 
 
+def _equity_section(port) -> str:
+    """Mục theo dõi kỹ thuật cho các mã trong `config/portfolio.yaml: watchlist`.
+
+    Bảng watchlist Buffett-list bên dưới chỉ so giá gốc–giá hiện tại. Với 2 mã
+    có chuỗi EOD thật (`data/eod/`) thì đo được nhiều hơn thế — và Decision
+    Engine nhánh equity, vốn xây xong từ Phase 7, cũng chạy được ngay ở đây.
+    """
+    try:
+        from equity.signals import analyze as eq_analyze
+        from equity.signals import decide_for
+
+        # `getattr` chứ không truy cập thẳng: mục này chỉ là phần thêm, không
+        # được phép làm sập cả trang khi ngữ cảnh thiếu trường (test dùng port
+        # giả đã bắt đúng trường hợp đó).
+        held = {p.ticker.upper() for p in getattr(port, "stock_positions", []) if p.quantity}
+        watch = [x.upper() for x in (getattr(port, "watchlist", None) or [])]
+    except Exception:  # noqa: BLE001 — thiếu mục này không được làm hỏng trang
+        return ""
+    rows = []
+    for t in watch:
+        s = eq_analyze(t)
+        if not s.has_data:
+            continue
+        d = decide_for(s, has_position=t in held)
+        flags = []
+        if s.tech.get("breakout") and s.tech["breakout"] != "NONE":
+            flags.append(html.escape(s.tech["breakout"]))
+        if s.volume_flag:
+            flags.append("KLGD bất thường")
+        rows.append(
+            f'<tr><td class="tk">{html.escape(t)}</td>'
+            f"<td>{_n(s.close, 2)}</td>"
+            f"<td>{_n(s.tech.get('rsi14'), 1) if s.tech.get('rsi14') is not None else '—'}</td>"
+            f"<td>{_signed((s.tech.get('macd') or {}).get('hist') or 0, 2)}</td>"
+            f"<td>{_n(s.tech.get('support'), 2) if s.tech.get('support') is not None else '—'}</td>"
+            f"<td>{_n(s.tech.get('resistance'), 2) if s.tech.get('resistance') is not None else '—'}</td>"
+            f"<td><b>{html.escape(d['action_vi'])}</b></td>"
+            f'<td class="na">{" · ".join(flags) if flags else "—"}</td></tr>'
+        )
+    if not rows:
+        return ""
+    note = ("Đang <b>không nắm giữ</b> cổ phiếu nào — nên khuyến nghị dừng ở ĐỨNG NGOÀI / "
+            "CHỜ XÁC NHẬN / MUA THĂM DÒ. Không có \"GIỮ\" cho mã không có vị thế: "
+            "giữ thứ mình không sở hữu là lời khuyên không thực hiện được."
+            if not held else
+            "Khuyến nghị tính theo vị thế thật đang khai báo trong <code>config/portfolio.yaml</code>.")
+    return f"""
+  <section class="card">
+    <h2 class="card-title">Theo dõi kỹ thuật — mã có dữ liệu EOD</h2>
+    <p class="card-note">{note} Chỉ báo tính từ <code>data/eod/&lt;MÃ&gt;.csv</code> qua
+      <code>equity/technical.py</code>; khuyến nghị do Decision Engine (nhánh equity) sinh ra,
+      không viết tay. Giá nghìn đồng.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Mã</th><th>Giá</th><th>RSI(14)</th><th>MACD hist</th>
+          <th>Hỗ trợ</th><th>Kháng cự</th><th>Khuyến nghị</th><th>Cờ</th></tr></thead>
+        <tbody>{"".join(rows)}</tbody>
+      </table>
+    </div>
+  </section>
+"""
+
+
 def _signed(value: float, decimals: int = 0) -> str:
     """Số có dấu, định dạng Việt (1.234,5). Cột dương phải có dấu + để khớp
     nhãn trên biểu đồ — thiếu dấu ở một chỗ là bảng và hình nói khác nhau."""
@@ -699,6 +762,7 @@ def render(ctx: dict) -> str:
 
     scenario_section = _scenario_section(ctx)
     deposit_section = _deposit_holding_section(_ranked_deposit_rates())
+    equity_section = _equity_section(ctx["portfolio"])
 
     gen = ctx["generated_at"].strftime("%d/%m/%Y %H:%M")
 
@@ -726,6 +790,7 @@ def render(ctx: dict) -> str:
 {rebalance_section}
 {scenario_section}
 {deposit_section}
+{equity_section}
 
   <section class="two-col">
     <div class="card">

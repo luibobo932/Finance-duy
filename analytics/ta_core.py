@@ -98,3 +98,45 @@ def volatility_annualized_pct(closes: list[float], n: int = 20) -> Optional[floa
     var = sum((r - mean) ** 2 for r in rets) / (len(rets) - 1)
     sd = var ** 0.5
     return round(sd * (252 ** 0.5) * 100, 2)
+
+
+# --- Nhãn xu hướng: MỘT định nghĩa cho cả vàng lẫn cổ phiếu ------------------
+#
+# Trước đây logic này chỉ nằm trong gold/indicators.py. Khi nối tiếp phần cổ
+# phiếu, chép nó sang equity/ sẽ tạo nguồn sự thật thứ hai cho cùng một câu hỏi
+# — đúng cái bẫy mà chính module này ra đời để tránh (2 bản cài đặt RSI).
+
+RSI_BULL_ABOVE = 55.0
+RSI_BEAR_BELOW = 45.0
+
+
+def indicator_votes(rsi14: Optional[float], macd_hist: Optional[float]) -> dict[str, int]:
+    """Phiếu của từng chỉ báo ĐANG CÓ: +1 tích cực, −1 tiêu cực, 0 trung tính.
+
+    Chỉ báo thiếu thì KHÔNG bỏ phiếu — vắng mặt, không phải phiếu trắng.
+    """
+    votes: dict[str, int] = {}
+    if rsi14 is not None:
+        votes["rsi"] = 1 if rsi14 > RSI_BULL_ABOVE else (-1 if rsi14 < RSI_BEAR_BELOW else 0)
+    if macd_hist is not None:
+        votes["macd"] = 1 if macd_hist > 0 else (-1 if macd_hist < 0 else 0)
+    return votes
+
+
+def trend_from_indicators(rsi14: Optional[float], macd_hist: Optional[float]) -> Optional[str]:
+    """TICH_CUC / TIEU_CUC / TRUNG_TINH, hoặc **None khi không đo được**.
+
+    None nghĩa là "chưa đo được", TRUNG_TINH nghĩa là "đã đo, và đang đi ngang".
+    Gộp hai thứ này làm hệ thống nói chắc về điều nó không biết — lỗi đã gặp
+    thật: nhãn TRUNG_TINH sinh ra từ một file 1 dòng được bản tin in như một
+    phát hiện suốt gần một tháng.
+    """
+    votes = indicator_votes(rsi14, macd_hist)
+    if not votes:
+        return None
+    score = sum(votes.values())
+    if score >= 1:
+        return "TICH_CUC"
+    if score <= -1:
+        return "TIEU_CUC"
+    return "TRUNG_TINH"

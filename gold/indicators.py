@@ -32,7 +32,8 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from analytics.ta_core import atr, bollinger, macd, rsi, sma, volatility_annualized_pct
+from analytics.ta_core import (atr, bollinger, indicator_votes, macd, rsi, sma,
+                               trend_from_indicators, volatility_annualized_pct)
 
 ROOT = Path(__file__).resolve().parent.parent
 HISTORY_CSV = ROOT / "data" / "normalized" / "xuan_trieu_gold_history.csv"
@@ -126,15 +127,7 @@ def trend_label(a: dict) -> Optional[str]:
     cần 26. Với 19 điểm hiện có, đòi đủ bộ nghĩa là vứt bỏ RSI 78,3 (quá mua
     rõ rệt) và báo "trung tính".
     """
-    votes = _votes(a)
-    if not votes:
-        return None
-    score = sum(votes.values())
-    if score >= 1:
-        return "TICH_CUC"
-    if score <= -1:
-        return "TIEU_CUC"
-    return "TRUNG_TINH"
+    return trend_from_indicators(a.get("rsi14"), (a.get("macd") or {}).get("hist"))
 
 
 def trend_evidence(a: dict) -> str:
@@ -154,15 +147,6 @@ def trend_evidence(a: dict) -> str:
 
 
 def _votes(a: dict) -> dict[str, int]:
-    """Phiếu của từng chỉ báo ĐANG CÓ: +1 tích cực, −1 tiêu cực, 0 trung tính.
-
-    Chỉ báo trả None thì KHÔNG bỏ phiếu — vắng mặt, không phải phiếu trắng.
-    """
-    votes: dict[str, int] = {}
-    r = a.get("rsi14")
-    if r is not None:
-        votes["rsi"] = 1 if r > 55 else (-1 if r < 45 else 0)
-    m = a.get("macd")
-    if m is not None and m.get("hist") is not None:
-        votes["macd"] = 1 if m["hist"] > 0 else (-1 if m["hist"] < 0 else 0)
-    return votes
+    """Phiếu chỉ báo — uỷ quyền cho analytics.ta_core để vàng và cổ phiếu dùng
+    CHUNG một định nghĩa "xu hướng", không phải hai bản chép tay."""
+    return indicator_votes(a.get("rsi14"), (a.get("macd") or {}).get("hist"))

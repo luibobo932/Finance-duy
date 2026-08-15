@@ -249,6 +249,53 @@ def send_telegram_report(text: str) -> None:
         logger.warning(f"Gửi Telegram thất bại: {e}")
 
 
+def section_chung_khoan() -> str:
+    """Mục CHỨNG KHOÁN — mục mà `section_tong_quan()` đã trỏ tới ở mọi kỳ bản
+    tin trong khi nó KHÔNG TỒN TẠI.
+
+    Toàn bộ lớp phân tích đã có sẵn (`equity/technical.py`, nhánh equity của
+    Decision Engine, rule quản trị của Risk Officer) và chạy được ngay trên 43
+    phiên EOD thật của VCB/CTD — chỉ chưa ai gọi.
+    """
+    from equity.signals import analyze as eq_analyze
+    from equity.signals import decide_for
+    from portfolio.loader import load_portfolio
+
+    port = load_portfolio()
+    held = {p.ticker.upper(): p for p in port.stock_positions if p.quantity}
+    tickers = [t.upper() for t in (port.watchlist or [])]
+    if not tickers:
+        return ""
+
+    lines = ["## CHỨNG KHOÁN", ""]
+    if not held:
+        lines.append("Đang **không nắm giữ** cổ phiếu nào — đây là danh sách theo dõi, "
+                     "nên khuyến nghị dừng ở ĐỨNG NGOÀI / CHỜ XÁC NHẬN / MUA THĂM DÒ "
+                     "(không có \"GIỮ\" cho mã không có vị thế).")
+        lines.append("")
+    for t in tickers:
+        s = eq_analyze(t)
+        if not s.has_data:
+            lines.append(f"- **{t}**: chưa có dữ liệu EOD (`data/eod/{t}.csv`)")
+            continue
+        d = decide_for(s, has_position=t in held)
+        lines.append(f"- **{t}** {s.close:,.2f} (EOD {s.last_date}) → "
+                     f"**{d['action_vi']}** (tin cậy {d['confidence']}/100)")
+        lines.append(f"  - {s.evidence()}")
+        sr = []
+        if s.tech.get("support") is not None:
+            sr.append(f"hỗ trợ {s.tech['support']:,.2f}")
+        if s.tech.get("resistance") is not None:
+            sr.append(f"kháng cự {s.tech['resistance']:,.2f}")
+        if sr:
+            lines.append(f"  - {' · '.join(sr)}")
+        if s.tech.get("breakout") and s.tech["breakout"] != "NONE":
+            lines.append(f"  - ⚠️ {s.tech['breakout']}")
+        if s.volume_flag:
+            lines.append(f"  - ⚠️ {s.volume_flag}")
+    return "\n".join(lines)
+
+
 def section_alerts() -> str:
     from alerts import load as load_alerts  # scripts/alerts.py
 
@@ -365,6 +412,7 @@ def main():
         section_kich_ban_gia_vang(parts, total),
         section_ke_hoach_giam_ty_trong(ranked_deposits),
         section_tien_gui(ranked_deposits),
+        section_chung_khoan(),
         section_alerts(),
     ]
     for s in sections:

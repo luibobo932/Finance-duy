@@ -25,6 +25,9 @@ class DecisionInput:
     flow_label: Optional[str] = None  # dòng tiền/khối ngoại, cùng thang
     margin_of_safety_pct: Optional[float] = None
     governance_status: Optional[str] = None
+    # Có đang NẮM GIỮ tài sản này không. Mặc định False vì watchlist là trạng
+    # thái phổ biến hơn ở danh mục này (đã bán hết cổ phiếu 19/7).
+    has_position: bool = False
     # None = CHƯA ĐO, không phải "hoàn hảo". Trước đây hai trường này mặc định
     # 100.0 và không caller nào truyền giá trị khác, nên 45% trọng số điểm tin
     # cậy là số cứng và nhánh hạ cấp `data_quality = "FAIR"` không bao giờ chạy
@@ -73,7 +76,12 @@ def derive_initial_action(inp: DecisionInput) -> str:
         ):
             return Action.BUY_SMALL.value
         if inp.trend_label == "TICH_CUC" or inp.fundamental_label == "TICH_CUC":
-            return Action.HOLD.value
+            # KHÔNG thể "GIỮ" thứ mình không nắm giữ. Chủ danh mục đã bán hết
+            # cổ phiếu (config/portfolio.yaml: positions rỗng) nên VCB/CTD chỉ
+            # là danh sách theo dõi. Trả "GIỮ" cho một mã không có vị thế là
+            # lời khuyên không thực hiện được — lỗi chỉ lộ ra khi nhánh equity
+            # được đem ra dùng thật, và nó vừa được đem ra dùng thật.
+            return Action.HOLD.value if inp.has_position else Action.WATCH.value
         return Action.WATCH.value
 
     return Action.WATCH.value

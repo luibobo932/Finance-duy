@@ -415,6 +415,37 @@ Khoản đang gửi: 246 tr @ 6,50%/năm · VIB · kỳ hạn 12 tháng
 
 Thiếu dữ liệu trả `None`, **không trả 0** — 0 sẽ bị đọc thành "chưa sinh lãi đồng nào", khác hẳn "chưa biết".
 
+## Trụ cột cổ phiếu: xây xong nhưng chưa cắm điện (14/08/2026)
+
+Ba bằng chứng, không phải cảm tính:
+
+- `run_morning.py::section_tong_quan()` in nguyên văn *"Cổ phiếu watchlist: **xem mục Chứng khoán bên dưới**"* — trong khi **không có mục nào như vậy**. Bản tin trỏ tới một phần không tồn tại, ở mọi kỳ, suốt từ đầu.
+- `equity/technical.py::technical_snapshot()` đã có đủ RSI, MACD, MA, relative volume, z-score, hỗ trợ/kháng cự, breakout, trend state — và chạy được ngay trên **43 phiên EOD thật** của VCB/CTD. Không caller nào gọi.
+- `decision/policy_engine.py` có sẵn nhánh `asset_class == "equity"`, `risk_officer` có rule quản trị doanh nghiệp + rule tập trung cổ phiếu. **Chưa dòng code nào chạy Decision Engine cho một mã cổ phiếu.**
+
+Nối lại qua `equity/signals.py` (phần nối, không phải phần tính — công thức vẫn ở `equity/technical.py`). Kết quả thật:
+
+```
+- VCB 60,30 (EOD 2026-08-10) → ĐỨNG NGOÀI (tin cậy 80/100)
+  - đo trên 43 phiên EOD: RSI(14)=59,1, MACD hist=+0,66, giá trên SMA20 (57,33)
+  - hỗ trợ 60,20 · kháng cự 61,00
+- CTD 62,40 (EOD 2026-08-10) → ĐỨNG NGOÀI (tin cậy 80/100)
+  - đo trên 43 phiên EOD: RSI(14)=47,3, MACD hist=+0,91, giá trên SMA20 (60,77)
+  - hỗ trợ 54,70 · kháng cự 65,00
+```
+
+### Lỗi ngữ nghĩa lộ ra ngay khi nhánh equity được dùng thật
+
+Chủ danh mục **đã bán hết cổ phiếu** (19/7), nên VCB/CTD chỉ là danh sách theo dõi. Nhánh cũ trả `HOLD` khi xu hướng tích cực — nhưng **không thể "GIỮ" thứ mình không nắm giữ**; đó là lời khuyên không thực hiện được. `DecisionInput` nay có `has_position` (mặc định `False`, khớp thực tế danh mục này), và không có vị thế thì xu hướng tích cực ra **ĐỨNG NGOÀI**.
+
+Loại lỗi này chỉ lộ ra khi code được đem dùng thật — đúng lý do không nên để một nhánh "xây xong" nằm im.
+
+### Một định nghĩa "xu hướng" cho cả vàng lẫn cổ phiếu
+
+Logic chấm nhãn xu hướng chuyển vào `analytics/ta_core.py` (`indicator_votes`, `trend_from_indicators`); `gold/indicators.py` uỷ quyền sang đó. Chép nó vào `equity/` sẽ tạo nguồn sự thật thứ hai cho cùng một câu hỏi — đúng cái bẫy mà chính `ta_core.py` ra đời để tránh (từng có 2 bản cài đặt RSI). Có test khẳng định hai bên luôn cho cùng kết quả.
+
+Cảnh báo **KLGD ≥ 1,5× bình quân** dùng lại đúng ngưỡng của `scripts/trend.py report` — một hệ thống, một ngưỡng — và dẫn thẳng sang phần soi giao dịch thỏa thuận / công bố giao dịch người nội bộ trong `docs/phuong-phap-phan-tich.md`.
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```
