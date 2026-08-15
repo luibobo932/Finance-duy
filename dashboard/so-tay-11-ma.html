@@ -1,0 +1,537 @@
+<title>Sổ tay 11 mã</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ground:#f6f7f5;
+    --surface:#ffffff;
+    --surface-2:#eef1ee;
+    --ink:#14181a;
+    --ink-2:#3f4a4a;
+    --ink-3:#6d7876;
+    --rule:#d8ddd8;
+    --rule-soft:#e6eae5;
+    --accent:#0f5c5c;
+    --accent-soft:#e2efec;
+    --good:#0f6b45;
+    --good-soft:#e2f0e8;
+    --warn:#8a6008;
+    --warn-soft:#f6eeda;
+    --crit:#96262d;
+    --crit-soft:#f7e6e5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground:#101413;
+      --surface:#181d1c;
+      --surface-2:#212827;
+      --ink:#eef2ef;
+      --ink-2:#bcc6c3;
+      --ink-3:#8b9794;
+      --rule:#2c3533;
+      --rule-soft:#232b2a;
+      --accent:#5fbfb4;
+      --accent-soft:#16302e;
+      --good:#5cc191;
+      --good-soft:#152a22;
+      --warn:#d9a541;
+      --warn-soft:#2c2415;
+      --crit:#e3878a;
+      --crit-soft:#2e1c1d;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground:#101413;
+    --surface:#181d1c;
+    --surface-2:#212827;
+    --ink:#eef2ef;
+    --ink-2:#bcc6c3;
+    --ink-3:#8b9794;
+    --rule:#2c3533;
+    --rule-soft:#232b2a;
+    --accent:#5fbfb4;
+    --accent-soft:#16302e;
+    --good:#5cc191;
+    --good-soft:#152a22;
+    --warn:#d9a541;
+    --warn-soft:#2c2415;
+    --crit:#e3878a;
+    --crit-soft:#2e1c1d;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-text-size-adjust: 100%;
+  }
+  .sheet { max-width: 900px; margin: 0 auto; padding: 40px 20px 72px; }
+
+  h1, h2, h3, .eyebrow, .chip, th, .tk, .stat .n, .stat .k {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  h1 {
+    font-size: clamp(1.9rem, 5vw, 2.7rem);
+    line-height: 1.1; letter-spacing: -0.022em; font-weight: 700;
+    margin: 0 0 10px; text-wrap: balance;
+  }
+  h2 {
+    font-size: 1.22rem; letter-spacing: -0.012em; font-weight: 700;
+    margin: 0 0 6px; text-wrap: balance;
+  }
+  h3 { font-size: 1.02rem; font-weight: 700; margin: 0; letter-spacing: -0.008em; }
+  p { margin: 0; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+
+  .eyebrow {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.11em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 12px;
+  }
+  .lede { font-size: 1.06rem; color: var(--ink-2); max-width: 66ch; }
+  .meta {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.76rem; color: var(--ink-3); line-height: 1.75;
+    border-top: 1px solid var(--rule); padding-top: 12px; margin-top: 22px;
+  }
+
+  header.top { margin-bottom: 40px; }
+  section { margin-bottom: 40px; }
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  .stack-s { display: flex; flex-direction: column; gap: 9px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 20px 22px;
+  }
+  .card-head {
+    display: flex; flex-wrap: wrap; align-items: baseline;
+    gap: 10px 14px; margin-bottom: 12px;
+  }
+  .tk {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 1.25rem; font-weight: 700; letter-spacing: 0.02em;
+  }
+  .price {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums; color: var(--ink-2); font-size: 0.95rem;
+  }
+  .why { color: var(--ink-3); font-size: 0.9rem; font-style: italic; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 3px 9px; border-radius: 3px;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .chip.good { color: var(--good); background: var(--good-soft); border-color: var(--good); }
+  .chip.warn { color: var(--warn); background: var(--warn-soft); border-color: var(--warn); }
+  .chip.crit { color: var(--crit); background: var(--crit-soft); border-color: var(--crit); }
+  .chip.flat { color: var(--ink-2); background: var(--surface-2); border-color: var(--rule); }
+
+  .rank {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8rem; font-weight: 700; color: var(--surface);
+    background: var(--accent); border-radius: 3px; padding: 2px 7px;
+  }
+
+  .pt { display: flex; gap: 10px; align-items: flex-start; }
+  .pt .lab {
+    flex: none; width: 78px; font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    padding-top: 5px;
+  }
+  .pt .txt { font-size: 0.95rem; color: var(--ink-2); }
+  .pt .txt b { color: var(--ink); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.87rem; min-width: 620px; }
+  thead th {
+    text-align: left; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-3); padding: 11px 13px;
+    border-bottom: 1px solid var(--rule); white-space: nowrap;
+  }
+  tbody td {
+    padding: 11px 13px; border-bottom: 1px solid var(--rule-soft);
+    font-variant-numeric: tabular-nums; color: var(--ink-2);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.sym {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight: 700; color: var(--ink);
+  }
+  .num-up { color: var(--good); font-weight: 600; }
+  .num-dn { color: var(--crit); font-weight: 600; }
+
+  .callout {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: 15px 18px; border-radius: 0 4px 4px 0; font-size: 0.95rem; color: var(--ink-2);
+  }
+  .callout.crit { border-left-color: var(--crit); background: var(--crit-soft); }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .callout b { color: var(--ink); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .stat { background: var(--surface-2); border-radius: 4px; padding: 12px 14px; }
+  .stat .k {
+    font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-3); display: block; margin-bottom: 4px;
+  }
+  .stat .n { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  ol.rank-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 16px; }
+  ul.tight { margin: 0; padding-left: 1.15em; color: var(--ink-2); font-size: 0.95rem; }
+  ul.tight li { margin-bottom: 5px; }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85em; background: var(--surface-2); padding: 1px 5px; border-radius: 3px;
+  }
+  hr.div { border: none; border-top: 1px solid var(--rule); margin: 0; }
+  footer.foot { color: var(--ink-3); font-size: 0.84rem; border-top: 1px solid var(--rule); padding-top: 18px; }
+  footer.foot a { color: var(--ink-3); }
+</style>
+
+<div class="sheet">
+
+  <header class="top">
+    <p class="eyebrow">Rà soát watchlist · 15/08/2026</p>
+    <h1>Sổ tay 11 mã</h1>
+    <p class="lede">Phân tích sâu 11 mã đang theo dõi, xếp hạng theo mức độ hấp dẫn hiện tại, và chỉ ra
+      mã nào <em>không</em> nên đụng vào lúc này. Mọi con số cơ bản đều kèm nguồn; mọi chỉ báo kỹ thuật
+      tính từ dữ liệu EOD thật trong repo.</p>
+    <p class="meta">
+      Giá &amp; chỉ báo: EOD <b>10/08/2026</b> (data/eod/ — mới nhất repo có, đã 5 ngày)<br>
+      Số liệu cơ bản: tin BCTC công bố tới <b>14/08/2026</b>, lưu ở <code>data/fundamentals.jsonl</code><br>
+      Xếp hạng là <b>nhận định</b> theo khung <code>docs/phuong-phap-phan-tich.md</code> — không phải khuyến nghị đầu tư từ tổ chức được cấp phép
+    </p>
+  </header>
+
+  <section>
+    <h2>Bối cảnh: thị trường đang mạnh, nhưng phân hóa</h2>
+    <p style="color:var(--ink-2); margin-top:8px; max-width:66ch">
+      VN-Index quanh <b>1.793 điểm</b>, đang thử vùng 1.800. Nền lợi nhuận rất tốt: LNST cổ đông công ty
+      mẹ trên HoSE <b>+45,8%</b> trong quý II và <b>+29,2%</b> nửa đầu năm — nhưng <b>ngân hàng và bất động
+      sản đóng góp tới ~70%</b> mức tăng đó. Nói cách khác, phần còn lại của thị trường tăng chậm hơn nhiều
+      so với những gì chỉ số thể hiện.
+    </p>
+    <div class="grid2" style="margin-top:16px">
+      <div class="stat"><span class="k">Khối ngoại</span><span class="n">−45.000 tỷ</span>
+        <p class="why" style="font-style:normal; margin-top:4px">bán ròng 4 tháng đầu năm — nhưng tuần gần đây đã quay lại mua ròng ~2.250 tỷ trên HoSE</p></div>
+      <div class="stat"><span class="k">Nâng hạng FTSE</span><span class="n">~1,5 tỷ USD</span>
+        <p class="why" style="font-style:normal; margin-top:4px">dòng vốn thụ động ước tính; đợt giải ngân đầu có thể từ <b>tháng 9/2026</b></p></div>
+    </div>
+    <div class="callout" style="margin-top:16px">
+      <b>Vì sao điều này quan trọng với anh:</b> trong danh sách dự báo được vào rổ FTSE có <b>4 mã anh
+      đang theo dõi</b> — HPG, VCB, FPT, BSR. Đó là một chất xúc tác có lịch cụ thể, không phải kỳ vọng chung chung.
+    </div>
+  </section>
+
+  <hr class="div">
+
+  <section style="margin-top:40px">
+    <p class="eyebrow">Bảng tổng hợp</p>
+    <h2>11 mã, một trang</h2>
+    <p style="color:var(--ink-3); font-size:0.9rem; margin:6px 0 14px">
+      Giá nghìn đồng, EOD 10/08. Cột “Đánh giá” là nhận định của tôi sau khi ghép kỹ thuật + cơ bản + rủi ro.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Mã</th><th>Giá</th><th>Từ gốc 18/7</th><th>Điểm mạnh nhất</th><th>Rủi ro lớn nhất</th><th>Đánh giá</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="sym">HPG</td><td>22,10</td><td class="num-up">+1,14%</td><td>LNST Q2 +51%, HRC kỷ lục</td><td>Cung thép tăng, biên co</td><td><span class="chip good">Ưu tiên 1</span></td></tr>
+          <tr><td class="sym">MWG</td><td>73,00</td><td class="num-dn">−4,82%</td><td>P/E 9,4× với ROE 26,9%</td><td>Giảm sở hữu ĐMX sau IPO</td><td><span class="chip good">Ưu tiên 2</span></td></tr>
+          <tr><td class="sym">FPT</td><td>71,80</td><td class="num-up">+7,16%</td><td>P/E thấp nhất 5 năm</td><td>Đơn ký mới hồi phục chậm</td><td><span class="chip good">Ưu tiên 3</span></td></tr>
+          <tr><td class="sym">REE</td><td>47,60</td><td class="num-up">+2,92%</td><td>7.100 tỷ tiền mặt, dòng tiền đều</td><td>Tăng trưởng chậm</td><td><span class="chip good">Phòng thủ</span></td></tr>
+          <tr><td class="sym">VCB</td><td>60,30</td><td class="num-up">+3,08%</td><td>LNTT Q2 +58%, nợ xấu 0,61%</td><td>Nợ nhóm 4 tăng 451%</td><td><span class="chip warn">Theo dõi</span></td></tr>
+          <tr><td class="sym">CTD</td><td>62,40</td><td class="num-dn">−1,73%</td><td>Backlog 51.600 tỷ kỷ lục</td><td>Biên LNST chỉ ~2,3%</td><td><span class="chip warn">Theo dõi</span></td></tr>
+          <tr><td class="sym">BSR</td><td>26,90</td><td class="num-up">+8,03%</td><td>LNST Q2 +382%</td><td>Lãi theo chu kỳ crack spread</td><td><span class="chip warn">Theo dõi</span></td></tr>
+          <tr><td class="sym">VNM</td><td>62,10</td><td class="num-up">+5,25%</td><td>Thương hiệu, cổ tức đều</td><td>Chưa có số Q2 cụ thể</td><td><span class="chip flat">Chưa đủ dữ liệu</span></td></tr>
+          <tr><td class="sym">ACB</td><td>22,65</td><td class="num-dn">−3,82%</td><td>Bán lẻ thận trọng</td><td>LNTT Q2 dự báo −7%</td><td><span class="chip flat">Đứng ngoài</span></td></tr>
+          <tr><td class="sym">GAS</td><td>79,80</td><td class="num-up">+4,72%</td><td>Độc quyền trung nguồn khí</td><td>Dự báo tăng trưởng LN âm Q2</td><td><span class="chip flat">Đứng ngoài</span></td></tr>
+          <tr><td class="sym">PNJ</td><td>35,95</td><td class="num-dn">−16,40%</td><td>—</td><td>Lỗ 283 tỷ, dự phòng 865,5 tỷ</td><td><span class="chip crit">Tránh</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr class="div">
+
+  <section style="margin-top:40px">
+    <p class="eyebrow">Hai mã anh theo sát nhất</p>
+    <h2>VCB và CTD — soi kỹ</h2>
+    <div class="stack" style="margin-top:16px">
+
+      <article class="card">
+        <div class="card-head">
+          <span class="tk">VCB</span>
+          <span class="price">60,30 · EOD 10/08</span>
+          <span class="chip warn">Theo dõi</span>
+        </div>
+        <div class="stack-s">
+          <div class="pt"><span class="lab">Kỹ thuật</span><span class="txt">
+            RSI(14) <b>59,1</b> · MACD hist <b>+0,66</b> · giá <b>trên</b> SMA20 (57,33) · hỗ trợ <b>60,20</b>,
+            kháng cự <b>61,00</b>. Đo trên 43 phiên EOD thật. Xu hướng tích cực nhưng
+            giá đang <b>nằm sát kháng cự</b> và chỉ cách hỗ trợ 0,1 điểm — vùng rủi ro/lợi nhuận không hấp dẫn để vào mới.
+          </span></div>
+          <div class="pt"><span class="lab">Cơ bản</span><span class="txt">
+            LNTT quý II <b>17.420 tỷ (+58%)</b>, LNST <b>14.550 tỷ (+64%)</b> — cao nhất lịch sử.
+            Sáu tháng LNTT <b>29.222 tỷ (+33,5%)</b>, đã xong hơn 63% kế hoạch năm. Thu nhập lãi thuần
+            quý II +35,2%. Tỷ lệ nợ xấu <b>0,61%</b> — vẫn thuộc nhóm thấp nhất hệ thống.
+          </span></div>
+          <div class="pt"><span class="lab">Cờ đỏ</span><span class="txt">
+            <b>Nợ nhóm 4 (nghi ngờ) tăng 451%, lên 1.227 tỷ — gấp 5,5 lần.</b> Con số tuyệt đối còn nhỏ so
+            với quy mô dư nợ 1,7 triệu tỷ, nhưng nhóm 4 là <b>bậc ngay trước nợ có khả năng mất vốn</b>.
+            Một quý tăng vọt như vậy là tín hiệu sớm cần theo dõi qua vài quý, không phải lý do hoảng hốt.
+          </span></div>
+          <div class="pt"><span class="lab">Xúc tác</span><span class="txt">
+            Nằm trong danh sách dự báo được đưa vào rổ FTSE — dòng vốn thụ động có thể bắt đầu giải ngân từ tháng 9.
+          </span></div>
+          <div class="pt"><span class="lab">Kết luận</span><span class="txt">
+            Doanh nghiệp tốt, <b>điểm vào không tốt</b>. Nếu muốn sở hữu, đợi giá lùi về vùng SMA20
+            (~57) thay vì mua sát kháng cự. Theo dõi nợ nhóm 4 ở BCTC quý III.
+          </span></div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <span class="tk">CTD</span>
+          <span class="price">62,40 · EOD 10/08</span>
+          <span class="chip warn">Theo dõi</span>
+        </div>
+        <div class="stack-s">
+          <div class="pt"><span class="lab">Kỹ thuật</span><span class="txt">
+            RSI(14) <b>47,3</b> (trung tính) · MACD hist <b>+0,91</b> · giá trên SMA20 (60,77) ·
+            hỗ trợ <b>54,70</b>, kháng cự <b>65,00</b>. Biên độ rộng hơn VCB nhiều — còn chỗ chạy tới kháng cự,
+            và hỗ trợ cách xa 12%.
+          </span></div>
+          <div class="pt"><span class="lab">Cơ bản</span><span class="txt">
+            Năm tài chính 2026 (kết thúc 30/6): doanh thu <b>34.340 tỷ (+38%)</b>, vượt 14,5% kế hoạch;
+            LNST <b>788 tỷ</b>. Backlog chuyển tiếp <b>51.600 tỷ</b> — cao nhất lịch sử công ty.
+          </span></div>
+          <div class="pt"><span class="lab">Vấn đề</span><span class="txt">
+            Biên LNST chỉ <b>~2,3%</b> (788 / 34.340). Đây là đặc thù tổng thầu xây dựng, không phải lỗi
+            quản trị — nhưng nó có nghĩa: <b>chi phí nguyên vật liệu tăng vài phần trăm là ăn hết lợi nhuận</b>.
+            Backlog kỷ lục là doanh thu tương lai, chưa phải lợi nhuận tương lai.
+          </span></div>
+          <div class="pt"><span class="lab">Cần soi</span><span class="txt">
+            Ngành này rủi ro nằm ở <b>khoản phải thu</b>. Khi có BCTC quý tiếp theo, đối chiếu
+            dòng tiền kinh doanh với lợi nhuận ròng — <code>equity/fundamentals.py</code> đã có sẵn
+            <code>cash_flow_to_income_ratio</code>, dưới 0,7 là cờ đỏ.
+          </span></div>
+          <div class="pt"><span class="lab">Kết luận</span><span class="txt">
+            Câu chuyện tăng trưởng thật, nhưng <b>chất lượng lợi nhuận chưa kiểm chứng được</b> bằng dữ liệu
+            đang có. Giữ trong watchlist, chưa đủ căn cứ để ưu tiên hơn nhóm dẫn đầu bên dưới.
+          </span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <hr class="div">
+
+  <section style="margin-top:40px">
+    <p class="eyebrow">Xếp hạng theo mức hấp dẫn hiện tại</p>
+    <h2>Bốn mã tiềm năng nhất</h2>
+    <p style="color:var(--ink-3); font-size:0.9rem; margin:6px 0 18px">
+      Thứ tự có nghĩa: xếp theo tỷ lệ giữa <em>bằng chứng đã có</em> và <em>giá đang trả</em>.
+    </p>
+    <ol class="rank-list">
+
+      <li class="card">
+        <div class="card-head">
+          <span class="rank">01</span>
+          <span class="tk">HPG</span>
+          <span class="price">22,10</span>
+          <span class="chip good">Hấp dẫn nhất</span>
+        </div>
+        <p class="why" style="margin-bottom:10px">Kết quả kinh doanh tốt nhất nhóm, giá lại yếu nhất nhóm.</p>
+        <ul class="tight">
+          <li>Quý II: doanh thu <b>55.557 tỷ (+53%)</b>, LNST <b>6.424 tỷ (+51%)</b>.</li>
+          <li>Sản lượng thép <b>3,8 triệu tấn (+30%)</b>; riêng HRC <b>1,9 triệu tấn (+64%)</b> — kỷ lục theo quý, nhờ Dung Quất 2.</li>
+          <li>Khối ngoại đang tăng tốc gom, và HPG nằm trong danh sách dự báo vào rổ FTSE.</li>
+          <li><b>Nghịch lý đáng chú ý:</b> giá cổ phiếu thủng đáy 1 năm <em>dù</em> kết quả tích cực. Khi thị trường
+            định giá ngược chiều với kết quả, hoặc thị trường biết điều gì đó, hoặc đó là cơ hội.</li>
+          <li><b>Rủi ro:</b> nguồn cung thép tiếp tục tăng — giữ được biên lợi nhuận hay không là ẩn số thật,
+            không phải rủi ro hình thức.</li>
+        </ul>
+      </li>
+
+      <li class="card">
+        <div class="card-head">
+          <span class="rank">02</span>
+          <span class="tk">MWG</span>
+          <span class="price">73,00</span>
+          <span class="chip good">Định giá rẻ nhất</span>
+        </div>
+        <p class="why" style="margin-bottom:10px">ROE 26,9% mà P/E 9,4× là tổ hợp hiếm trên thị trường này.</p>
+        <ul class="tight">
+          <li>P/E forward 2026 <b>~9,4 lần</b> đi kèm ROE <b>26,9%</b>.</li>
+          <li>Hai công ty chứng khoán định giá <b>83.900</b> (ABS, upside 18,2%) và <b>106.700</b> (BVSC) — giá hiện tại 73,00.</li>
+          <li><b>Rủi ro:</b> BVSC đã <em>hạ</em> mục tiêu từ 119.700 xuống 106.700 vì MWG giảm tỷ lệ sở hữu
+            Điện Máy Xanh sau IPO. Cấu trúc sở hữu đổi thì định giá đổi — cần đọc kỹ trước khi coi mức chiết khấu là "rẻ".</li>
+        </ul>
+      </li>
+
+      <li class="card">
+        <div class="card-head">
+          <span class="rank">03</span>
+          <span class="tk">FPT</span>
+          <span class="price">71,80</span>
+          <span class="chip good">Moat rõ nhất</span>
+        </div>
+        <p class="why" style="margin-bottom:10px">Lợi thế cạnh tranh bền nhất trong danh sách, lần đầu về vùng định giá rẻ sau 5 năm.</p>
+        <ul class="tight">
+          <li>P/E forward 2026 <b>~11,6 lần</b> — <b>thấp nhất 5 năm</b> (Mirae Asset), mục tiêu 12 tháng 92.000.</li>
+          <li>Có tín hiệu phục hồi trong đơn ký mới; nằm trong danh sách dự báo vào rổ FTSE.</li>
+          <li><b>Ý kiến trái chiều — nêu rõ:</b> ACBS <em>hạ</em> mục tiêu cuối 2026 về 100.000, lý do là bội số P/E
+            thấp hơn so với cùng ngành và chi phí vốn cao hơn. Hai bên cùng nói "mua" nhưng không cùng lý do.</li>
+        </ul>
+      </li>
+
+      <li class="card">
+        <div class="card-head">
+          <span class="rank">04</span>
+          <span class="tk">REE</span>
+          <span class="price">47,60</span>
+          <span class="chip good">Phòng thủ</span>
+        </div>
+        <p class="why" style="margin-bottom:10px">Lựa chọn hợp lý nhất nếu ưu tiên là ngủ ngon, không phải tăng nhanh.</p>
+        <ul class="tight">
+          <li>Nắm <b>hơn 7.100 tỷ</b> tiền mặt và tiền gửi — bản thân nó đã là một khoản tiết kiệm sinh lãi.</li>
+          <li>Điện &amp; nước đóng góp lớn nhất, dòng tiền đều; mảng cơ điện lạnh bứt phá <b>+59%</b> trong quý I.</li>
+          <li>Trả cổ tức 15% bằng cổ phiếu; giá đã giảm ~25% từ đỉnh tháng 3. Agriseco khuyến nghị tăng tỷ trọng, mục tiêu 53.000.</li>
+          <li><b>Đánh đổi:</b> đây không phải mã tăng nhanh. Chọn REE là chọn ổn định.</li>
+        </ul>
+      </li>
+    </ol>
+  </section>
+
+  <hr class="div">
+
+  <section style="margin-top:40px">
+    <p class="eyebrow">Cảnh báo</p>
+    <h2>PNJ — không đụng vào lúc này</h2>
+    <article class="card" style="border-color:var(--crit)">
+      <div class="card-head">
+        <span class="tk">PNJ</span>
+        <span class="price">35,95 · đáy 6 năm</span>
+        <span class="chip crit">Tránh</span>
+      </div>
+      <div class="stack-s">
+        <div class="pt"><span class="lab">Chuyện gì</span><span class="txt">
+          Quý II/2026 <b>lỗ sau thuế 283 tỷ</b> — cùng kỳ năm ngoái <em>lãi</em> 437 tỷ — dù doanh thu vẫn
+          tăng 12% lên 8.484 tỷ. Nguyên nhân: trích lập dự phòng ước tính <b>865,5 tỷ</b> liên quan hoạt động
+          <b>mua lại sản phẩm kim cương</b>, khiến chi phí quản lý doanh nghiệp tăng <b>422%</b>.
+        </span></div>
+        <div class="pt"><span class="lab">Giá</span><span class="txt">
+          Từ 2/7 đến 30/7 giảm <b>48,5%</b> (63.100 → 32.500). So với đỉnh cuối tháng 1/2026 (~85.000)
+          vẫn thấp hơn gần một nửa.
+        </span></div>
+        <div class="pt"><span class="lab">Vì sao tránh</span><span class="txt">
+          Không phải vì giá đã giảm sâu — mà vì <b>rủi ro chưa định lượng được</b>. Nguồn tin ghi nhận
+          giá trị mua lại sau biến cố <b>vượt tiền và đầu tư tài chính hơn 3.000 tỷ</b>. Khoản dự phòng
+          865,5 tỷ là <em>ước tính</em> cho nghĩa vụ còn đang phát sinh. Mua một doanh nghiệp mà mẫu số
+          chưa chốt thì không phải "mua rẻ", đó là đặt cược vào một con số chưa ai biết.
+        </span></div>
+        <div class="pt"><span class="lab">Ghi chú</span><span class="txt">
+          Các nguồn dùng cụm <em>"vướng đại án kim cương"</em>. Tôi <b>không</b> quy kết cá nhân nào và
+          không nguồn nào tôi đọc nêu kết luận pháp lý đã có hiệu lực. Điều kiện xem lại: khi nghĩa vụ
+          mua lại được chốt bằng con số cuối cùng trên BCTC, chứ không phải khi giá hồi.
+        </span></div>
+      </div>
+    </article>
+
+    <div class="grid2" style="margin-top:16px">
+      <div class="card">
+        <h3>GAS <span class="chip flat" style="margin-left:6px">Đứng ngoài</span></h3>
+        <p style="color:var(--ink-2); font-size:0.93rem; margin-top:8px">
+          Dự báo tăng trưởng lợi nhuận <b>âm</b> trong quý II/2026. Moat độc quyền trung nguồn khí vẫn còn,
+          nhưng không có lý do phải vào đúng lúc chu kỳ lợi nhuận đi xuống.
+        </p>
+      </div>
+      <div class="card">
+        <h3>ACB <span class="chip flat" style="margin-left:6px">Đứng ngoài</span></h3>
+        <p style="color:var(--ink-2); font-size:0.93rem; margin-top:8px">
+          LNTT quý II dự báo <b>−7%</b> so với cùng kỳ — nhưng lý do là <b>nền so sánh rất cao</b>
+          (quý II/2025 có thu nhập lớn từ kinh doanh chứng khoán), không phải hoạt động lõi xấu đi.
+          Đây là "chưa đến lúc", không phải "doanh nghiệp có vấn đề".
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="div">
+
+  <section style="margin-top:40px">
+    <p class="eyebrow">Gắn với danh mục thật của anh</p>
+    <h2>Nếu muốn quay lại cổ phiếu thì mua bao nhiêu</h2>
+    <p style="color:var(--ink-2); margin:8px 0 16px; max-width:66ch">
+      Hiện anh <b>không nắm giữ cổ phiếu nào</b>, vàng chiếm <b>76%</b> tài sản. Hạn mức trong
+      <code>config/risk_limits.yaml</code> đặt ra trần cứng:
+    </p>
+    <div class="grid2">
+      <div class="stat"><span class="k">Tối đa 1 mã</span><span class="n">≈ 117 tr</span>
+        <p class="why" style="font-style:normal; margin-top:4px">10% tài sản ròng (1.173 tr)</p></div>
+      <div class="stat"><span class="k">Tối đa tổng cổ phiếu</span><span class="n">≈ 235 tr</span>
+        <p class="why" style="font-style:normal; margin-top:4px">20% tài sản ròng</p></div>
+    </div>
+    <div class="callout warn" style="margin-top:16px">
+      <b>Thứ tự ưu tiên không đổi.</b> Việc cấp bách hơn vẫn là <b>giảm tỷ trọng vàng</b> — bán 10 chỉ
+      thu 137 tr đưa vàng về 64,3%. Mua cổ phiếu bằng tiền mặt hiện có (35 tr) mà không giảm vàng thì
+      chỉ làm danh mục phức tạp thêm chứ không giải quyết vấn đề tập trung.
+    </div>
+    <div class="callout" style="margin-top:12px">
+      <b>Nếu bán vàng rồi:</b> 137 tr thu về đủ cho 1–2 vị thế trong hạn mức. Tiền gửi 8,0%/năm là mốc
+      so sánh phải vượt qua — một mã cổ phiếu chỉ đáng mua nếu anh tin nó hơn <b>8%/năm không rủi ro</b>,
+      chứ không phải hơn 0%.
+    </div>
+    <p style="color:var(--ink-2); margin-top:16px; max-width:66ch">
+      Hệ thống hiện chấm cả VCB và CTD là <b>ĐỨNG NGOÀI</b> — và đó là kết luận đúng với dữ liệu đang có:
+      xu hướng tích cực nhưng chưa có biên an toàn định lượng được, vì chưa nhập EPS/giá trị sổ sách vào
+      <code>equity/valuation.py</code>. Muốn hệ thống ra được <b>MUA THĂM DÒ</b> thì cần dữ liệu định giá,
+      không cần thêm chỉ báo kỹ thuật.
+    </p>
+  </section>
+
+  <hr class="div">
+
+  <section style="margin-top:40px">
+    <p class="eyebrow">Trung thực về giới hạn</p>
+    <h2>Những gì bản này chưa làm được</h2>
+    <ul class="tight" style="margin-top:10px; max-width:70ch">
+      <li><b>Chỉ VCB và CTD có chỉ báo kỹ thuật thật.</b> Chín mã còn lại chỉ có giá gốc/giá hiện tại
+        trong <code>data/watchlist.json</code> — chưa có chuỗi EOD nên không tính được RSI/MACD/hỗ trợ/kháng cự.</li>
+      <li><b>Chưa có P/E, P/B tính từ dữ liệu gốc.</b> Các bội số nêu trên là <em>của công ty chứng khoán</em>,
+        tôi trích lại kèm nguồn chứ không tự tính — vì chưa nhập EPS và giá trị sổ sách vào repo.</li>
+      <li><b>Số cơ bản đến từ tin tức, chưa đối chiếu BCTC gốc.</b> Đã lưu nguyên văn kèm nguồn ở
+        <code>data/fundamentals.jsonl</code> để sau này kiểm lại được.</li>
+      <li><b>Giá đã 5 ngày.</b> EOD mới nhất trong repo là 10/08; hôm nay 15/08. Mọi mức giá trên cần
+        kiểm lại trước khi hành động.</li>
+      <li><b>Chưa quét giao dịch người nội bộ.</b> Khung phân tích yêu cầu điều này; hiện chỉ có cảnh báo
+        KLGD ≥ 1,5× bình quân, và cả VCB lẫn CTD đều đang <em>dưới</em> mức đó (0,61× và 0,51×).</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <p><b>Nguồn</b> — Vietstock, Người Quan Sát, CafeF, Tin Nhanh Chứng Khoán, VnEconomy, VietnamFinance,
+      Elibook, KIS Việt Nam, DNSE, VnBusiness, Đầu Tư Cổ Phiếu, Stockbiz, Dân Việt, Coteccons,
+      Shinhan Securities Market Radar (12/08/2026), Tiền Phong. Truy cập 15/08/2026.</p>
+    <p style="margin-top:10px">Đây là công cụ hỗ trợ theo dõi cá nhân, không phải khuyến nghị đầu tư từ
+      tổ chức được cấp phép. Mọi nhận định đều có thể sai; các con số kèm nguồn để anh tự kiểm chứng.</p>
+  </footer>
+
+</div>

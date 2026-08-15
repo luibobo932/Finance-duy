@@ -446,6 +446,21 @@ Logic chấm nhãn xu hướng chuyển vào `analytics/ta_core.py` (`indicator_
 
 Cảnh báo **KLGD ≥ 1,5× bình quân** dùng lại đúng ngưỡng của `scripts/trend.py report` — một hệ thống, một ngưỡng — và dẫn thẳng sang phần soi giao dịch thỏa thuận / công bố giao dịch người nội bộ trong `docs/phuong-phap-phan-tich.md`.
 
+## Rà soát watchlist 11 mã (15/08/2026)
+
+`data/fundamentals.jsonl` — số liệu cơ bản THẬT cho 11 mã watchlist + 1 bản ghi bối cảnh thị trường (`_MARKET`), thu thập bằng WebSearch, **mỗi dòng kèm nguồn và ngày thu thập**. Trước đây `equity/fundamentals.py` chỉ có schema và công thức, không có số liệu nào — đúng chủ ý (không bịa), nhưng cũng có nghĩa mọi chỉ tiêu cơ bản đều trống.
+
+Báo cáo đầy đủ: **[Sổ tay 11 mã](https://claude.ai/code/artifact/ea8c7eb4-4121-4635-b916-d2ed103d92a2)**.
+
+Bốn phát hiện đáng ghi lại:
+
+- **HPG** — LNST quý II **6.424 tỷ (+51%)**, HRC 1,9 triệu tấn (+64%, kỷ lục), khối ngoại gom, nằm trong danh sách dự báo vào rổ FTSE — mà giá **thủng đáy 1 năm**. Kết quả và giá đi ngược chiều nhau.
+- **PNJ** — quý II **lỗ 283 tỷ** (cùng kỳ lãi 437 tỷ) do trích lập dự phòng **865,5 tỷ** cho nghĩa vụ mua lại kim cương; giá giảm 48,5% trong tháng 7, đáy 6 năm. Nghĩa vụ còn đang phát sinh (giá trị mua lại vượt tiền + đầu tư tài chính hơn 3.000 tỷ) nên **rủi ro chưa định lượng được** — đó mới là lý do tránh, không phải vì giá đã giảm sâu.
+- **VCB** — LNTT quý II +58%, nợ xấu 0,61% vẫn thấp nhất hệ thống, nhưng **nợ nhóm 4 (nghi ngờ) tăng 451%** lên 1.227 tỷ. Tuyệt đối còn nhỏ, nhưng nhóm 4 là bậc ngay trước nợ có khả năng mất vốn.
+- **CTD** — backlog **51.600 tỷ** cao nhất lịch sử, nhưng biên LNST chỉ **~2,3%** (788/34.340). Backlog là doanh thu tương lai, chưa phải lợi nhuận tương lai.
+
+Giới hạn đã nêu thẳng trong báo cáo: chỉ VCB/CTD có chuỗi EOD nên chỉ 2 mã đó có chỉ báo kỹ thuật thật; các bội số P/E là **của công ty chứng khoán**, trích lại kèm nguồn chứ không tự tính (chưa nhập EPS/giá trị sổ sách); số cơ bản lấy từ tin BCTC công bố, **chưa đối chiếu BCTC gốc**.
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```
