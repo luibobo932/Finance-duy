@@ -9,6 +9,7 @@ services.entrade.com.vn (bị chặn trong claude.ai sandbox, đã xác nhận m
 Cách dùng:
   python3 scripts/fetch_eod.py VCB CTD              # 40 ngày gần nhất (mặc định)
   python3 scripts/fetch_eod.py VCB --days 90
+  python3 scripts/fetch_eod.py VNINDEX --index --days 3000   # chỉ số, ~12 năm
 """
 from __future__ import annotations
 
@@ -28,6 +29,10 @@ if str(ROOT) not in sys.path:
 EOD_DIR = ROOT / "data" / "eod"
 VN = timezone(timedelta(hours=7))
 API_URL = "https://services.entrade.com.vn/chart-api/v2/ohlcs/stock"
+# Chỉ số (VNINDEX, VN30, HNXINDEX) nằm ở endpoint khác endpoint cổ phiếu.
+# Đơn vị trả về là ĐIỂM, không phải nghìn đồng — cùng cấu trúc cột nên vẫn
+# ghi chung định dạng data/eod/<MÃ>.csv, nhưng đừng đem so với giá cổ phiếu.
+INDEX_API_URL = "https://services.entrade.com.vn/chart-api/v2/ohlcs/index"
 
 NETWORK_HINT = (
     "Không tải được dữ liệu từ services.entrade.com.vn. Trong môi trường Claude Code "
@@ -40,9 +45,10 @@ class FetchError(RuntimeError):
     pass
 
 
-def fetch_ohlc_raw(symbol: str, frm: int, to: int) -> dict:
+def fetch_ohlc_raw(symbol: str, frm: int, to: int, *, is_index: bool = False) -> dict:
     """Gọi API entrade, trả JSON thô {t,o,h,l,c,v,...}."""
-    url = f"{API_URL}?from={frm}&to={to}&symbol={symbol}&resolution=1D"
+    base = INDEX_API_URL if is_index else API_URL
+    url = f"{base}?from={frm}&to={to}&symbol={symbol}&resolution=1D"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
@@ -128,12 +134,13 @@ def write_csv(path: Path, rows: list[dict]) -> None:
             ])
 
 
-def fetch_and_update(symbol: str, days: int, now: Optional[datetime] = None) -> int:
+def fetch_and_update(symbol: str, days: int, now: Optional[datetime] = None,
+                     *, is_index: bool = False) -> int:
     """Tải + gộp dữ liệu EOD cho 1 mã, trả về tổng số phiên sau khi gộp."""
     now = now or datetime.now(VN)
     frm = int((now - timedelta(days=days)).timestamp())
     to = int(now.timestamp())
-    raw = fetch_ohlc_raw(symbol, frm, to)
+    raw = fetch_ohlc_raw(symbol, frm, to, is_index=is_index)
     new_rows = drop_incomplete_today(parse_ohlc_response(raw), now)
     path = EOD_DIR / f"{symbol.upper()}.csv"
     merged = merge_rows(load_existing(path), new_rows)
@@ -148,12 +155,13 @@ def main() -> None:
         i = args.index("--days")
         days = int(args[i + 1])
         args = args[:i] + args[i + 2:]
+    is_index = "--index" in args
     symbols = [a.upper() for a in args if not a.startswith("--")]
     if not symbols:
         sys.exit(__doc__)
     for symbol in symbols:
         try:
-            n = fetch_and_update(symbol, days)
+            n = fetch_and_update(symbol, days, is_index=is_index)
         except FetchError as e:
             print(f"{symbol}: {e}", file=sys.stderr)
             continue

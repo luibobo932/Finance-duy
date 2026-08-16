@@ -48,13 +48,17 @@ def load_history() -> list[dict]:
     return [json.loads(l) for l in HIST.read_text(encoding="utf-8").splitlines() if l.strip()]
 
 
-def section_tong_quan(gold_decision: dict | None) -> str:
+def section_tong_quan(gold_decision: dict | None, market_line: str | None = None) -> str:
     lines = ["## TỔNG QUAN HÀNH ĐỘNG", ""]
     if gold_decision:
         lines.append(f"Vàng: **{gold_decision['action_vi']}** (tin cậy {gold_decision['confidence']}/100)")
     else:
         lines.append("Vàng: chưa đủ dữ liệu để ra quyết định")
     lines.append("Tiền gửi: xem mục Tiền gửi bên dưới")
+    # Kết luận, không phải con trỏ tới mục khác: mục CHỨNG KHOÁN từng được trỏ
+    # tới suốt nhiều kỳ trong khi nó chưa tồn tại.
+    if market_line:
+        lines.append(f"Thị trường chung: {market_line}")
     lines.append("Cổ phiếu watchlist: xem mục Chứng khoán bên dưới")
     return "\n".join(lines)
 
@@ -313,6 +317,94 @@ def _best_deposit_rate() -> float | None:
         return ranked[0]["rate_pct"] if ranked else None
     except Exception:  # noqa: BLE001
         return None
+
+
+def section_boi_canh_thi_truong() -> tuple[str, str]:
+    """Mục BỐI CẢNH THỊ TRƯỜNG — canh gác đúng một câu hỏi: đã đến lúc mua chưa.
+
+    Mọi mục cổ phiếu trước nay nhìn TỪNG MÃ. Với một danh mục đang không nắm
+    cổ phiếu nào, câu hỏi lớn hơn nằm ở tầng chỉ số, và nó chỉ được trả lời
+    khi CẢ HAI điều kiện đo được cùng đạt (xem `equity/market_regime.py`).
+
+    Mục này luôn được in, kể cả khi chưa đo được — một cái canh gác im lặng
+    vì thiếu dữ liệu mà không nói gì thì không phân biệt được với "chưa đến
+    lúc", đúng cái lẫn lộn mà `analytics/alert_health.py` đã tốn 13 kỳ mới phát
+    hiện ở phần cảnh báo giá.
+
+    Trả (nội dung mục, một dòng tóm tắt cho TỔNG QUAN) — tóm tắt là KẾT LUẬN,
+    không phải câu "xem mục bên dưới".
+    """
+    from analytics.news_sentiment import measure as measure_news
+    from equity.market_regime import (
+        STATUS_CHUA_DO_DUOC,
+        STATUS_THEO_DOI_SAT,
+        STATUS_VUNG_GOM,
+        accumulation_signal,
+        analyze as regime_analyze,
+        load_rules,
+        save_state,
+        track,
+    )
+
+    try:
+        rules = load_rules()
+        # Cả hai vế đo theo NGÀY HỆ THỐNG, không theo ngày snapshot bản tin:
+        # snapshot có thể trễ vài ngày, và neo phép đo tin tức vào đó sẽ loại
+        # sạch tin mới như thể chúng đến từ tương lai. Dữ liệu giá cũ được báo
+        # riêng bằng `snap.is_stale` thay vì bẻ cong mốc thời gian.
+        snap = regime_analyze(rules=rules)
+        news = measure_news(rules=rules)
+        signal = accumulation_signal(snap, news, rules)
+    except Exception as e:  # noqa: BLE001 — hỏng phần này không được chặn bản tin
+        return (f"## BỐI CẢNH THỊ TRƯỜNG\n\n⚠️ Không đo được bối cảnh thị trường: {e}",
+                "không đo được")
+
+    # Bộ đếm kỳ cũng khoá theo ngày hệ thống, cùng mốc với phép đo — khoá theo
+    # ngày snapshot (có thể trễ vài ngày) sẽ khiến "đã bao nhiêu kỳ" đếm theo
+    # một trục thời gian khác với chính con số nó đang đếm.
+    state, is_new, periods = track(signal["status"], signal["zone"])
+    save_state(state)
+
+    lines = ["## BỐI CẢNH THỊ TRƯỜNG", ""]
+    if snap.has_data:
+        lines.append(f"VN-Index **{snap.close:,.2f}** (EOD {snap.last_date}) — {snap.zone_vi}")
+        lines.append(f"- {snap.evidence()}")
+        for n in snap.notes:
+            lines.append(f"- ⚠️ {n}")
+    else:
+        lines.append("VN-Index: **chưa có chuỗi lịch sử** (`data/eod/VNINDEX.csv`)")
+        lines.append("- Bật bằng: `python3 scripts/fetch_eod.py VNINDEX --index --days 3000` "
+                     "(chạy trên máy không bị chặn services.entrade.com.vn)")
+
+    lines.append("")
+    if signal["status"] == STATUS_VUNG_GOM:
+        prefix = "🚨 **TÍN HIỆU MỚI**" if is_new else f"🟢 **Duy trì {periods} kỳ**"
+        lines.append(f"{prefix} — {signal['status_vi']}")
+    elif signal["status"] == STATUS_CHUA_DO_DUOC:
+        lines.append(f"❔ **{signal['status_vi']}** — hệ thống KHÔNG kết luận (thiếu dữ liệu, "
+                     "không phải 'chưa đến lúc')")
+    else:
+        lines.append(f"**{signal['status_vi']}** (đã {periods} kỳ liên tiếp)")
+
+    for c in signal["conditions"]:
+        lines.append(f"- {c.mark} {c.name}: {c.evidence}")
+
+    if signal["tranches"] and signal["status"] in (STATUS_VUNG_GOM, STATUS_THEO_DOI_SAT):
+        lines.append("")
+        lines.append("**Kế hoạch giải ngân từng bậc** (mốc tính từ đỉnh):")
+        for t in signal["tranches"]:
+            mark = "✅ đã tới" if t["reached"] else "chờ"
+            lines.append(f"- −{t['drawdown_pct']:.0f}% → VN-Index ≈ {t['index_level']:,.0f}: "
+                         f"{t['allocation_pct']:.0f}% phần tiền dành cho cổ phiếu [{mark}]")
+
+    for w in signal["warnings"]:
+        lines.append("")
+        lines.append(f"⚠️ {w}")
+
+    met = sum(1 for c in signal["conditions"] if c.met)
+    summary = f"**{signal['status_vi']}** ({met}/{len(signal['conditions'])} điều kiện gom hàng đạt"
+    summary += ", TÍN HIỆU MỚI)" if (is_new and signal["status"] == STATUS_VUNG_GOM) else ")"
+    return "\n".join(lines), summary
 
 
 def section_chung_khoan() -> str:
@@ -599,15 +691,18 @@ def main():
     deposit_rates = load_normalized()
     ranked_deposits = rank(deposit_rates) if deposit_rates else []
 
+    market_section, market_line = section_boi_canh_thi_truong()
+
     sections = [
         f"# BẢN TIN ĐẦU TƯ SÁNG — {bulletin_date(load_history())}",
-        section_tong_quan(gold_decision),
+        section_tong_quan(gold_decision, market_line),
         section_tai_san({"parts": parts, "total": total}),
         section_suc_mua(parts, total),
         section_vang(est, gold_decision),
         section_kich_ban_gia_vang(parts, total),
         section_ke_hoach_giam_ty_trong(ranked_deposits),
         section_tien_gui(ranked_deposits),
+        market_section,
         section_chung_khoan(),
         section_alerts(),
     ]

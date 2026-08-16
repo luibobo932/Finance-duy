@@ -16,6 +16,7 @@ SECTION_ICONS: dict[str, str] = {
     "TÀI SẢN RÒNG": "💰",
     "VÀNG": "🥇",
     "TIỀN GỬI": "🏦",
+    "BỐI CẢNH THỊ TRƯỜNG": "🧿",
     "CHỨNG KHOÁN": "📈",
     "CẢNH BÁO NGƯỠNG GIÁ": "🚨",
     "THAY ĐỔI SO VỚI BẢN TIN TRƯỚC": "🔄",

@@ -73,6 +73,8 @@ Windows Task Scheduler task `FinanceDuy-BanTinChieu` chạy `scripts/daily_eveni
 | `gold_price.py` + `data/gold_model.json` | Ước tính giá vàng nhẫn tại tiệm theo XAU/USD real-time (hiệu chuẩn từ 1 ảnh bảng giá); networth tự dùng để định giá vàng động |
 | `plan.py` + `config/plan.yaml` | **Tầng kế hoạch**: lợi suất THỰC sau lạm phát, bào mòn sức mua, bảng độ nhạy 10 năm, đối chiếu mục tiêu tài chính |
 | `send_report.py` | Gửi báo cáo qua Telegram (`plan`/`morning`/`evening`), `--preview` để xem trước mà không gửi |
+| `market_regime.py` + `config/market_regime.yaml` | **Bối cảnh thị trường**: VN-Index so với lịch sử của chính nó (drawdown từ đỉnh + percentile 3 năm) và tín hiệu GOM HÀNG hai điều kiện; `--check` trả exit 0 khi đủ điều kiện, `--as-of` để đo lại như một ngày trong quá khứ |
+| `news_log.py` + `data/market_news.jsonl` | Nhật ký tin tức chứng khoán kèm nhãn tiêu cực/tích cực (gợi ý tự động theo từ khoá, có đánh dấu auto/manual) — nguồn cho điều kiện "tin xấu tràn ngập" |
 | `health_check.py` | Health check (Phase 10): freshness dữ liệu + vệ sinh an ninh (.env, quét secret); dữ liệu tự động cũ quá 3× ngưỡng thì leo thang WARN → FAIL; exit 1 khi FAIL; `--alert` gửi Telegram (chống spam qua `data/health_state.json`) |
 
 Xem `docs/ROADMAP.md` cho trạng thái toàn bộ 12 hạng mục phát triển và việc cần người dùng cung cấp.
@@ -738,3 +740,56 @@ Cả hai routine bắn vào phiên Claude Code gốc (session `session_013t34M5Y
 - Vàng: trong nước + thế giới, kèm phân tích **địa chính trị/chiến tranh**, **động thái Trump** (đánh giá rủi ro với kinh tế thế giới) và **quyết định/tín hiệu Fed**
 - Tiền gửi: khoản dưới 1 tỷ đồng, ưu tiên so sánh online vs tại quầy
 - Phân tích: dùng plugin Finance (chuẩn CFA) khi khả dụng trong phiên
+
+## Cảnh báo GOM HÀNG: hai điều kiện, và luật im lặng (16/08/2026)
+
+Luận điểm của chủ danh mục, ghi lại nguyên văn để về sau còn phản biện được: *tay to gom khi giá tốt và VN-Index ở vùng thấp, rồi bán ra ở vùng cao* — và giai đoạn hiện tại là giai đoạn họ vừa phân phối xong. Yêu cầu: **cảnh báo khi nào cần mua vào**, với hai điều kiện — (1) VN-Index ở mức đáy thật thấp so với lịch sử, (2) thị trường đang tràn ngập tin tiêu cực.
+
+Hệ thống KHÔNG chứng minh luận điểm này. Nó chỉ biến hai điều kiện đó thành **số đo**, canh gác liên tục, và — phần quan trọng nhất — nói thẳng khi nó chưa đo được.
+
+### Lỗ hổng có thật trước khi làm phần này
+
+Cả trụ cột cổ phiếu chỉ nhìn **từng mã**: `equity/signals.py` tính RSI/MACD/hỗ trợ/kháng cự cho VCB và CTD. Không dòng nào nhìn **thị trường**. Với một danh mục đang không nắm cổ phiếu nào, câu hỏi lớn nhất không phải "mua mã nào" mà là "đã đến lúc mua chưa" — và câu đó chỉ trả lời được ở tầng chỉ số. `data/history.jsonl` có trường `vnindex.close` nhưng chỉ 19 snapshot trong 3 tuần, và các snapshot gần nhất còn bỏ trống vì chưa có nguồn tự động.
+
+### Vì sao PHẢI có hai thước đo giá, không phải một
+
+- **Drawdown từ đỉnh** không bị lệch bởi tăng trưởng dài hạn, nhưng một mình thì nói dối được: đỉnh bong bóng giảm 35% vẫn có thể đắt hơn mọi phiên của ba năm trước đó.
+- **Percentile trong cửa sổ ~3 năm** trả lời "rẻ so với chính nó gần đây", nhưng một mình cũng nói dối: thị trường đi ngang nhiều năm sẽ liên tục cho percentile thấp mà chẳng có đợt bán tháo nào.
+
+VÙNG GOM đòi **cả hai** (`equity/market_regime.py::classify_zone`), và có test giữ đúng ca đỉnh-bong-bóng: giảm 35% mà vẫn đắt hơn 89% số phiên trong cửa sổ thì chỉ được nhãn GIẢM SÂU, không phải VÙNG GOM.
+
+Ngưỡng lấy từ chính lịch sử VN-Index chứ không từ cảm giác: 2018 −27%, 2020 −33%, 2022 −43% (1528 → 873,78). Đặt vùng gom ở −30% nghĩa là **tín hiệu này im lặng nhiều năm liền theo thiết kế** — một tín hiệu kêu mỗi quý thì không còn là tín hiệu đáy. Ngược lại, percentile để 10 thì tín hiệu gần như không bao giờ phát được; một cái canh gác không thể kêu còn tệ hơn không có, nên mức là 30.
+
+### Luật im lặng: thiếu dữ liệu không bao giờ được thành tín hiệu mua
+
+Chỉ cần **một** điều kiện chưa đo được là trạng thái thành `CHUA_DO_DUOC`, và bản tin nói rõ đó **không phải** "chưa đến lúc" mà là "hệ thống không đủ dữ liệu để nói". Ba cửa tự lừa mình bị bịt bằng test:
+
+- Nhật ký tin tức trống → **không** phải "không có tin xấu" (`overwhelming_negative` trả `None`, không phải `False`)
+- 3 tiêu đề xấu → **không** phải "tràn ngập" (dưới `min_headlines` thì không kết luận)
+- Nhật ký tin tức cũ quá 3 ngày → không được coi là hiện trạng
+
+Cùng tinh thần đó, `suggest_sentiment()` cho nhãn NEUTRAL khi từ khoá hai bên hoà nhau: nếu hoà mà nghiêng về tiêu cực thì chính điều kiện đang muốn kiểm chứng sẽ tự đạt — thiên kiến xác nhận được cài thẳng vào code.
+
+### Hai lỗi thật lộ ra khi chạy thử end-to-end
+
+1. **Tin mới bị coi là tin của tương lai.** Bản đầu neo phép đo tin tức vào ngày của snapshot mới nhất trong `history.jsonl` (theo đúng quy ước của `scripts/alerts.py`). Nhưng snapshot dừng ở 06/08 trong khi tin được ghi ngày 16/08, nên toàn bộ tin mới bị loại, và hệ thống báo "chưa có tin nào" ngay sau khi vừa nhập ba tin. Nay cả hai vế đo tại **cùng một mốc là ngày hệ thống** (`--as-of` để đo lại quá khứ), còn độ cũ của dữ liệu giá được đo và báo **riêng** thay vì âm thầm bẻ cong mốc thời gian.
+2. **File EOD quên cập nhật vẫn cho ra mọi con số đẹp đẽ.** "VN-Index đang ở đáy sâu" đọc từ file 3 tuần tuổi là một câu về quá khứ được nói ở thì hiện tại. Phiên cuối cũ quá `max_price_age_days` → điều kiện giá thành CHƯA ĐO ĐƯỢC (vùng vẫn được gán nhãn để tham khảo, nhưng tín hiệu mua thì không).
+
+### Tín hiệu kèm kế hoạch, và kèm cảnh báo về chính nó
+
+Một cảnh báo "đã đến lúc mua" mà không nói mua ở đâu, mua bao nhiêu thì không thực hiện được — cùng lý do `decision/position_size.py` tồn tại cho từng mã. Tín hiệu đi kèm **ba bậc giải ngân** quy thẳng ra điểm số VN-Index (−30% / −37% / −45% so với đỉnh, 30/35/35% phần tiền dành cho cổ phiếu), và hai cảnh báo luôn đi kèm:
+
+- Giá đóng cửa vẫn là đáy của 10 phiên gần nhất → **dao vẫn đang rơi**; đáy sâu + tin xấu không có nghĩa là đã hết giảm.
+- "Tin xấu tràn ngập" là tín hiệu **ngược** chỉ khi giá đã chiết khấu sâu. Tin xấu lúc giá còn cao là tin xấu thật, không phải cơ hội — có test giữ đúng bất biến này (`test_tin_xau_tran_ngap_nhung_gia_con_cao_thi_khong_phai_co_hoi`).
+
+Trạng thái được nhớ giữa các kỳ (`data/market_regime_state.json`): kỳ đầu là **TIN MỚI**, kỳ thứ 20 là **BỐI CẢNH** — cùng bài học với `analytics/alert_health.py`, nơi 3/6 ngưỡng từng kích hoạt vĩnh viễn suốt 13 kỳ mà không ai nhận ra chúng đã hết là tin.
+
+### Cần làm gì để bật cảnh báo này
+
+```
+python3 scripts/fetch_eod.py VNINDEX --index --days 3000   # chạy trên laptop, ~12 năm lịch sử
+python3 scripts/news_log.py add "<tiêu đề>" --source cafef  # ≥5 tin/tuần thì mới đo được
+python3 scripts/market_regime.py                            # xem trạng thái hiện tại
+```
+
+Chưa có `data/eod/VNINDEX.csv` thì mục BỐI CẢNH THỊ TRƯỜNG trong bản tin sáng **vẫn được in**, nói rõ đang thiếu gì và thiếu ở đâu. Một cái canh gác im lặng vì thiếu dữ liệu mà không nói gì thì không phân biệt được với một cái canh gác đang báo "chưa đến lúc".
