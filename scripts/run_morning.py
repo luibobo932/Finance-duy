@@ -325,7 +325,7 @@ def section_chung_khoan() -> str:
     """
     from decision.position_size import plan_position
     from equity.signals import analyze as eq_analyze
-    from equity.signals import decide_for, valuation_for
+    from equity.signals import decide_for, dividends_for, valuation_for
     from equity.target_prices import undated_warning
     from portfolio.loader import load_portfolio, load_risk_limits
 
@@ -374,6 +374,9 @@ def section_chung_khoan() -> str:
             w = undated_warning(view)
             if w:
                 lines.append(f"  - ⚠️ {w}")
+        div = dividends_for(s)
+        if div:
+            lines.append(f"  - {div.note()}")
         if net:
             plan = plan_position(
                 t, s.close, net, limits=limits,
@@ -387,6 +390,7 @@ def section_chung_khoan() -> str:
                 support=s.tech.get("support"), resistance=s.tech.get("resistance"),
                 target=view.lowest.target_nghin_dong if view and view.lowest else None,
                 hurdle_pct=hurdle,
+                dividend_yield_pct=div.net_yield_pct if div else None,
                 available_cash_trieu=port.cash_amount_vnd / 1e6,
                 min_cash_buffer_trieu=(limits.get("minimum_cash_buffer_vnd") or 0) / 1e6,
             )

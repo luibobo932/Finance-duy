@@ -577,21 +577,23 @@ Mỗi lần nêu, hệ thống nhắc: đây là **phán đoán đi mượn** t�
 | Chốt chặn | Nguồn |
 |---|---|
 | Hạn mức 1 mã ≤10%, tổng ≤20% | `config/risk_limits.yaml` |
-| **Rào lợi suất**: phải thắng tiền gửi 8,0%/năm KHÔNG rủi ro | đo được từ `deposit_rates.jsonl` |
+| **Rào lợi suất**: phải thắng tiền gửi 8,0%/năm KHÔNG rủi ro, **so sau thuế phí** | `deposit_rates.jsonl` + `equity/costs.py` |
 | **Lợi nhuận/rủi ro ≥ 2:1**, cắt lỗ dưới hỗ trợ thật | `equity/technical.py` |
-| Cỡ lệnh sao cho một lần sai ≤1% tài sản ròng | rủi ro tính từ khoảng cách tới cắt lỗ |
+| Cỡ lệnh sao cho một lần sai ≤1% tài sản ròng | mức mất tính cả phí và thuế bán |
 
 Kết quả thật trên hai mã đang theo dõi:
 
 ```
 VCB 60,30 → ĐỨNG NGOÀI
-   CHƯA MUA — tiềm năng 2,7% không vượt được tiền gửi 8,00%/năm KHÔNG rủi ro;
-   lợi nhuận/rủi ro 1,2:1 dưới mức tối thiểu 2:1 — doanh nghiệp có thể tốt
-   nhưng ĐIỂM VÀO xấu
+   CHƯA MUA — tổng lợi nhuận 2,9% (tăng giá 2,7% gộp → 2,1% sau thuế phí
+   cộng cổ tức 0,71% sau thuế) không vượt được tiền gửi 8,00%/năm KHÔNG rủi
+   ro; lợi nhuận/rủi ro 0,8:1 dưới mức tối thiểu 2:1 — doanh nghiệp có thể
+   tốt nhưng ĐIỂM VÀO xấu
 
 CTD 62,40 → MUA THĂM DÒ
-   Mua tối đa 83 tr · cắt lỗ dưới 53,61 (rủi ro 14,1%) · mục tiêu 93,00
-   (+49,0%) · lợi nhuận/rủi ro 3,5:1
+   Mua tối đa 81 tr · cắt lỗ dưới 53,61 (mất 14,6% đã gồm thuế phí) · mục
+   tiêu 93,00 (+49,0% gộp, +48,4% sau thuế phí) · cổ tức 1,52%/năm sau thuế
+   · lợi nhuận/rủi ro 3,3:1
 ```
 
 **VCB bị chặn bởi hai lý do độc lập** dù kết quả kinh doanh rất tốt — đó chính là điều một bộ chặn phải làm được: phân biệt "doanh nghiệp tốt" với "điểm vào tốt".
@@ -636,6 +638,47 @@ Hệ thống tính "cắt lỗ dưới 53,61" rồi in ra. Không gì theo dõi 
 ### Lỗi thứ năm, lộ ra khi thử vị thế thật
 
 Đang nắm 83 tr CTD, hệ thống vẫn bảo **"mua tối đa 89 tr"** — cộng lại 13,7% tài sản ròng, **vượt trần 10% cho một mã** mà không báo gì. Cả hai trần (1 mã và tổng cổ phiếu) đều không trừ phần đang nắm. Sau khi sửa: còn được mua thêm **43 tr**, đúng bằng 125,6 − 83.
+
+## Thuế, phí và cổ tức: hai sai lệch ngược chiều nhau (16/08/2026)
+
+Rào lợi suất dựng ở phần trên so **tiềm năng GỘP** của cổ phiếu với lãi tiền gửi. Phép so đó thiên vị cổ phiếu: gửi tiết kiệm không mất phí giao dịch nào. Nhưng sửa mỗi chiều đó lại thành thiên vị ngược, vì hệ thống chưa từng biết tới cổ tức. Hai sai lệch đi **ngược chiều nhau**, nên bỏ cả hai không tự triệt tiêu:
+
+| Bỏ qua | Hướng lệch |
+|---|---|
+| Thuế và phí giao dịch | chấm cổ phiếu **CAO** hơn thực tế |
+| Cổ tức tiền mặt | chấm cổ phiếu **THẤP** hơn thực tế |
+
+### `equity/costs.py` — quy định hiện hành, không phải ước lượng
+
+```
+Thuế TNCN khi BÁN      0,1% trên GIÁ TRỊ BÁN — phải nộp KỂ CẢ KHI LỖ
+Phí giao dịch          ~0,15–0,35% mỗi chiều (config: brokerage_fee_pct)
+Thuế cổ tức tiền mặt   5%
+```
+
+Một vòng mua–bán tốn **0,4–0,8%** trước khi giá nhúc nhích. Ba chỗ đã sửa theo:
+
+- **Rào lợi suất** so số ròng: một mã tiềm năng gộp đúng 8% thì sau thuế phí là **thua** tiền gửi 8%.
+- **Mức mất khi cắt lỗ** cộng cả phí hai chiều và thuế bán — khoản thuế vẫn phải nộp khi lệnh đang lỗ.
+- **Cỡ lệnh** tính trên mức mất thật, nên nhỏ đi (CTD: 83 → 81 tr).
+
+Có test giữ **bất biến**: thêm chi phí không bao giờ được làm một mã **dễ** mua hơn.
+
+*Không* mô hình thuế cho vàng: cá nhân bán vàng vật chất tại VN không có thuế giao dịch riêng — chi phí thật là chênh lệch mua–bán, `decision/rebalance.py` đã tính đúng. Bịa thêm một khoản thuế vàng là bịa số liệu.
+
+### `equity/dividends.py` — và hai cái bẫy trong cổ tức
+
+**Bẫy 1: "tỷ lệ %" của cổ tức tính trên MỆNH GIÁ 10.000đ, không phải giá thị trường.** VCB công bố "cổ tức tiền mặt **4,5%**" — nghe ngang tiền gửi. Thực tế 450đ/cp; trên giá 60.300đ, tỷ suất thật là **0,75%** trước thuế, **0,71%** sau thuế. Chênh hơn **6 lần**, và luôn theo hướng làm cổ phiếu trông hấp dẫn hơn. Hệ thống luôn quy về tỷ suất trên giá đang mua.
+
+**Bẫy 2: cổ tức bằng CỔ PHIẾU không phải lợi nhuận.** "Cổ tức 49,5% bằng cổ phiếu" của VCB không làm tài sản tăng 49,5%: doanh nghiệp không chi ra đồng nào, giá tham chiếu bị điều chỉnh giảm tương ứng trong ngày giao dịch không hưởng quyền. Cầm nhiều cổ phiếu hơn với giá mỗi cổ phiếu thấp hơn thì giá trị nắm giữ không đổi. Cổ phiếu **thưởng** (CTD 20:1) và cổ tức cổ phiếu của REE (15%) bản chất pha loãng y hệt. Hệ thống tính tỷ suất của chúng bằng **0** và nói rõ vì sao, thay vì im lặng bỏ qua.
+
+`data/dividends.jsonl` — 5 bản ghi có nguồn và ngày cho VCB/CTD/REE. Thiếu dữ liệu trả `None` ("tổng lợi nhuận đang bị tính THIẾU"), **không** trả 0 ("doanh nghiệp không trả cổ tức") — hai câu khác hẳn nhau.
+
+Chỉ cổ tức **tiền mặt sau thuế** được cộng vào tổng lợi nhuận khi so với tiền gửi. Cổ tức bằng cổ phiếu bị đánh thuế khi BÁN chứ không khi nhận; phần đó hệ thống ghi rõ là **chưa mô hình được**, chứ không coi như bằng 0.
+
+### Một giả định được nói thẳng ra
+
+Rào lợi suất so **tổng mức tăng tới giá mục tiêu** với lãi tiền gửi **một năm**. Điều đó chỉ đúng nếu giá mục tiêu được kỳ vọng đạt trong khoảng 12 tháng; xa hơn thì rào đang dễ dãi với cổ phiếu. Mỗi kế hoạch vào lệnh nay in kèm câu cảnh báo đó thay vì để giả định nằm im trong code.
 
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 

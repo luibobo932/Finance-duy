@@ -50,6 +50,14 @@ equity:
     - UNDER_VERIFICATION
     - SUMMONED_FOR_QUESTIONING
 
+transaction_costs:
+  # Phí giao dịch MỖI CHIỀU của công ty chứng khoán đang dùng (%). Khoảng thị
+  # trường 0,15–0,35%; để 0,2% là mức phổ biến. Sửa theo biểu phí thật.
+  #
+  # Thuế bán 0,1% và thuế cổ tức tiền mặt 5% KHÔNG khai ở đây vì đó là quy
+  # định pháp luật, không phải lựa chọn của chủ danh mục — xem equity/costs.py.
+  brokerage_fee_pct: 0.2
+
 data_quality:
   # Risk Officer (Phase 7) veto khi gặp các điều kiện này
   veto_on_stale_critical_data: true

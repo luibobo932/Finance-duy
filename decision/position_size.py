@@ -12,7 +12,10 @@ Bốn ràng buộc, tất cả đều từ số thật chứ không từ cảm t
    ≤ 20% tài sản ròng. Đây là trần cứng, không thương lượng.
 2. **Rào lợi suất (hurdle)** — tiền gửi đang trả 8,0%/năm KHÔNG rủi ro. Một mã
    cổ phiếu chỉ đáng mua nếu kỳ vọng vượt được mức đó, chứ không phải vượt 0%.
-   Đây là chỗ hầu hết khuyến nghị mua im lặng bỏ qua.
+   Đây là chỗ hầu hết khuyến nghị mua im lặng bỏ qua. Và phép so phải **trừ
+   thuế phí trước** (`equity/costs.py`): gửi tiết kiệm không mất phí giao dịch,
+   còn một vòng mua–bán cổ phiếu tốn ~0,4–0,8% cộng thuế bán 0,1% phải nộp
+   KỂ CẢ KHI LỖ. So tiềm năng GỘP với lãi tiền gửi là so lệch thước.
 3. **Rủi ro/lợi nhuận đo từ hỗ trợ–kháng cự THẬT** (`equity/technical.py`),
    không phải từ một tỷ lệ đẹp gán sẵn. Giá nằm sát kháng cự thì R:R xấu dù
    doanh nghiệp tốt — đúng tình huống VCB ngày 10/8: giá 60,3 kẹt giữa hỗ trợ
@@ -26,6 +29,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Optional
+
+from equity.costs import (DEFAULT_BROKERAGE_FEE_PCT, SELL_TAX_PCT, load_fee_pct,
+                          net_upside_pct, round_trip)
 
 # Rủi ro tối đa cho MỘT lần vào lệnh, tính trên tài sản ròng. 1% là mức thận
 # trọng phổ biến; với danh mục chưa từng có kỷ luật cắt lỗ thì thận trọng là
@@ -52,19 +58,52 @@ class PositionPlan:
     upside_to_target_pct: Optional[float]
     # Kết luận
     suggested_trieu: Optional[float]
+    # Thuế phí — phí giao dịch mỗi chiều đang áp dụng
+    fee_pct: float = DEFAULT_BROKERAGE_FEE_PCT
+    # Cổ tức tiền mặt SAU thuế 5%, tính trên giá mua. None = chưa có dữ liệu,
+    # khác hẳn 0,0 = đã tra và doanh nghiệp không trả cổ tức tiền mặt.
+    dividend_yield_pct: Optional[float] = None
     blockers: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
     @property
     def risk_pct(self) -> Optional[float]:
-        """% mất nếu giá về mức cắt lỗ."""
+        """% mất do GIÁ nếu về mức cắt lỗ — chưa gồm thuế phí."""
         if self.stop is None or not self.price:
             return None
         return (self.price - self.stop) / self.price * 100
 
     @property
+    def net_upside_pct(self) -> Optional[float]:
+        """Phần được CÒN LẠI sau thuế và phí — con số dùng để so tiền gửi."""
+        if self.upside_to_target_pct is None:
+            return None
+        return net_upside_pct(self.upside_to_target_pct, self.fee_pct)
+
+    @property
+    def net_risk_pct(self) -> Optional[float]:
+        """Phần mất THẬT khi bị cắt lỗ: giá giảm CỘNG phí mua, phí bán và thuế
+        bán 0,1% — khoản thuế vẫn phải nộp dù lệnh đang lỗ."""
+        r = self.risk_pct
+        if r is None:
+            return None
+        exit_ratio = (100.0 - r) / 100.0
+        return r + self.fee_pct + exit_ratio * (self.fee_pct + SELL_TAX_PCT)
+
+    @property
+    def cost_round_trip_pct(self) -> Optional[float]:
+        """Chi phí trọn vòng mua–bán nếu lệnh chạy đúng tới mục tiêu."""
+        if self.upside_to_target_pct is None:
+            return None
+        exit_ = 100.0 * (1 + self.upside_to_target_pct / 100)
+        return round_trip(100.0, fee_pct=self.fee_pct,
+                          exit_amount_trieu=exit_).total_pct
+
+    @property
     def reward_risk(self) -> Optional[float]:
-        r, up = self.risk_pct, self.upside_to_target_pct
+        """Đo trên số RÒNG cả hai vế — gộp vế được mà ròng vế mất là ăn gian
+        theo hướng dễ dãi với chính mình."""
+        r, up = self.net_risk_pct, self.net_upside_pct
         if r is None or up is None or r <= 0:
             return None
         return up / r
@@ -79,9 +118,13 @@ class PositionPlan:
         rr = self.reward_risk
         bits = [f"Mua tối đa {self.suggested_trieu:,.0f} tr"]
         if self.stop is not None:
-            bits.append(f"cắt lỗ dưới {self.stop:,.2f} (rủi ro {self.risk_pct:.1f}%)")
+            bits.append(f"cắt lỗ dưới {self.stop:,.2f} (mất {self.net_risk_pct:.1f}% "
+                        "đã gồm thuế phí)")
         if self.target is not None:
-            bits.append(f"mục tiêu {self.target:,.2f} (+{self.upside_to_target_pct:.1f}%)")
+            bits.append(f"mục tiêu {self.target:,.2f} (+{self.upside_to_target_pct:.1f}% "
+                        f"gộp, +{self.net_upside_pct:.1f}% sau thuế phí)")
+        if self.dividend_yield_pct:
+            bits.append(f"cổ tức {self.dividend_yield_pct:.2f}%/năm sau thuế")
         if rr is not None:
             bits.append(f"lợi nhuận/rủi ro {rr:.1f}:1")
         return " · ".join(bits)
@@ -101,12 +144,15 @@ def plan_position(
     hurdle_pct: Optional[float] = None,
     available_cash_trieu: Optional[float] = None,
     min_cash_buffer_trieu: Optional[float] = None,
+    fee_pct: Optional[float] = None,
+    dividend_yield_pct: Optional[float] = None,   # SAU thuế 5%, trên giá mua
 ) -> PositionPlan:
     """Kế hoạch vào lệnh cho 1 mã, hoặc lý do KHÔNG nên vào.
 
     Trả `blockers` rỗng chỉ khi mọi ràng buộc đều qua — thiếu dữ liệu cũng là
     một blocker, không phải lý do để bỏ qua ràng buộc đó.
     """
+    fee = load_fee_pct() if fee_pct is None else float(fee_pct)
     single_max = float(limits.get("single_stock_max") or 0.10)
     total_max = float(limits.get("total_stock_max") or 0.20)
     # Cả hai trần đều phải TRỪ phần đang nắm, nếu không "mua thêm" sẽ vượt
@@ -137,15 +183,41 @@ def plan_position(
         blockers.append("chưa có giá mục tiêu — không đo được phần được")
 
     # --- Rào lợi suất: phải thắng tiền gửi không rủi ro ----------------------
-    if hurdle_pct is not None and upside is not None and upside <= hurdle_pct:
+    # So SAU thuế phí, vì tiền gửi không mất phí giao dịch nào. Trước đây phép
+    # so này dùng tiềm năng GỘP, tức là cộng cho cổ phiếu một khoản mà tiền gửi
+    # không được cộng.
+    net_up = net_upside_pct(upside, fee) if upside is not None else None
+    # Cổ tức TIỀN MẶT sau thuế là phần lợi nhuận thật, phải cộng vào trước khi
+    # so với tiền gửi — bỏ nó đi là chấm điểm cổ phiếu thấp hơn thực tế. Cổ tức
+    # bằng CỔ PHIẾU đã được `equity/dividends.py` tính bằng 0 và không vào đây.
+    total_ret = net_up
+    if net_up is not None and dividend_yield_pct:
+        total_ret = net_up + dividend_yield_pct
+    if hurdle_pct is not None and total_ret is not None and total_ret <= hurdle_pct:
+        extra = (f" cộng cổ tức {dividend_yield_pct:.2f}% sau thuế"
+                 if dividend_yield_pct else "")
         blockers.append(
-            f"tiềm năng {upside:.1f}% không vượt được tiền gửi {hurdle_pct:.2f}%/năm KHÔNG rủi ro"
+            f"tổng lợi nhuận {total_ret:.1f}% (tăng giá {upside:.1f}% gộp → {net_up:.1f}% "
+            f"sau thuế phí{extra}) không vượt được tiền gửi {hurdle_pct:.2f}%/năm KHÔNG rủi ro"
+        )
+    if dividend_yield_pct:
+        notes.append(f"Đã cộng cổ tức tiền mặt {dividend_yield_pct:.2f}%/năm sau thuế 5% "
+                     "vào tổng lợi nhuận — cổ tức bằng cổ phiếu KHÔNG được cộng vì nó "
+                     "không làm tài sản tăng")
+    if hurdle_pct is not None and upside is not None:
+        notes.append(
+            "Rào lợi suất so tổng mức tăng tới giá mục tiêu với lãi tiền gửi MỘT NĂM — "
+            "chỉ đúng nếu giá mục tiêu được kỳ vọng đạt trong khoảng 12 tháng; xa hơn "
+            "thì rào này đang dễ dãi với cổ phiếu"
         )
 
     # --- Rủi ro/lợi nhuận ----------------------------------------------------
     risk_pct = (price - stop) / price * 100 if stop is not None else None
-    if risk_pct is not None and upside is not None and risk_pct > 0:
-        rr = upside / risk_pct
+    net_risk = None
+    if risk_pct is not None:
+        net_risk = risk_pct + fee + (100.0 - risk_pct) / 100.0 * (fee + SELL_TAX_PCT)
+    if net_risk is not None and net_up is not None and net_risk > 0:
+        rr = net_up / net_risk
         if rr < MIN_REWARD_RISK:
             blockers.append(
                 f"lợi nhuận/rủi ro {rr:.1f}:1 dưới mức tối thiểu {MIN_REWARD_RISK:.0f}:1 — "
@@ -155,9 +227,11 @@ def plan_position(
         notes.append(f"giá đang sát kháng cự {resistance:,.2f} — cân nhắc chờ vượt hoặc chờ lùi")
 
     # --- Cỡ lệnh theo rủi ro tối đa mỗi lần vào ------------------------------
+    # Dùng mức mất RÒNG: một lệnh bị cắt lỗ còn kéo theo phí hai chiều và thuế
+    # bán, nên tính cỡ lệnh trên phần mất do giá là ước lượng thiếu.
     by_risk = None
-    if risk_pct is not None and risk_pct > 0:
-        by_risk = net_worth_trieu * MAX_RISK_PER_TRADE_PCT / 100 / (risk_pct / 100)
+    if net_risk is not None and net_risk > 0:
+        by_risk = net_worth_trieu * MAX_RISK_PER_TRADE_PCT / 100 / (net_risk / 100)
 
     caps = [c for c in (max_single, room_total, by_risk) if c is not None]
     suggested = min(caps) if caps else None
@@ -181,7 +255,14 @@ def plan_position(
                          "phần còn lại phải đến từ GIẢM TỶ TRỌNG VÀNG, không phải từ rút "
                          "quỹ khẩn cấp")
 
+    # Chỉ nêu chi phí cho lệnh THẬT SỰ được đề xuất — in con số phí cho một
+    # lệnh đang bị chặn là mời gọi đọc nhầm rằng lệnh đó đang được khuyên mua.
+    if suggested and upside is not None and not blockers:
+        notes.append(round_trip(suggested, fee_pct=fee,
+                                exit_amount_trieu=suggested * (1 + upside / 100)).note())
+
     return PositionPlan(
+        fee_pct=fee, dividend_yield_pct=dividend_yield_pct,
         ticker=ticker.upper(), price=price,
         max_by_single_limit_trieu=max_single, max_by_total_limit_trieu=room_total,
         support=support, resistance=resistance, target=target, stop=stop,

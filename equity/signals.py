@@ -127,6 +127,21 @@ def valuation_for(signal: TickerSignal):
     return view if view.targets else None
 
 
+def dividends_for(signal: TickerSignal):
+    """Cổ tức của mã — None khi chưa có dữ liệu, KHÔNG trả về 'không cổ tức'.
+
+    Bỏ cổ tức ra khỏi so sánh là chấm điểm cổ phiếu THẤP hơn thực tế; nhưng
+    cộng nhầm cổ tức bằng cổ phiếu vào lại là tự cộng điểm. `equity/dividends.py`
+    tách hai loại đó ra.
+    """
+    if not signal.has_data or signal.close is None:
+        return None
+    from equity.dividends import view_for
+
+    view = view_for(signal.ticker, signal.close)
+    return view if view.dividends else None
+
+
 def decide_for(signal: TickerSignal, *, has_position: bool = False,
                governance_status: Optional[str] = None) -> Optional[dict]:
     """Chạy Decision Engine THẬT cho một mã — nhánh equity trước nay chưa từng chạy.

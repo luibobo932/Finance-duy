@@ -462,7 +462,7 @@ def _equity_section(port) -> str:
     """
     try:
         from equity.signals import analyze as eq_analyze
-        from equity.signals import decide_for
+        from equity.signals import decide_for, dividends_for
 
         # `getattr` chứ không truy cập thẳng: mục này chỉ là phần thêm, không
         # được phép làm sập cả trang khi ngữ cảnh thiếu trường (test dùng port
@@ -485,11 +485,13 @@ def _equity_section(port) -> str:
             continue
         d = decide_for(s, has_position=t in held)
         view = valuation_for(s)
+        div = dividends_for(s)
         plan = plan_position(
             t, s.close, net or 0.0, limits=limits,
             support=s.tech.get("support"), resistance=s.tech.get("resistance"),
             target=view.lowest.target_nghin_dong if view and view.lowest else None,
             hurdle_pct=hurdle,
+            dividend_yield_pct=div.net_yield_pct if div else None,
         ) if net else None
         flags = []
         if s.tech.get("breakout") and s.tech["breakout"] != "NONE":
@@ -503,6 +505,7 @@ def _equity_section(port) -> str:
             f"<td>{_n(s.tech.get('rsi14'), 1) if s.tech.get('rsi14') is not None else '—'}</td>"
             f"<td>{_n(s.tech.get('support'), 2) if s.tech.get('support') is not None else '—'}</td>"
             f"<td>{(_n(mos, 1) + '%') if mos is not None else '—'}</td>"
+            f"<td>{(_n(div.net_yield_pct, 2) + '%') if div and div.net_yield_pct is not None else '—'}</td>"
             f"<td><b>{html.escape(d['action_vi'])}</b></td>"
             f'<td>{html.escape(plan.summary()) if plan else "—"}</td>'
             f'<td class="na">{" · ".join(flags) if flags else "—"}</td></tr>'
@@ -519,11 +522,16 @@ def _equity_section(port) -> str:
     <h2 class="card-title">Theo dõi kỹ thuật — mã có dữ liệu EOD</h2>
     <p class="card-note">{note} Chỉ báo tính từ <code>data/eod/&lt;MÃ&gt;.csv</code> qua
       <code>equity/technical.py</code>; khuyến nghị do Decision Engine (nhánh equity) sinh ra,
-      không viết tay. Giá nghìn đồng.</p>
+      không viết tay. Giá nghìn đồng. Cột <b>Cổ tức</b> là tỷ suất tiền mặt SAU thuế 5% tính
+      trên giá hiện tại — không phải tỷ lệ công bố, vốn tính trên mệnh giá 10.000đ (VCB công bố
+      4,5% nhưng tỷ suất thật chỉ ~0,7%). Cổ tức bằng cổ phiếu tính bằng 0 vì giá tham chiếu bị
+      điều chỉnh giảm tương ứng. Kế hoạch vào lệnh đã trừ phí giao dịch hai chiều và thuế bán
+      0,1% — khoản thuế phải nộp kể cả khi lỗ.</p>
     <div class="table-scroll">
       <table>
         <thead><tr><th>Mã</th><th>Giá</th><th>RSI(14)</th><th>Hỗ trợ</th>
-          <th>Biên an toàn</th><th>Khuyến nghị</th><th>Kế hoạch vào lệnh</th><th>Cờ</th></tr></thead>
+          <th>Biên an toàn</th><th>Cổ tức</th><th>Khuyến nghị</th><th>Kế hoạch vào lệnh</th>
+          <th>Cờ</th></tr></thead>
         <tbody>{"".join(rows)}</tbody>
       </table>
     </div>
