@@ -600,6 +600,43 @@ Và một ràng buộc về nguồn tiền: chủ danh mục có 35 tr tiền m�
 
 Rule quản trị doanh nghiệp vẫn **thắng cả biên an toàn**: có test khẳng định cờ đỏ quản trị đè được mọi mức chiết khấu, đúng tình huống PNJ (giá rơi 48,5% nên "rẻ", nhưng nghĩa vụ mua lại chưa định lượng được).
 
+## Vòng đời vị thế: từ khuyến nghị MUA đến vị thế được quản lý (15/08/2026)
+
+Mở được nút MUA làm lộ ra bốn lỗ hổng phía sau nó. Cả bốn đều chưa từng nổ **chỉ vì chưa có quyết định cổ phiếu nào được ghi**.
+
+### 1. Tài sản ròng tự phồng lên 83 triệu
+
+Làm đúng theo khuyến nghị "mua CTD 83 tr" rồi khai vị thế vào config:
+
+```
+Tổng trước khi mua               1.172,7 tr
+Sau khi thêm vị thế 83 tr CTD    1.255,7 tr   ← TĂNG 83 tr
+```
+
+Tiền mua phải lấy từ đâu đó — bán vàng hoặc rút tiền mặt — nhưng `config/portfolio.yaml` chỉ mô tả *đang nắm gì*, không mô tả *đã đổi gì lấy gì*. Mọi con số phía sau (tỷ trọng vàng, tiến độ tới 10 tỷ) đều lệch theo.
+
+`portfolio/transactions.py` + `data/transactions.jsonl`: mỗi giao dịch MUA **bắt buộc khai `funded_from`** — một giao dịch mua không có nguồn tiền là giao dịch chưa xảy ra. Đây cũng là chỗ trả lời câu **giá vốn** đã hỏi mà chưa có: giá vốn không phải con số cần nhớ, nó là kết quả cộng dồn của các giao dịch. Bán làm giảm giá vốn theo **tỷ lệ**, không theo giá bán — dùng giá bán sẽ khiến giá vốn phần còn lại nhảy theo thị trường.
+
+Module **không tự sửa config**, chỉ báo lệch — sửa danh mục phải là hành động có ý thức, cùng lý do mà `--force` của `trend.py append` buộc ghi lại dấu vết.
+
+### 2. Giá tham chiếu cổ phiếu ghi cứng vào VCB
+
+`REF_PRICE_FIELDS["equity"]` là `[("vcb", "close")]`. Một quyết định về **CTD** sẽ được ghi kèm **giá của VCB** — sai lệch âm thầm làm hỏng vĩnh viễn mọi phép chấm điểm sau này. Nay `extract_ref_price` nhận `ticker`, và **thiếu ticker thì trả `None`** thay vì lấy bừa một mã: ghi sai giá tham chiếu còn tệ hơn không ghi.
+
+### 3. Quyết định cổ phiếu không được ghi
+
+`decisions.jsonl` có 13/13 bản ghi là vàng. Nay quyết định cổ phiếu cũng được ghi — và đây mới là loại **có hướng giá**, chấm đúng/sai được, thứ mà HOLD/CHỐT BỚT của vàng không làm được. Sau vài kỳ nữa, thành phần "lịch sử" (15% trọng số) của điểm tin cậy cuối cùng sẽ có nội dung thật.
+
+### 4. Mức cắt lỗ chỉ là một dòng chữ
+
+Hệ thống tính "cắt lỗ dưới 53,61" rồi in ra. Không gì theo dõi mức đó. Một vị thế có mức thoát chỉ tồn tại trong một dòng chữ đã trôi qua thì không phải vị thế được quản lý — đó là vị thế có kèm một lời hứa.
+
+`decision/stop_registry.py` đăng ký mức cắt lỗ thành **cảnh báo thật** trong `data/alerts.json` để `scripts/alerts.py` quét mỗi kỳ. Không đè ngưỡng đặt tay (cờ `auto: true` riêng), và **vị thế đóng thì gỡ cảnh báo** — ngưỡng mồ côi sẽ kêu mãi mà không mang thông tin nào, đúng bệnh alert fatigue đã sửa ở `alert_health.py`.
+
+### Lỗi thứ năm, lộ ra khi thử vị thế thật
+
+Đang nắm 83 tr CTD, hệ thống vẫn bảo **"mua tối đa 89 tr"** — cộng lại 13,7% tài sản ròng, **vượt trần 10% cho một mã** mà không báo gì. Cả hai trần (1 mã và tổng cổ phiếu) đều không trừ phần đang nắm. Sau khi sửa: còn được mua thêm **43 tr**, đúng bằng 125,6 − 83.
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```

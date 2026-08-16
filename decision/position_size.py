@@ -93,7 +93,8 @@ def plan_position(
     net_worth_trieu: float,
     *,
     limits: dict,
-    current_stock_value_trieu: float = 0.0,
+    current_stock_value_trieu: float = 0.0,   # TỔNG cổ phiếu đang nắm
+    current_position_value_trieu: float = 0.0,  # riêng MÃ NÀY đang nắm
     support: Optional[float] = None,
     resistance: Optional[float] = None,
     target: Optional[float] = None,
@@ -108,7 +109,11 @@ def plan_position(
     """
     single_max = float(limits.get("single_stock_max") or 0.10)
     total_max = float(limits.get("total_stock_max") or 0.20)
-    max_single = net_worth_trieu * single_max
+    # Cả hai trần đều phải TRỪ phần đang nắm, nếu không "mua thêm" sẽ vượt
+    # trần mà không báo gì. Lỗi thật đã đo: đang nắm 83 tr CTD, hệ thống vẫn
+    # bảo "mua tối đa 89 tr" — cộng lại là 13,7% tài sản ròng, vượt trần 10%
+    # cho một mã.
+    max_single = max(0.0, net_worth_trieu * single_max - current_position_value_trieu)
     room_total = max(0.0, net_worth_trieu * total_max - current_stock_value_trieu)
 
     blockers: list[str] = []
@@ -158,6 +163,9 @@ def plan_position(
     suggested = min(caps) if caps else None
     if room_total <= 0:
         blockers.append("đã chạm trần tổng tỷ trọng cổ phiếu trong config/risk_limits.yaml")
+    if max_single <= 0:
+        blockers.append(f"đã chạm trần {single_max*100:.0f}% cho riêng mã này — "
+                        "mua thêm sẽ vượt hạn mức tập trung 1 mã")
 
     # --- Nguồn tiền: phải CÓ THẬT -------------------------------------------
     if available_cash_trieu is not None:

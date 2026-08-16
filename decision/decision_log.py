@@ -33,12 +33,25 @@ RULE_VERSION = 2
 # lưu lại TÊN trường đã dùng để review chỉ so sánh cùng đơn vị.
 REF_PRICE_FIELDS: dict[str, list[tuple[str, ...]]] = {
     "gold": [("gold", "ring_sell"), ("gold", "xauusd")],
-    "equity": [("vcb", "close")],  # dùng khi decide() cho equity được nối vào orchestrator
+    # equity KHÔNG dùng bảng này: giá tham chiếu phụ thuộc MÃ, không phụ thuộc
+    # lớp tài sản. Bản cũ ghi cứng ("vcb","close"), nghĩa là một quyết định về
+    # CTD sẽ được ghi kèm GIÁ CỦA VCB — sai lệch âm thầm làm hỏng vĩnh viễn
+    # mọi phép chấm điểm sau này. Lỗi chưa từng nổ chỉ vì chưa có quyết định
+    # cổ phiếu nào được ghi. Xem `_equity_ref_price`.
 }
 
 
-def extract_ref_price(snapshot: dict, asset_class: str) -> Optional[tuple[str, float]]:
-    """Lấy (tên_trường, giá) tham chiếu từ snapshot; None nếu không có."""
+def extract_ref_price(snapshot: dict, asset_class: str,
+                       ticker: Optional[str] = None) -> Optional[tuple[str, float]]:
+    """Lấy (tên_trường, giá) tham chiếu từ snapshot; None nếu không có.
+
+    Với cổ phiếu PHẢI truyền `ticker`: giá tham chiếu phụ thuộc mã, không phụ
+    thuộc lớp tài sản. Thiếu ticker thì trả None thay vì lấy bừa một mã —
+    ghi sai giá tham chiếu còn tệ hơn không ghi, vì nó làm hỏng mọi phép chấm
+    điểm về sau mà không có gì báo lỗi.
+    """
+    if asset_class == "equity":
+        return _equity_ref_price(snapshot, ticker)
     for path in REF_PRICE_FIELDS.get(asset_class, []):
         node: object = snapshot
         for key in path:
@@ -51,14 +64,25 @@ def extract_ref_price(snapshot: dict, asset_class: str) -> Optional[tuple[str, f
     return None
 
 
-def build_entry(decision: dict, asset_class: str, ky: str, snapshot: Optional[dict]) -> dict:
+def _equity_ref_price(snapshot: dict, ticker: Optional[str]) -> Optional[tuple[str, float]]:
+    """Giá đóng cửa của ĐÚNG mã đó trong snapshot."""
+    if not ticker:
+        return None
+    node = snapshot.get(ticker.lower())
+    if isinstance(node, dict) and isinstance(node.get("close"), (int, float)) and node["close"] > 0:
+        return f"{ticker.lower()}.close", float(node["close"])
+    return None
+
+
+def build_entry(decision: dict, asset_class: str, ky: str, snapshot: Optional[dict],
+                ticker: Optional[str] = None) -> dict:
     """Chuẩn hóa 1 bản ghi quyết định từ output của policy_engine.decide()."""
     ref_field: Optional[str] = None
     ref_price: Optional[float] = None
     date: Optional[str] = None
     if snapshot:
         date = snapshot.get("date")
-        ref = extract_ref_price(snapshot, asset_class)
+        ref = extract_ref_price(snapshot, asset_class, ticker)
         if ref:
             ref_field, ref_price = ref
     return {

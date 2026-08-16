@@ -214,3 +214,17 @@ def test_rule_quan_tri_van_thang_ca_bien_an_toan():
         pytest.skip("chưa có EOD")
     d = decide_for(s, governance_status="INDICTED")
     assert d["action"] == "STAND_ASIDE" and d["risk_veto"] is True
+
+
+def test_tran_1_MA_phai_tru_phan_dang_nam():
+    """Lỗi thật đã đo: đang nắm 83 tr CTD, hệ thống vẫn bảo "mua tối đa 89 tr"
+    — cộng lại 13,7% tài sản ròng, vượt trần 10% cho một mã mà không báo gì."""
+    p = plan_position("CTD", 62.4, NET, limits=LIMITS, support=54.7, target=93.0,
+                      current_stock_value_trieu=83.0, current_position_value_trieu=83.0)
+    assert p.suggested_trieu <= NET * 0.10 - 83.0 + 1e-9
+
+
+def test_da_cham_tran_1_ma_thi_chan_han():
+    p = plan_position("CTD", 62.4, NET, limits=LIMITS, support=54.7, target=93.0,
+                      current_position_value_trieu=NET * 0.10)
+    assert any("trần 10% cho riêng mã này" in b for b in p.blockers)

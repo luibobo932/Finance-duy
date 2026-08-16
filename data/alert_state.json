@@ -16,5 +16,8 @@
   },
   "gold-res": {
     "consecutive_fires": 0
+  },
+  "stop-ctd": {
+    "consecutive_fires": 0
   }
 }

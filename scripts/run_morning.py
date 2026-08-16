@@ -337,6 +337,7 @@ def section_chung_khoan() -> str:
         return ""
     hurdle = _best_deposit_rate()
     net = _net_worth_trieu()
+    hist = load_history()
 
     lines = ["## CHỨNG KHOÁN", ""]
     if not held:
@@ -376,6 +377,13 @@ def section_chung_khoan() -> str:
         if net:
             plan = plan_position(
                 t, s.close, net, limits=limits,
+                # Vị thế ĐANG NẮM phải được trừ vào room còn lại, nếu không
+                # trần "tổng cổ phiếu ≤20%" bị bỏ qua: đã nắm 83 tr mà hệ thống
+                # vẫn bảo "mua tối đa 89 tr", tức cho phép vượt trần mà không
+                # báo gì.
+                current_stock_value_trieu=port.stock_market_value_vnd / 1e6,
+                current_position_value_trieu=(
+                    held[t].market_value_vnd / 1e6 if t in held else 0.0),
                 support=s.tech.get("support"), resistance=s.tech.get("resistance"),
                 target=view.lowest.target_nghin_dong if view and view.lowest else None,
                 hurdle_pct=hurdle,
@@ -385,7 +393,89 @@ def section_chung_khoan() -> str:
             lines.append(f"  - **{plan.summary()}**")
             for n in plan.notes:
                 lines.append(f"    - ⚠️ {n}")
+
+        # Ghi quyết định cổ phiếu vào nhật ký. Trước đây decisions.jsonl chỉ có
+        # vàng (13/13 bản ghi) nên toàn bộ máy chấm điểm không nhìn thấy phần
+        # cổ phiếu — mà đây mới là loại quyết định CÓ HƯỚNG GIÁ, chấm đúng/sai
+        # được, thứ mà HOLD/CHỐT BỚT của vàng không làm được.
+        _log_equity_decision(d, t, hist)
+
+    changes = _sync_stop_alerts(held, limits)
+    if changes:
+        lines.append("")
+        lines.append("🔔 **Cảnh báo cắt lỗ đã đồng bộ:** " + "; ".join(changes))
+
+    issues = _portfolio_consistency()
+    if issues:
+        lines.append("")
+        lines.append("⚠️ **Danh mục chưa khớp nhật ký giao dịch:**")
+        lines.extend(f"  - {i}" for i in issues)
     return "\n".join(lines)
+
+
+def _log_equity_decision(decision: dict, ticker: str, hist: list[dict]) -> None:
+    """Ghi bất biến vào data/decisions.jsonl, kèm giá tham chiếu của ĐÚNG mã."""
+    try:
+        from decision.decision_log import append_decision, build_entry
+
+        if not hist:
+            return
+        snap = hist[-1]
+        append_decision(build_entry(decision, asset_class="equity",
+                                    ky=snap.get("ky", "sang"), snapshot=snap, ticker=ticker))
+    except Exception:  # noqa: BLE001 — ghi nhật ký hỏng không được chặn bản tin
+        pass
+
+
+def _sync_stop_alerts(held: dict, limits: dict) -> list[str]:
+    """Đăng ký mức cắt lỗ của vị thế ĐANG NẮM thành cảnh báo thật.
+
+    Mức cắt lỗ chỉ tồn tại trong một dòng chữ đã trôi qua thì không phải mức
+    thoát — đó là một lời hứa. `scripts/alerts.py` quét data/alerts.json mỗi
+    kỳ, nên đưa mức cắt lỗ vào đó là cách duy nhất để nó được canh thật.
+    """
+    if not held:
+        return []
+    try:
+        import json as _json
+
+        from decision.stop_registry import sync_stops
+        from equity.signals import analyze as eq_analyze
+
+        path = ROOT / "data" / "alerts.json"
+        data = _json.loads(path.read_text(encoding="utf-8"))
+        positions = []
+        for ticker, pos in held.items():
+            s = eq_analyze(ticker)
+            sup = s.tech.get("support") if s.has_data else None
+            if sup and s.close and sup < s.close:
+                positions.append({"ticker": ticker, "stop": round(sup * 0.98, 2),
+                                  "entry": (pos.avg_cost_vnd or 0) / 1000 or None})
+        alerts, changes = sync_stops(data.get("alerts", []), positions)
+        if changes:
+            data["alerts"] = alerts
+            path.write_text(_json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+                            encoding="utf-8")
+        return changes
+    except Exception:  # noqa: BLE001 — đồng bộ cảnh báo hỏng không được chặn bản tin
+        return []
+
+
+def _portfolio_consistency() -> list[str]:
+    """Vị thế khai báo có khớp nhật ký giao dịch không.
+
+    Ra đời từ một phép thử: làm đúng theo khuyến nghị MUA rồi khai vị thế vào
+    config, tài sản ròng nhảy từ 1.172,7 lên 1.255,7 tr — tự nhiên nhiều thêm
+    83 triệu, vì config mô tả "đang nắm gì" chứ không mô tả "đã đổi gì lấy gì".
+    """
+    try:
+        from portfolio.loader import load_portfolio
+        from portfolio.transactions import load_transactions, reconcile, validate_history
+
+        txs = load_transactions()
+        return validate_history(txs) + reconcile(load_portfolio().stock_positions, txs)
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def _net_worth_trieu() -> float | None:
