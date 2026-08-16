@@ -1,0 +1,80 @@
+# Ngưỡng cho "khi nào là lúc gom hàng" — equity/market_regime.py +
+# analytics/news_sentiment.py.
+#
+# Luận điểm của chủ danh mục (ghi lại nguyên văn để sau này phản biện được):
+# tay to gom khi VN-Index ở vùng thấp và tin xấu tràn ngập, rồi phân phối ở
+# vùng cao khi tin tốt tràn ngập. Hệ thống KHÔNG chứng minh luận điểm này;
+# nó chỉ đo hai điều kiện đó bằng số và nói thẳng khi chưa đo được.
+#
+# Vì sao các con số dưới đây, chứ không phải con số khác — lấy từ chính lịch
+# sử VN-Index, không phải từ cảm giác:
+#     2018:  1211 → 880     ≈ −27%
+#     2020:   991 → 660     ≈ −33%   (Covid)
+#     2022:  1528 → 873,78  ≈ −43%
+# Ba lần "đáy thật thấp" gần nhất đều ≥ −27%. Đặt ngưỡng vùng gom ở −30% nghĩa
+# là tín hiệu này HIẾM theo thiết kế: nó im lặng nhiều năm liền, và đó là hành
+# vi đúng — một tín hiệu kêu mỗi quý thì không còn là tín hiệu đáy.
+
+regime:
+  # Điều kiện 1a: giảm bao nhiêu % từ đỉnh cao nhất trong chuỗi dữ liệu thì
+  # coi là "đáy thật thấp".
+  deep_drawdown_pct: 30.0
+  # Mức bắt đầu THEO DÕI SÁT (chưa mua, nhưng đã phải chuẩn bị tiền).
+  watch_drawdown_pct: 20.0
+  # Mức chỉ là điều chỉnh thường gặp — không phải cơ hội.
+  correction_drawdown_pct: 10.0
+
+  # Điều kiện 1b: rẻ so với CHÍNH NÓ gần đây. Drawdown một mình chưa đủ: chỉ
+  # số có thể giảm 30% từ đỉnh mà vẫn cao hơn 90% số phiên của 3 năm trước đó
+  # (đỉnh bong bóng thì đáy của nó vẫn đắt). Percentile chặn đúng ca đó.
+  percentile_window_sessions: 750    # ~3 năm giao dịch
+  # Vì sao 30 chứ không phải 10: thị trường tăng dài hạn thì đáy của một đợt
+  # sập vẫn nằm trên phần lớn số phiên cũ. Đối chiếu đáy 874,78 (11/2022) với
+  # cửa sổ 3 năm trước đó, nó chỉ thấp hơn phần lớn số phiên vì đã xoá sạch
+  # thành quả hai năm — mức percentile khoảng 10–30% tuỳ cửa sổ. Đặt 10 thì
+  # tín hiệu gần như không bao giờ phát được, mà một cái canh gác không thể
+  # kêu thì tệ hơn là không có.
+  low_percentile_max: 30.0           # nằm trong nhóm 30% phiên thấp nhất
+
+  # Dưới mức này thì mọi kết luận "so với lịch sử" đều là nói quá — trả về
+  # CHƯA ĐO ĐƯỢC thay vì kết luận trên chuỗi quá ngắn.
+  min_sessions_for_history: 250
+
+  # Phiên cuối trong file EOD cũ hơn số ngày này → điều kiện giá thành CHƯA ĐO
+  # ĐƯỢC. "VN-Index đang ở đáy sâu" đọc từ một file quên cập nhật ba tuần là
+  # một câu về quá khứ được nói ở thì hiện tại. Cùng tinh thần với
+  # `decision_rules.yaml::data_quality.max_age_seconds`.
+  max_price_age_days: 5
+
+  # Nhận diện vùng PHÂN PHỐI (điều chủ danh mục cho là đang diễn ra): sát đỉnh
+  # sau một đợt tăng dài. Không phải lời khuyên bán — là nhãn bối cảnh.
+  near_peak_pct: 7.0
+  strong_run_lookback_sessions: 250
+  strong_run_gain_pct: 30.0
+
+  # Cảnh báo "dao vẫn đang rơi": đáy sâu + tin xấu KHÔNG đồng nghĩa đã hết
+  # giảm. Nếu giá đóng cửa hiện tại vẫn là thấp nhất trong N phiên gần nhất
+  # thì tín hiệu gom vẫn được phát, nhưng kèm cảnh báo này.
+  new_low_lookback_sessions: 10
+
+  # Giải ngân theo bậc thay vì mua một lần. Mỗi bậc là % giảm từ đỉnh và tỷ
+  # trọng phần tiền dành cho cổ phiếu được giải ngân tại bậc đó.
+  tranches:
+    - drawdown_pct: 30.0
+      allocation_pct: 30.0
+    - drawdown_pct: 37.0
+      allocation_pct: 35.0
+    - drawdown_pct: 45.0
+      allocation_pct: 35.0
+
+news:
+  # Điều kiện 2: "thị trường đang đăng nhiều tin tiêu cực".
+  window_days: 7
+  # Dưới số tin này trong cửa sổ thì KHÔNG kết luận gì — 2 tin xấu không phải
+  # "tin xấu tràn ngập", và im lặng cũng không phải "tin tốt".
+  min_headlines: 5
+  # Tỷ lệ tin tiêu cực để coi là tràn ngập.
+  negative_ratio_min: 0.6
+  # Tin mới nhất cũ hơn số ngày này → dữ liệu tin tức coi như CHƯA ĐO ĐƯỢC.
+  # Không có nhật ký tin tức mới KHÔNG được hiểu là "không có tin xấu".
+  max_age_days: 3
