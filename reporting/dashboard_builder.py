@@ -337,8 +337,6 @@ def _goal_section(ctx: dict) -> str:
     except Exception:  # noqa: BLE001 — thiếu mục này không được làm hỏng trang
         return ""
 
-    band_class = {"risk_free": "good", "moderate": "good",
-                  "aggressive": "warning", "unrealistic": "critical"}
     band_color = {"risk_free": "--good-text", "moderate": "--good-text",
                   "aggressive": "--st-warning-text", "unrealistic": "--st-critical"}
     trs = "\n".join(
@@ -467,8 +465,7 @@ def _equity_section(port) -> str:
         # `getattr` chứ không truy cập thẳng: mục này chỉ là phần thêm, không
         # được phép làm sập cả trang khi ngữ cảnh thiếu trường (test dùng port
         # giả đã bắt đúng trường hợp đó).
-        from decision.position_size import plan_position
-        from equity.signals import valuation_for
+        from equity.signals import plan_for, valuation_for
 
         held = {p.ticker.upper() for p in getattr(port, "stock_positions", []) if p.quantity}
         watch = [x.upper() for x in (getattr(port, "watchlist", None) or [])]
@@ -487,18 +484,11 @@ def _equity_section(port) -> str:
         stale = stale_price_note(s)
         view = valuation_for(s)
         div = dividends_for(s)
-        plan = plan_position(
-            t, s.close, net or 0.0, limits=limits,
-            support=s.tech.get("support"), resistance=s.tech.get("resistance"),
-            target=view.lowest.target_nghin_dong if view and view.lowest else None,
-            hurdle_pct=hurdle,
-            dividend_yield_pct=div.net_yield_pct if div else None,
-            # Cùng ràng buộc đang áp ở bản tin văn bản. Thiếu dòng này thì
-            # trang đọc chính — thứ chủ danh mục thật sự nhìn — in "CHƯA ĐỦ DỮ
-            # LIỆU ĐỂ RA QUYẾT ĐỊNH" ở cột Khuyến nghị và "Mua tối đa 81 tr ·
-            # cắt lỗ dưới 53.61" ở cột ngay bên cạnh, trên cùng một hàng.
-            price_stale_note=stale,
-        ) if net else None
+        # Cùng hàm dựng với bản tin. Trước đây trang này gọi thẳng
+        # plan_position() mà bỏ bốn ràng buộc (vị thế đang nắm cho cả hai trần,
+        # tiền mặt khả dụng, quỹ khẩn cấp) nên với 83 tr CTD đang nắm nó in
+        # "Mua tối đa 81 tr" trong khi bản tin in "Mua tối đa 34 tr".
+        plan = plan_for(s, port, limits, net_worth_trieu=net, hurdle_pct=hurdle)
         flags = []
         if stale:
             flags.append("DỮ LIỆU CŨ")
@@ -723,7 +713,6 @@ def render(ctx: dict) -> str:
 
     # --- Thẻ số liệu -------------------------------------------------------
     totals = [v.total_trieu for v in vals]
-    golds = [v.gold_trieu for v in vals]
     gold_pcts = [v.gold_pct * 100 if v.gold_pct is not None else None for v in vals]
     critical = ctx["critical_pct"]
     over_critical = (

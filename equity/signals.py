@@ -251,3 +251,48 @@ def _as_date(value: Optional[str]) -> Optional[date]:
         return datetime.strptime(value[:10], "%Y-%m-%d").date()
     except ValueError:
         return None
+
+
+def plan_for(signal: TickerSignal, port, limits: dict, *,
+             net_worth_trieu: Optional[float] = None,
+             hurdle_pct: Optional[float] = None,
+             today: Optional[date] = None):
+    """Kế hoạch vào lệnh cho một mã — MỘT chỗ dựng, mọi nơi hiển thị gọi lại.
+
+    Vì sao phải gom về một hàm, đo được ngày 29/08 với vị thế 83 tr CTD:
+
+        bản tin   → Mua tối đa 34 tr   (đúng: trần 10% một mã còn 34,3 tr)
+        dashboard → Mua tối đa 81 tr   (sai: gấp 2,4 lần, đẩy vị thế lên 14%)
+
+    Hai con số cho cùng một câu hỏi, trên cùng một dữ liệu. Nguyên nhân:
+    `reporting/dashboard_builder.py` gọi `plan_position()` mà bỏ bốn tham số
+    ràng buộc — vị thế đang nắm (trần 1 mã và trần tổng), tiền mặt khả dụng và
+    quỹ khẩn cấp tối thiểu. Trần chỉ trừ được phần đang nắm khi caller TRUYỀN
+    phần đang nắm vào; không truyền thì trần im lặng nới ra.
+
+    Đúng lỗi này đã được sửa một lần rồi — commit "Vòng đời vị thế" ghi lại
+    nguyên văn: "đang nắm 83 tr CTD, hệ thống vẫn bảo mua tối đa 89 tr". Sửa ở
+    `run_morning.py`, không sửa ở dashboard, và dashboard mới là trang chủ danh
+    mục thật sự đọc. Một hàm dựng chung là cách duy nhất để lần sau không lặp
+    lại: thiếu ràng buộc thì thiếu ở cả hai nơi, và test bắt được ngay.
+    """
+    from decision.position_size import plan_position
+
+    if net_worth_trieu is None:
+        return None
+    held = {p.ticker.upper(): p for p in getattr(port, "stock_positions", []) if p.quantity}
+    view = valuation_for(signal)
+    div = dividends_for(signal)
+    t = signal.ticker.upper()
+    return plan_position(
+        t, signal.close, net_worth_trieu, limits=limits or {},
+        current_stock_value_trieu=getattr(port, "stock_market_value_vnd", 0.0) / 1e6,
+        current_position_value_trieu=(held[t].market_value_vnd / 1e6 if t in held else 0.0),
+        support=signal.tech.get("support"), resistance=signal.tech.get("resistance"),
+        target=view.lowest.target_nghin_dong if view and view.lowest else None,
+        hurdle_pct=hurdle_pct,
+        dividend_yield_pct=div.net_yield_pct if div else None,
+        available_cash_trieu=getattr(port, "cash_amount_vnd", 0.0) / 1e6,
+        min_cash_buffer_trieu=(limits or {}).get("minimum_cash_buffer_vnd", 0) / 1e6,
+        price_stale_note=stale_price_note(signal, today),
+    )

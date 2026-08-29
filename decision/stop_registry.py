@@ -51,13 +51,28 @@ def build_stop_alert(ticker: str, stop_level: float, *, entry: Optional[float] =
     }
 
 
-def sync_stops(alerts: list[dict], positions: Sequence[dict]) -> tuple[list[dict], list[str]]:
+def sync_stops(alerts: list[dict], positions: Sequence[dict], *,
+               freeze: Sequence[str] = ()) -> tuple[list[dict], list[str]]:
     """Đồng bộ cảnh báo cắt lỗ với vị thế đang nắm.
 
     `positions` = [{"ticker", "stop", "entry"?, "target"?}]. Trả (alerts mới,
     danh sách việc đã làm) — luôn nói rõ đã thêm/sửa/gỡ gì, vì thay đổi âm
     thầm trong danh sách cảnh báo là thứ không ai kiểm được.
+
+    `freeze` = các mã mà dữ liệu giá đang quá cũ để tính lại mức cắt lỗ. Ràng
+    buộc thứ tư, và nó phải làm ĐÚNG HAI việc trái chiều nhau:
+
+    1. **Không tính mức mới.** Mức cắt lỗ suy từ vùng hỗ trợ của chuỗi EOD; đo
+       trên chuỗi cũ 19 ngày thì ra một con số nói về thị trường đã không còn
+       được quan sát. Ghi nó vào `data/alerts.json` còn tệ hơn in ra màn hình:
+       nó nằm lại trên đĩa và được quét mỗi kỳ như một mức rủi ro đang sống.
+    2. **Không gỡ mức cũ.** Đây mới là vế dễ làm sai. Bỏ mã ra khỏi
+       `positions` cho "an toàn" sẽ khiến nhánh dưới coi là vị thế đã đóng và
+       XOÁ cảnh báo — tức là dữ liệu cũ khiến vị thế thật MẤT mức canh cắt lỗ.
+       Dữ liệu cũ phải làm hệ thống im lặng, không được làm nó tháo bỏ một
+       thứ đang bảo vệ tiền thật.
     """
+    frozen = {t.upper() for t in freeze}
     wanted = {p["ticker"].upper(): p for p in positions if p.get("stop")}
     changes: list[str] = []
     out: list[dict] = []
@@ -68,6 +83,10 @@ def sync_stops(alerts: list[dict], positions: Sequence[dict]) -> tuple[list[dict
             out.append(a)  # ngưỡng đặt tay: giữ nguyên tuyệt đối
             continue
         ticker = str(a.get("asset", "")).upper()
+        if ticker in frozen:
+            out.append(a)  # giữ nguyên mức đang canh, không tính lại, không gỡ
+            seen.add(ticker)
+            continue
         p = wanted.get(ticker)
         if p is None:
             # Vị thế đã đóng — gỡ, không để ngưỡng mồ côi kêu mãi.
@@ -80,7 +99,7 @@ def sync_stops(alerts: list[dict], positions: Sequence[dict]) -> tuple[list[dict
         out.append(fresh)
 
     for ticker, p in wanted.items():
-        if ticker in seen:
+        if ticker in seen or ticker in frozen:
             continue
         out.append(build_stop_alert(ticker, p["stop"], entry=p.get("entry"), target=p.get("target")))
         changes.append(f"thêm cảnh báo cắt lỗ {ticker} tại {p['stop']:,.2f}")

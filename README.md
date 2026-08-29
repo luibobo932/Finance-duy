@@ -715,6 +715,59 @@ Ba test cũ chạy trên EOD thật mà không ghim mốc thời gian, nên rule
 
 Kết quả sau khi sửa: cùng chuỗi EOD đó, đọc **trong ngày** vẫn ra MUA THĂM DÒ 80/100 như trước — hành vi đường chạy bình thường không đổi; đọc **hôm nay** ra CHƯA ĐỦ DỮ LIỆU 30/100, không kèm cỡ lệnh hay mức cắt lỗ nào.
 
+## Bốn lỗi tìm được khi rà soát toàn hệ thống (29/08/2026)
+
+Rà soát bằng cách CHẠY mọi script rồi soi kết quả, chứ không chỉ đọc code. Ba trong bốn lỗi chỉ lộ ra khi chạy thật.
+
+### 1. `fetch_market_snapshot.py` ghi snapshot RỖNG và báo thành công
+
+Chạy script khi mạng bị chặn: thoát mã 0 như bình thường, và ghi vào `data/history.jsonl`:
+
+```json
+{"date": "2026-08-29", "ky": "chieu", "vnindex": {}, "gold": {},
+ "vcb": {"close": 60300, "change_pct": 1.01}, "ctd": {"close": 62400, "change_pct": 0.48}}
+```
+
+Hai chuyện sai cùng lúc, và chúng khuếch đại nhau:
+
+- **Không có giá vàng** — mà vàng là ~76% tài sản. Hậu quả đo được ngay: `value_at()` trả `total_trieu=None` cho kỳ mới nhất, đường tài sản ròng **thủng đúng ở đầu bên phải**; Decision Engine ghi tiếp 4 quyết định dựa trên kỳ rỗng đó.
+- **Giá VCB/CTD là nến ngày 10/08 mang nhãn ngày 29/08** — rửa dữ liệu cũ thành dữ liệu mới. `analytics/price_sanity.py` không bắt được, vì nó so với snapshot liền trước, mà chép nguyên giá cũ thì lệch 0% — qua mọi kiểm tra một cách hoàn hảo.
+
+`validate_snapshot()` bắt giá **sai** (âm, bằng 0, bất khả thi) nhưng không bắt giá **thiếu**, vì thiếu không phải một giá trị bất thường. Nay `refuse_reasons()` từ chối ghi khi không có giá vàng hoặc tỷ giá, và `latest_eod_close_pct()` mang theo `as_of` để nến cũ hơn `EOD_MAX_AGE_DAYS` bị loại thay vì đóng dấu ngày hôm nay. **Thà không ghi gì còn hơn ghi một kỳ rỗng rồi để cả hệ thống coi đó là hiện trạng mới nhất.**
+
+### 2. Dashboard nói "mua tối đa 81 tr", bản tin nói 34 tr — cùng một câu hỏi
+
+Với 83 tr CTD đang nắm, trần 10% cho một mã chỉ còn 34,3 tr. Bản tin tính đúng; `reporting/dashboard_builder.py` gọi thẳng `plan_position()` mà **bỏ bốn tham số ràng buộc** (vị thế đang nắm cho cả hai trần, tiền mặt khả dụng, quỹ khẩn cấp) nên in ra 81 tr — gấp 2,4 lần, đẩy vị thế lên 14% tài sản.
+
+Trần chỉ trừ được phần đang nắm khi caller **truyền** phần đang nắm vào; không truyền thì trần im lặng nới ra. Đúng lỗi này đã sửa một lần rồi — commit "Vòng đời vị thế" ghi nguyên văn *"đang nắm 83 tr CTD, hệ thống vẫn bảo mua tối đa 89 tr"* — nhưng chỉ sửa ở `run_morning.py`. Dashboard mới là trang chủ danh mục thật sự đọc.
+
+Nay có `equity/signals.py::plan_for()` là **chỗ dựng duy nhất**, cả hai bề mặt gọi lại. Test `test_chi_MOT_noi_duoc_goi_thang_plan_position` chặn tái phát: thêm bề mặt mới mà gọi thẳng `plan_position()` là test đỏ.
+
+### 3. Bộ đếm kỷ luật giao dịch vừa bỏ sót vừa buộc tội oan
+
+`docs/AUDIT_REPORT.md` mục L7 xếp logic string-matching cũ là "dễ vỡ". Đo lại trên đúng 9 nhãn mà `action_mapper.py` sinh ra thì nó không dễ vỡ — **nó đã vỡ sẵn**:
+
+| Khuyến nghị lúc đó | Lệnh | Logic cũ | Đúng ra |
+|---|---|---|---|
+| KHÔNG MUA THÊM | SELL | ⚠️ "đi ngược" | thuận — bán không mâu thuẫn với "đừng mua thêm" |
+| ĐỨNG NGOÀI | BUY | không gắn cờ | **đi ngược** |
+| CHỜ XÁC NHẬN | BUY | không gắn cờ | **đi ngược** |
+| GIỮ | SELL | không gắn cờ | **đi ngược** |
+
+Nhánh BUY dò chuỗi `"CHƯA MUA"` — chuỗi này chỉ có trong `PositionPlan.summary()`, **không nằm trong bất kỳ nhãn quyết định nào**. Nên trên cả 9 nhãn, cột BUY luôn `False`: mọi lệnh mua sai đều lọt. Mà mua sai mới là phía mất tiền. Ngược lại "KHÔNG MUA THÊM" chứa chuỗi con "MUA" nên lệnh bán đúng bị đếm là sai.
+
+Nay `decision/discipline.py` đối chiếu bằng **enum**, bảng 9 hành động tường minh, và tách **ba** trạng thái chứ không hai: `CHƯA ĐỦ DỮ LIỆU` không phải một khuyến nghị để mà đi ngược — nó là lời thú nhận hệ thống không biết; trộn vào cột "đi ngược" sẽ làm loãng đúng thứ cần nhìn.
+
+### 4. Mức cắt lỗ ghi xuống đĩa từ dữ liệu cũ (`L8` cũng chưa từng được sửa)
+
+`_sync_stop_alerts()` là bề mặt **thứ ba** của lỗi dữ liệu cũ đã sửa lượt trước — và là bề mặt duy nhất **ghi xuống đĩa**: mức cắt lỗ suy từ vùng hỗ trợ của 19 ngày trước nằm lại trong `data/alerts.json` và được `alerts.py` quét mỗi kỳ như một mức rủi ro đang sống.
+
+Chỗ dễ làm sai là vế thứ hai: bỏ mã ra khỏi `positions` "cho an toàn" sẽ khiến `sync_stops` coi là vị thế đã đóng và **xoá** cảnh báo — dữ liệu cũ làm một vị thế thật mất mức canh cắt lỗ. Nay có tham số `freeze`: **không tính lại, và cũng không gỡ**. Dữ liệu cũ phải làm hệ thống im lặng, không được làm nó tháo bỏ một thứ đang bảo vệ tiền thật.
+
+Cùng lượt, sửa nốt `L8` (chia cho 0 trong `journal.py`, đã ghi trong audit đầu tiên và chưa từng được thêm guard): `journal.py add BUY VCB 58.5 0` rồi `report` → `ZeroDivisionError`, mất toàn bộ báo cáo. Chặn ở **hai** tầng — cửa vào (giá/khối lượng phải > 0) và chỗ đọc (cho những dòng đã lỡ ghi trước đây).
+
+**747 test** (trước đó 697).
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```

@@ -234,3 +234,49 @@ def test_ban_tin_va_dashboard_dung_CHUNG_mot_cau_giai_thich():
     cu = stale_price_note(s, _last(s) + timedelta(days=60))
     assert cu and "fetch_eod.py" in cu
     assert stale_price_note(s, _last(s)) is None
+
+
+# --- Mức cắt lỗ GHI XUỐNG ĐĨA: bề mặt thứ ba, và là bề mặt nguy hiểm nhất ---
+
+def test_du_lieu_cu_KHONG_duoc_tinh_lai_muc_cat_lo():
+    """`_sync_stop_alerts` ghi mức cắt lỗ vào data/alerts.json — khác hẳn hai
+    bề mặt chỉ hiển thị: con số nằm lại trên đĩa và `scripts/alerts.py` quét nó
+    mỗi kỳ như một mức rủi ro đang sống."""
+    from decision.stop_registry import build_stop_alert, sync_stops
+
+    cu = build_stop_alert("CTD", 53.61)
+    alerts, changes = sync_stops([cu], [{"ticker": "CTD", "stop": 49.0}], freeze=["CTD"])
+    con_lai = [a for a in alerts if a["asset"] == "CTD"]
+    assert len(con_lai) == 1
+    assert con_lai[0]["level"] == 53.61, "đã tính lại mức cắt lỗ trên dữ liệu cũ"
+    assert not changes
+
+
+def test_du_lieu_cu_cung_KHONG_duoc_GO_muc_dang_canh():
+    """Vế dễ làm sai: 'cho an toàn thì bỏ mã ra khỏi positions' sẽ khiến hệ
+    thống coi là vị thế đã đóng và XOÁ cảnh báo — dữ liệu cũ làm một vị thế
+    thật mất mức canh cắt lỗ."""
+    from decision.stop_registry import build_stop_alert, sync_stops
+
+    cu = build_stop_alert("CTD", 53.61)
+    bo_ra, _ = sync_stops([cu], [])                       # cách làm sai
+    assert not [a for a in bo_ra if a["asset"] == "CTD"]  # → mất cảnh báo
+
+    dung, _ = sync_stops([cu], [], freeze=["CTD"])        # cách làm đúng
+    assert [a for a in dung if a["asset"] == "CTD"]
+
+
+def test_vi_the_dong_that_thi_van_go_binh_thuong():
+    """Đóng băng không được che mất hành vi gốc: hết vị thế thì vẫn phải gỡ."""
+    from decision.stop_registry import build_stop_alert, sync_stops
+
+    alerts, changes = sync_stops([build_stop_alert("CTD", 53.61)], [])
+    assert not alerts and any("gỡ" in c for c in changes)
+
+
+def test_nguong_dat_tay_khong_bao_gio_bi_dung_toi():
+    from decision.stop_registry import build_stop_alert, sync_stops
+
+    tay = {"id": "vcb-ho-tro", "asset": "VCB", "type": "below", "level": 57.0}
+    alerts, _ = sync_stops([tay, build_stop_alert("CTD", 53.61)], [], freeze=["CTD"])
+    assert tay in alerts

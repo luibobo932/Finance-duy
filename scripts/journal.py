@@ -26,8 +26,19 @@ def cmd_add(args):
     side = args[0].upper()
     if side not in ("BUY", "SELL"):
         sys.exit("Lệnh phải là BUY hoặc SELL")
+    try:
+        price, qty = float(args[2]), float(args[3])
+    except (ValueError, IndexError):
+        sys.exit("Giá và khối lượng phải là số. VD: journal.py add BUY VCB 58.5 1000")
+    # Chặn tại CỬA VÀO. Một lệnh qty=0 lọt vào file sẽ làm `report` sập bằng
+    # ZeroDivisionError ở dòng tính giá vốn trung bình (docs/AUDIT_REPORT.md
+    # mục L8) — và lúc đó cuốn nhật ký đã hỏng, sửa phải mở file ra tay.
+    if price <= 0:
+        sys.exit(f"Giá phải > 0 (đang nhận {price}). Đơn vị nghìn đồng, VD 58.5")
+    if qty <= 0:
+        sys.exit(f"Khối lượng phải > 0 (đang nhận {qty}). Đơn vị: cổ phiếu")
     entry = {"date": str(date.today()), "side": side, "ticker": args[1].upper(),
-             "price": float(args[2]), "qty": float(args[3]), "note": "", "rec": ""}
+             "price": price, "qty": qty, "note": "", "rec": ""}
     if "--note" in args:
         entry["note"] = args[args.index("--note") + 1]
     if "--rec" in args:
@@ -73,19 +84,47 @@ def cmd_report():
     total = wins + losses
     if total:
         print(f"Win-rate: {wins}/{total} = {wins/total*100:.0f}%")
-    # Đối chiếu khuyến nghị
-    against = [r for r in rows if r.get("rec") and (
-        (r["side"] == "BUY" and "CHƯA MUA" in r["rec"].upper()) or
-        (r["side"] == "SELL" and "MUA" in r["rec"].upper() and "CHƯA" not in r["rec"].upper()))]
-    if against:
-        print(f"\n⚠️ {len(against)} lệnh đi ngược khuyến nghị hệ thống — xem lại kỷ luật:")
-        for r in against:
-            print(f"  {r['date']} {r['side']} {r['ticker']} (khuyến nghị lúc đó: {r['rec']})")
+    # Đối chiếu khuyến nghị — bằng ENUM, không dò chuỗi tiếng Việt.
+    # Logic cũ dò chuỗi con: bỏ sót MỌI lệnh mua sai, và gắn cờ oan cho lệnh
+    # bán sau khuyến nghị "KHÔNG MUA THÊM" (vì chuỗi đó chứa "MUA").
+    # Xem decision/discipline.py để có bảng đối chiếu đầy đủ 9 hành động.
+    from decision.discipline import AGAINST, NO_BASIS, UNKNOWN, classify, explain
+
+    buckets = {AGAINST: [], NO_BASIS: [], UNKNOWN: []}
+    for r in rows:
+        if not r.get("rec"):
+            continue
+        v = classify(r["side"], r["rec"])
+        if v in buckets:
+            buckets[v].append(r)
+
+    def _show(rows_, title):
+        if not rows_:
+            return
+        print(f"\n{title}")
+        for r in rows_:
+            print(f"  {r['date']} {r['ticker']}: {explain(r['side'], r['rec'])}")
+
+    _show(buckets[AGAINST],
+          f"⚠️ {len(buckets[AGAINST])} lệnh ĐI NGƯỢC khuyến nghị hệ thống — xem lại kỷ luật:")
+    _show(buckets[NO_BASIS],
+          f"ℹ️ {len(buckets[NO_BASIS])} lệnh vào lúc hệ thống CHƯA RA ĐƯỢC khuyến nghị "
+          "(không phải vô kỷ luật, nhưng cũng không có gì chống lưng):")
+    _show(buckets[UNKNOWN],
+          f"❓ {len(buckets[UNKNOWN])} lệnh có khuyến nghị KHÔNG ĐỌC ĐƯỢC — ghi bằng nhãn "
+          "chuẩn (VD MUA THĂM DÒ) để đối chiếu được:")
     # Vị thế còn mở
     open_pos = {t: sum(q for _, q in dq) for t, dq in lots.items() if dq}
     if open_pos:
         print("\nVị thế đang mở:")
         for t, q in open_pos.items():
+            # Guard cho dữ liệu cũ đã lỡ ghi trước khi có validate ở cmd_add:
+            # tổng khối lượng 0 thì không có giá vốn trung bình để nói, và
+            # chia cho 0 làm sập cả báo cáo vì đúng một dòng hỏng.
+            if q <= 0:
+                print(f"  {t}: khối lượng ghi nhận {q:.0f} — dòng nhật ký hỏng, "
+                      "không tính được giá vốn TB (sửa data/journal.jsonl)")
+                continue
             avg = sum(p * qn for p, qn in lots[t]) / q
             print(f"  {t}: {q:.0f}cp, giá vốn TB {avg:.2f}")
 
