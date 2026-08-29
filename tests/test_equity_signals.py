@@ -6,6 +6,8 @@ bên dưới" ở MỌI kỳ bản tin, trong khi không có mục nào như v�
 của VCB/CTD; nhánh equity của Decision Engine cũng đã có sẵn. Không caller nào
 gọi tới cả hai.
 """
+from datetime import date
+
 import pytest
 
 from decision.action_mapper import Action
@@ -18,6 +20,19 @@ def _rows(closes, volumes=None):
     return [{"date": f"2026-06-{1 + i:02d}", "open": str(c), "high": str(c * 1.01),
              "low": str(c * 0.99), "close": str(c), "volume": str(volumes[i])}
             for i, c in enumerate(closes)]
+
+
+def _phien_cuoi(signal):
+    """Ngày của nến EOD cuối cùng trong chuỗi — dùng làm "hôm nay" cho các test
+    KHÔNG nói về độ mới dữ liệu.
+
+    Không có nó thì mọi test dưới đây là bom hẹn giờ: rule chặn dữ liệu cũ
+    (`stale_critical_data`) chạy TRƯỚC mọi rule khác và trả NO_DECISION, nên
+    một test về rule quản trị doanh nghiệp sẽ đổi kết quả chỉ vì hôm nay là
+    ngày nào — nó xanh khi vừa viết và đỏ ba tuần sau, mà chẳng có dòng code
+    nào thay đổi. Test độ mới nằm riêng ở tests/test_equity_freshness.py.
+    """
+    return date.fromisoformat(signal.last_date)
 
 
 # --- Đọc dữ liệu: thiếu thì báo thiếu --------------------------------------
@@ -101,7 +116,7 @@ def test_chua_co_du_lieu_thi_KHONG_ra_quyet_dinh():
 
 def test_ra_duoc_quyet_dinh_day_du_truong():
     s = analyze("X", rows=_rows([50 + i * 0.5 for i in range(30)]))
-    d = decide_for(s)
+    d = decide_for(s, today=_phien_cuoi(s))
     for key in ("action", "action_vi", "confidence", "reasons", "data_quality", "risk_veto"):
         assert key in d
 
@@ -110,7 +125,7 @@ def test_rule_quan_tri_van_chan_duoc_qua_duong_nay():
     """Rule quản trị doanh nghiệp của Risk Officer trước nay chưa từng chạy vì
     nhánh equity không được gọi. Nối vào rồi thì nó phải có tác dụng thật."""
     s = analyze("X", rows=_rows([50 + i * 0.5 for i in range(30)]))
-    d = decide_for(s, governance_status="INDICTED")
+    d = decide_for(s, governance_status="INDICTED", today=_phien_cuoi(s))
     assert d["action"] == Action.STAND_ASIDE.value
     assert d["risk_veto"] is True
 
@@ -119,7 +134,7 @@ def test_dang_xac_minh_KHONG_bi_chan_han():
     """Đúng yêu cầu gốc: 'đang xác minh'/'mời làm việc' chỉ cảnh báo, không
     quy kết — thuật ngữ pháp lý phải giữ đúng mức."""
     s = analyze("X", rows=_rows([50 + i * 0.5 for i in range(30)]))
-    d = decide_for(s, governance_status="UNDER_VERIFICATION")
+    d = decide_for(s, governance_status="UNDER_VERIFICATION", today=_phien_cuoi(s))
     assert d["action"] != Action.STAND_ASIDE.value
 
 
@@ -158,7 +173,7 @@ def test_chay_duoc_tren_EOD_that_cua_VCB_va_CTD():
             pytest.skip(f"chưa có data/eod/{t}.csv")
         assert s.sessions >= 15
         assert s.trend_label is not None
-        assert decide_for(s) is not None
+        assert decide_for(s, today=_phien_cuoi(s)) is not None
 
 
 def test_ban_tin_khong_con_tro_toi_muc_KHONG_TON_TAI():

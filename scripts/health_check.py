@@ -39,7 +39,7 @@ TELEGRAM_TOKEN_RE = re.compile(r"\b\d{8,12}:[A-Za-z0-9_-]{30,}\b")
 # Import (không định nghĩa lại) để dùng CHUNG với analytics/data_quality.py —
 # nơi cùng mốc này là điểm mà độ mới dữ liệu tụt về 0. Hệ thống chỉ được có
 # MỘT định nghĩa "quá cũ"; hai bản sao sẽ lặng lẽ trôi khỏi nhau.
-from analytics.data_quality import STALE_ESCALATE_FACTOR  # noqa: E402
+from analytics.data_quality import EOD_MAX_AGE_DAYS, STALE_ESCALATE_FACTOR  # noqa: E402
 
 # (tên, đường dẫn, tuổi tối đa ngày, loại, CÓ nguồn tự động?)
 #
@@ -50,8 +50,11 @@ from analytics.data_quality import STALE_ESCALATE_FACTOR  # noqa: E402
 # bật" vừa sửa ở analytics/alert_health.py, và làm automation hỏng thật bị chìm.
 FRESHNESS_TARGETS: list[tuple[str, str, int, str, bool]] = [
     ("Snapshot thị trường (history.jsonl)", "data/history.jsonl", 2, "jsonl", True),
-    ("EOD VCB", "data/eod/VCB.csv", 4, "csv", True),
-    ("EOD CTD", "data/eod/CTD.csv", 4, "csv", True),
+    # Ngưỡng lấy từ analytics.data_quality — cùng con số mà Decision Engine
+    # dùng để chặn khuyến nghị cổ phiếu. Health check kêu "EOD quá cũ" mà bản
+    # tin vẫn khuyên mua trên chính chuỗi đó là mâu thuẫn đã từng xảy ra thật.
+    ("EOD VCB", "data/eod/VCB.csv", EOD_MAX_AGE_DAYS, "csv", True),
+    ("EOD CTD", "data/eod/CTD.csv", EOD_MAX_AGE_DAYS, "csv", True),
     ("Lãi suất chuẩn hóa", "data/normalized/deposit_rates.jsonl", 7, "jsonl_updated_at", False),
     ("Hiệu chuẩn giá vàng tiệm", "data/normalized/xuan_trieu_gold_history.csv", 30, "csv", False),
 ]

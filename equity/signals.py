@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import csv
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
 
@@ -142,8 +143,41 @@ def dividends_for(signal: TickerSignal):
     return view if view.dividends else None
 
 
+def data_quality_for(signal: TickerSignal, today: Optional[date] = None):
+    """Chất lượng chuỗi EOD mà quyết định của mã này dựa vào.
+
+    Đo trên `signal.last_date` — ngày của chính chuỗi đã nạp — chứ không đọc
+    lại file, để nhãn hành động và nhãn chất lượng không thể nói về hai bộ dữ
+    liệu khác nhau.
+    """
+    from analytics.data_quality import assess_equity
+
+    return assess_equity(signal.ticker, _as_date(signal.last_date), today)
+
+
+def stale_price_note(signal: TickerSignal, today: Optional[date] = None) -> Optional[str]:
+    """Câu giải thích vì sao KHÔNG được dựng kế hoạch vào lệnh trên chuỗi này.
+
+    Một chỗ định nghĩa duy nhất, vì có hai nơi hiển thị (bản tin văn bản và
+    dashboard HTML) và cả hai đều từng in "Mua tối đa 81 tr · cắt lỗ dưới
+    53.61" ngay cạnh nhãn CHƯA ĐỦ DỮ LIỆU. Để mỗi nơi tự viết lấy một câu là
+    mời gọi đúng một trong hai nơi quên mất.
+    """
+    dq = data_quality_for(signal, today)
+    if not dq.stale or not signal.last_date:
+        return None
+    last = _as_date(signal.last_date)
+    if last is None:
+        return None
+    age = ((today or date.today()) - last).days
+    return (f"giá tham chiếu là nến EOD ngày {signal.last_date}, đã {age} ngày — "
+            "hỗ trợ/kháng cự và mức cắt lỗ tính từ đó không còn nói về thị trường "
+            "hôm nay; chạy `python3 scripts/fetch_eod.py` trước")
+
+
 def decide_for(signal: TickerSignal, *, has_position: bool = False,
-               governance_status: Optional[str] = None) -> Optional[dict]:
+               governance_status: Optional[str] = None,
+               today: Optional[date] = None) -> Optional[dict]:
     """Chạy Decision Engine THẬT cho một mã — nhánh equity trước nay chưa từng chạy.
 
     Trả None khi chưa có dữ liệu: không có tín hiệu thì không ra quyết định,
@@ -153,6 +187,18 @@ def decide_for(signal: TickerSignal, *, has_position: bool = False,
     production nào truyền trường này, nên điều kiện duy nhất dẫn tới MUA THĂM
     DÒ không bao giờ thoả — nhánh cổ phiếu về cấu trúc không thể khuyến nghị
     mua, mọi mã vĩnh viễn dừng ở ĐỨNG NGOÀI.
+
+    ĐỘ MỚI nay cũng được TRUYỀN THẬT, vì lý do y hệt và với hậu quả nặng hơn:
+    hai trường dưới đây từng là `data_freshness_score=100.0` ghi cứng và một
+    `RiskContext` không có `data_stale`, nên rule `stale_critical_data` —
+    rule đang chạy đúng cho vàng, chặn hẳn quyết định thành CHƯA ĐỦ DỮ LIỆU —
+    về cấu trúc KHÔNG THỂ chạm tới cổ phiếu. Đo được ngày 29/08: chuỗi EOD cũ
+    19 ngày, health check gọi là hỏng, bản tin vẫn ra MUA THĂM DÒ 80/100 kèm
+    mức cắt lỗ 53.61. Xem `analytics/data_quality.equity_sources` để có bằng
+    chứng đầy đủ.
+
+    `today` để tiêm được cho test — một test về biên an toàn không được đổi
+    kết quả chỉ vì hôm nay là ngày nào.
     """
     if not signal.has_data:
         return None
@@ -172,6 +218,9 @@ def decide_for(signal: TickerSignal, *, has_position: bool = False,
     elif view.high_dispersion:
         completeness = min(completeness, 80.0)
 
+    dq = data_quality_for(signal, today)
+    completeness = min(completeness, dq.completeness_pct)
+
     return decide(
         DecisionInput(
             asset=signal.ticker, asset_class="equity",
@@ -180,10 +229,25 @@ def decide_for(signal: TickerSignal, *, has_position: bool = False,
             governance_status=governance_status,
             has_position=has_position,
             # Chất lượng dữ liệu của cổ phiếu đo riêng: chuỗi EOD là nguồn tự
-            # động thật, khác hẳn tình trạng dữ liệu vàng.
+            # động thật, khác hẳn tình trạng dữ liệu vàng. "Tự động" nói về
+            # CÁCH lấy, không nói gì về việc nó có còn chạy hay không — nên độ
+            # mới vẫn phải đo, không được mặc định 100.
             data_completeness_pct=completeness,
-            data_freshness_score=100.0,
+            data_freshness_score=dq.freshness_score,
         ),
-        RiskContext(governance_status=governance_status),
+        RiskContext(governance_status=governance_status,
+                    data_stale=dq.data_stale,
+                    data_missing_critical=dq.data_missing_critical),
         load_risk_limits(), load_decision_rules(),
     )
+
+
+def _as_date(value: Optional[str]) -> Optional[date]:
+    """Ngày của nến EOD cuối. Ngày hỏng trả None — và None nghĩa là THIẾU
+    nguồn (bị chặn), chứ không phải "coi như hôm nay"."""
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.strptime(value[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None

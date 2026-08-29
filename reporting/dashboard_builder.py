@@ -462,7 +462,7 @@ def _equity_section(port) -> str:
     """
     try:
         from equity.signals import analyze as eq_analyze
-        from equity.signals import decide_for, dividends_for
+        from equity.signals import decide_for, dividends_for, stale_price_note
 
         # `getattr` chứ không truy cập thẳng: mục này chỉ là phần thêm, không
         # được phép làm sập cả trang khi ngữ cảnh thiếu trường (test dùng port
@@ -484,6 +484,7 @@ def _equity_section(port) -> str:
         if not s.has_data:
             continue
         d = decide_for(s, has_position=t in held)
+        stale = stale_price_note(s)
         view = valuation_for(s)
         div = dividends_for(s)
         plan = plan_position(
@@ -492,8 +493,15 @@ def _equity_section(port) -> str:
             target=view.lowest.target_nghin_dong if view and view.lowest else None,
             hurdle_pct=hurdle,
             dividend_yield_pct=div.net_yield_pct if div else None,
+            # Cùng ràng buộc đang áp ở bản tin văn bản. Thiếu dòng này thì
+            # trang đọc chính — thứ chủ danh mục thật sự nhìn — in "CHƯA ĐỦ DỮ
+            # LIỆU ĐỂ RA QUYẾT ĐỊNH" ở cột Khuyến nghị và "Mua tối đa 81 tr ·
+            # cắt lỗ dưới 53.61" ở cột ngay bên cạnh, trên cùng một hàng.
+            price_stale_note=stale,
         ) if net else None
         flags = []
+        if stale:
+            flags.append("DỮ LIỆU CŨ")
         if s.tech.get("breakout") and s.tech["breakout"] != "NONE":
             flags.append(html.escape(s.tech["breakout"]))
         if s.volume_flag:

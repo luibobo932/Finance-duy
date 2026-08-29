@@ -325,7 +325,8 @@ def section_chung_khoan() -> str:
     """
     from decision.position_size import plan_position
     from equity.signals import analyze as eq_analyze
-    from equity.signals import decide_for, dividends_for, valuation_for
+    from equity.signals import (data_quality_for, decide_for, dividends_for,
+                                stale_price_note, valuation_for)
     from equity.target_prices import undated_warning
     from portfolio.loader import load_portfolio, load_risk_limits
 
@@ -353,6 +354,11 @@ def section_chung_khoan() -> str:
         d = decide_for(s, has_position=t in held)
         lines.append(f"- **{t}** {s.close:,.2f} (EOD {s.last_date}) → "
                      f"**{d['action_vi']}** (tin cậy {d['confidence']}/100)")
+        # Một câu giải thích, dùng cho cả nhãn hành động lẫn kế hoạch vào lệnh
+        # bên dưới, để hai thứ không thể nói khác nhau.
+        stale_note = stale_price_note(s)
+        if stale_note:
+            lines.append(f"  - ⚠️ DỮ LIỆU CŨ: {data_quality_for(s).explain()}")
         lines.append(f"  - {s.evidence()}")
         sr = []
         if s.tech.get("support") is not None:
@@ -393,6 +399,11 @@ def section_chung_khoan() -> str:
                 dividend_yield_pct=div.net_yield_pct if div else None,
                 available_cash_trieu=port.cash_amount_vnd / 1e6,
                 min_cash_buffer_trieu=(limits.get("minimum_cash_buffer_vnd") or 0) / 1e6,
+                # Không có dòng này thì bản tin in "CHƯA ĐỦ DỮ LIỆU" ở nhãn
+                # hành động rồi ngay dòng dưới in "Mua tối đa 81 tr · cắt lỗ
+                # dưới 53.61" — hai câu trái ngược nhau trong cùng một gạch đầu
+                # dòng, và câu thực hiện được là câu sai.
+                price_stale_note=stale_note,
             )
             lines.append(f"  - **{plan.summary()}**")
             for n in plan.notes:

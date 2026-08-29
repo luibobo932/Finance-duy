@@ -680,6 +680,41 @@ Chỉ cổ tức **tiền mặt sau thuế** được cộng vào tổng lợi n
 
 Rào lợi suất so **tổng mức tăng tới giá mục tiêu** với lãi tiền gửi **một năm**. Điều đó chỉ đúng nếu giá mục tiêu được kỳ vọng đạt trong khoảng 12 tháng; xa hơn thì rào đang dễ dãi với cổ phiếu. Mỗi kế hoạch vào lệnh nay in kèm câu cảnh báo đó thay vì để giả định nằm im trong code.
 
+## Dữ liệu cũ phải chặn được khuyến nghị cổ phiếu, đúng như nó đang chặn vàng (29/08/2026)
+
+Cùng một lần chạy, ngày 29/08, hai nửa hệ thống nói hai điều trái ngược về **cùng một file**:
+
+```
+scripts/health_check.py  → ❌ EOD CTD: mới nhất 2026-08-10 — đã 19 ngày,
+                             gấp >3× ngưỡng 4 ngày. Automation đã ngừng chạy.
+scripts/run_morning.py   → CTD 62.40 (EOD 2026-08-10) → MUA THĂM DÒ (80/100)
+                             Mua tối đa 81 tr · cắt lỗ dưới 53.61 · mục tiêu 93.00
+```
+
+Một nửa gọi dữ liệu là hỏng, nửa kia dựng trên nó một lệnh mua kèm mức cắt lỗ. Trong khi **đúng kỳ đó**, vàng — đọc từ snapshot cũ y hệt — bị Risk Officer chặn thành CHƯA ĐỦ DỮ LIỆU (30/100).
+
+### Cơ chế chặn không thiếu, nhánh cổ phiếu chỉ không đi qua nó
+
+`equity/signals.py::decide_for` ghi cứng `data_freshness_score=100.0` và dựng một `RiskContext` không có `data_stale`. Rule `stale_critical_data` chạy đúng cho vàng, nhưng về cấu trúc **không thể chạm tới cổ phiếu** — không caller nào truyền dữ liệu vào để nó xét.
+
+Đây là lần thứ ba đúng lớp lỗi này: `margin_of_safety_pct` từng không được truyền nên nhánh cổ phiếu không thể khuyến nghị MUA; `data_completeness_pct` từng mặc định 100 nên 13/13 quyết định vàng cùng một điểm 92. Trường có tồn tại, kiểu đúng, mặc định trông vô hại — và không ai truyền. Lý lẽ "chuỗi EOD là nguồn tự động thật" cũng sai ở đúng chỗ đó: **"tự động" nói về cách lấy, không nói gì về việc nó có còn chạy hay không.**
+
+### Chỗ nguy hiểm nhất không phải nhãn hành động, mà là mức cắt lỗ
+
+`53.61` — chính xác tới hai chữ số thập phân — được suy ra từ vùng hỗ trợ của gần ba tuần trước. Sau ngần ấy phiên không quan sát, giá có thể đã ở bất kỳ đâu. Bốn ràng buộc sẵn có của `decision/position_size.py` đều nói về **tương quan** giữa các con số (giá vs hỗ trợ, lợi nhuận vs rào tiền gửi, cỡ lệnh vs hạn mức) nên vẫn cho ra kết quả đẹp khi mọi con số cùng cũ 19 ngày. Nay có ràng buộc thứ năm: `price_stale_note` chặn hẳn kế hoạch vào lệnh, và đứng **đầu** danh sách lý do — các blocker khác bàn về chất lượng của lệnh, cái này bàn về việc có được phép bàn hay không.
+
+### Một ngưỡng, một câu giải thích, hai nơi hiển thị
+
+- `analytics/data_quality.py::EOD_MAX_AGE_DAYS = 4` là **định nghĩa duy nhất** của "EOD quá cũ" — `scripts/health_check.py` import nó thay vì giữ riêng số 4. Bốn ngày lịch chứ không phải một: giá đóng cửa thứ Sáu đọc sáng thứ Hai đã 3 ngày tuổi mà vẫn là phiên gần nhất, ngưỡng phải nuốt được một cuối tuần bình thường. Không có lịch nghỉ lễ, nên Tết dài sẽ làm dữ liệu trông cũ hơn thực tế — sai theo hướng khuyên ít đi, không theo hướng nguy hiểm.
+- `equity/signals.py::stale_price_note()` là **câu giải thích duy nhất**. Cần vậy vì có hai nơi hiển thị: bản tin văn bản và `dashboard/ban-tin-dau-tu.html`. Trang HTML — thứ chủ danh mục thật sự đọc — đã in "CHƯA ĐỦ DỮ LIỆU ĐỂ RA QUYẾT ĐỊNH" ở cột Khuyến nghị và "Mua tối đa 81 tr · cắt lỗ dưới 53.61" ở cột ngay bên cạnh, **trên cùng một hàng**.
+- Độ mới đo trên `TickerSignal.last_date` — chuỗi đã nạp — chứ không đọc lại đĩa, để nhãn hành động và nhãn chất lượng không thể nói về hai bộ dữ liệu khác nhau.
+
+### Test tự hỏng theo lịch cũng là một lỗi
+
+Ba test cũ chạy trên EOD thật mà không ghim mốc thời gian, nên rule chặn dữ liệu cũ làm chúng đỏ — chúng xanh khi vừa viết và đỏ ba tuần sau mà không dòng code nào thay đổi. Nay `decide_for(..., today=...)` tiêm được, và mọi test **không** nói về độ mới đều lấy "hôm nay" là ngày của nến EOD cuối. Phần độ mới nằm riêng ở `tests/test_equity_freshness.py` (17 test).
+
+Kết quả sau khi sửa: cùng chuỗi EOD đó, đọc **trong ngày** vẫn ra MUA THĂM DÒ 80/100 như trước — hành vi đường chạy bình thường không đổi; đọc **hôm nay** ra CHƯA ĐỦ DỮ LIỆU 30/100, không kèm cỡ lệnh hay mức cắt lỗ nào.
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```
