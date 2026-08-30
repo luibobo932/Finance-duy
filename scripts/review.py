@@ -57,6 +57,17 @@ def main() -> None:
         if r["change_pct"] is not None and r["compared_with"]:
             line += (f" → giá {r['change_pct']:+.2f}% tới {r['compared_with']['date']}"
                      f" ({r['compared_with']['ky']})")
+            # Chân trời đánh giá phải hiện ra: một verdict trên 0 ngày (sáng so
+            # với chiều cùng ngày) và một verdict trên 19 ngày không cùng sức
+            # nặng — giấu con số này là để người đọc tự hiểu nhầm rằng chúng
+            # ngang nhau.
+            chi_tiet = []
+            if r.get("horizon_days") is not None:
+                chi_tiet.append(f"{r['horizon_days']} ngày")
+            if r.get("approximated"):
+                chi_tiet.append(f"đo bằng {r.get('measured_field')}, xấp xỉ")
+            if chi_tiet:
+                line += " [" + ", ".join(chi_tiet) + "]"
         print(f"{line} — {VERDICT_VI[r['verdict']]}")
     print(f"\nĐã chấm điểm: {s['scored']} (đúng {s['dung_huong']} / sai {s['sai_huong']})"
           f" · đi ngang {s['di_ngang']} · không chấm {s['khong_cham_diem']}"
@@ -67,6 +78,18 @@ def main() -> None:
         print("Accuracy: chưa tính được — chưa có quyết định định hướng nào đủ dữ liệu chấm điểm.")
     if s["scored"] < 5:
         print("(Cần ≥5 quyết định đã chấm điểm thì accuracy mới được nạp vào confidence score.)")
+    ngan = [r for r in rows if (r.get("horizon_days") or 0) < 1
+            and r["verdict"] in ("DUNG_HUONG", "SAI_HUONG", "DI_NGANG")]
+    if ngan:
+        print(f"⚠️ {len(ngan)} quyết định được chấm trên cửa sổ DƯỚI 1 NGÀY — vài giờ không "
+              "đủ để nói một khuyến nghị vị thế đúng hay sai; đọc các dòng đó như chưa có "
+              "kết luận.")
+    xx = [r for r in rows if r.get("approximated")]
+    if xx:
+        from analytics.decision_review import APPROXIMATION_NOTE
+
+        print(f"[xấp xỉ] {len(xx)} quyết định neo vào trường giá đã ngừng thu thập. "
+              f"{APPROXIMATION_NOTE}.")
     _print_opportunity_cost(decisions)
 
 

@@ -25,26 +25,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Sequence
 
-from analytics.decision_review import later_snapshots, period_key, price_from_snapshot
+from analytics.decision_review import APPROXIMATION_NOTE, best_measurement
 
 # Hành động phòng thủ: giảm hoặc không tăng mức phơi nhiễm.
 DEFENSIVE_ACTIONS = {"TAKE_PARTIAL_PROFIT", "DO_NOT_BUY_MORE"}
 # GIỮ không phải hành động phòng thủ — nó là không làm gì, nên không có phí.
 NEUTRAL_ACTIONS = {"HOLD", "WATCH", "STAND_ASIDE", "WAIT_FOR_CONFIRMATION"}
 
-# Trường giá thay thế khi trường gốc ngừng được thu thập. Tình huống thật: các
-# quyết định ngày 22/7 neo vào `ring_sell`, nhưng giá vàng trong nước ngừng thu
-# thập từ 27/7 (không có nguồn tự động), nên so với trường gốc chỉ ra 0,00% —
-# đúng kỹ thuật mà vô dụng về phân tích.
-FALLBACK_FIELDS: dict[str, list[str]] = {
-    "gold": ["ring_sell", "sjc_sell", "sjc_buy", "xauusd"],
-}
-# Sai số khi thay trường: tỷ lệ giá trong nước / thế giới KHÔNG cố định — đo
-# được 2,3% biên độ trong 6 ngày (xem gold/calibration.py). Nên % thay đổi của
-# xauusd chỉ XẤP XỈ % thay đổi của giá trong nước, và phải nói rõ điều đó.
-APPROXIMATION_NOTE = ("XẤP XỈ: trường giá gốc ngừng thu thập nên đo bằng trường khác; "
-                      "tỷ lệ giá trong nước/thế giới trôi ~2,3% trong 6 ngày quan sát "
-                      "(gold/calibration.py) nên con số này có sai số tương ứng")
+# FALLBACK_FIELDS và APPROXIMATION_NOTE nay sống ở analytics/decision_review.py
+# và được import lại ở trên. Trước đây chúng khai ở ĐÂY, còn `review_one` bên
+# kia thì không có cơ chế thay trường — nên hai module chấm cùng một quyết định
+# ra +5,48% và +0,00%. Một định nghĩa, hai người dùng.
 
 
 @dataclass
@@ -108,45 +99,12 @@ def measure_one(decision: dict, snapshots: Sequence[dict]) -> OpportunityEntry:
         base.note = "thiếu giá tham chiếu tại thời điểm quyết định"
         return base
 
-    asset_class = decision.get("asset_class", "gold")
-    later = later_snapshots(decision, list(snapshots))
-
-    # Thử trường gốc trước; nếu nó đã ngừng thu thập thì mới dùng trường thay thế.
-    # Trường thay thế phải đọc giá ở CẢ HAI đầu bằng cùng một trường — không bao
-    # giờ so ref_price (ring_sell) với giá sau (xauusd) vì khác hẳn thang đo.
-    candidates = [field] + [f for f in FALLBACK_FIELDS.get(asset_class, []) if f != field]
-    at_decision = _snapshot_of(decision, snapshots)
-
-    # Với mỗi trường khả dụng, tìm phép đo dùng kỳ MỚI NHẤT có trường đó. Rồi
-    # giữa các trường, chọn phép đo có NHIỀU THỜI GIAN TRÔI QUA NHẤT.
-    #
-    # Vì sao không đơn giản "ưu tiên trường gốc": quyết định 22/7 sáng neo vào
-    # ring_sell, mà ring_sell chỉ còn tới 22/7 chiều — so hai kỳ cách nhau vài
-    # giờ ra +0,00% và không nói gì về chi phí của một hành động phòng thủ. Đo
-    # bằng xauusd tới 10/8 mới trả lời được câu hỏi thật, dù là xấp xỉ.
-    best: Optional[tuple] = None  # (khoá kỳ, là_xấp_xỉ, trường, giá, snapshot, %)
-    for i, f in enumerate(candidates):
-        ref_for_f = ref if i == 0 else (
-            price_from_snapshot(at_decision, asset_class, f) if at_decision else None)
-        if not ref_for_f:
-            continue
-        for snap in reversed(later):
-            price = price_from_snapshot(snap, asset_class, f)
-            if not price:
-                continue
-            key = period_key(snap.get("date", ""), snap.get("ky", ""))
-            change = (price - ref_for_f) / ref_for_f * 100
-            cand = (key, i > 0, f, price, snap, change)
-            # Kỳ muộn hơn thì thắng; cùng kỳ thì ưu tiên trường GỐC (không xấp xỉ)
-            if best is None or (key > best[0]) or (key == best[0] and best[1] and i == 0):
-                best = cand
-            break  # đã lấy kỳ mới nhất của trường này
-
-    if best is None:
+    m = best_measurement(decision, list(snapshots))
+    if m is None:
         base.note = "chưa có kỳ nào sau đó có giá để so"
         return base
-
-    _key, approx, f, price, snap, change = best
+    approx, f, price, snap, change = (
+        m["approximated"], m["field"], m["later_price"], m["snapshot"], m["change_pct"])
     base.later_price = price
     base.later_date = snap.get("date")
     base.change_pct = change
@@ -157,14 +115,6 @@ def measure_one(decision: dict, snapshots: Sequence[dict]) -> OpportunityEntry:
     if approx:
         base.note += f" — {APPROXIMATION_NOTE}"
     return base
-
-
-def _snapshot_of(decision: dict, snapshots: Sequence[dict]) -> Optional[dict]:
-    """Snapshot ĐÚNG kỳ ra quyết định — để lấy giá tham chiếu ở trường thay thế."""
-    for s in snapshots:
-        if s.get("date") == decision.get("date") and s.get("ky") == decision.get("ky"):
-            return s
-    return None
 
 
 def measure_all(decisions: Sequence[dict], snapshots: Sequence[dict]) -> list[OpportunityEntry]:

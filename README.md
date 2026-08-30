@@ -806,6 +806,51 @@ Vốn nằm trong thị trường 6 ngày. Cùng 6 ngày đó, gửi tiết ki�
 
 **751 test** (trước đó 747). Test cũ từng **mã hoá chính cái sai**: nó assert chênh lệch đúng bằng `2 × 0,15 = 0,3` — con số chỉ đúng với công thức phẳng.
 
+## Thước đo độ chính xác đang tự bảo vệ mình (30/08/2026)
+
+`scripts/review.py` chạy trên dữ liệu thật cho ra: **đã chấm điểm 0**, accuracy "chưa tính được", suốt 15 quyết định đã ghi. Nghe như "chưa đủ mẫu". Thực tế là thước đo bị **đóng băng ở đúng chỗ nó đáng lẽ phải ghi một lần đoán sai**.
+
+### Nguyên nhân: một trường giá chết
+
+`gold.ring_sell` (giá vàng nhẫn trong nước) chỉ có tới **22/07** rồi ngừng hẳn — không có nguồn tự động. Bốn quyết định neo vào trường đó bị kẹt: kỳ so sánh muộn nhất còn giá là 22/07 chiều, cách quyết định 22/07 sáng **vài giờ**.
+
+Với quyết định **CHỐT BỚT** ngày 22/07 sáng — một hành động kỳ vọng giá **giảm**:
+
+| đo bằng | tới kỳ | thay đổi | verdict |
+|---|---|---|---|
+| `ring_sell` (trường gốc) | 22/07 chiều, **0 ngày** | +0,00% | "đi ngang" |
+| `xauusd` (trường thay thế) | 10/08 chiều, **19 ngày** | **+5,48%** | **sai hướng** |
+
+Cả hai quyết định CHỐT BỚT của 22/07 đều rơi vào đó. Nên `scored = 0`, accuracy vĩnh viễn "chưa tính được" — trong khi thực tế đã có **hai lần đoán sai** nằm sẵn trong dữ liệu.
+
+### Điều đáng nói nhất: vấn đề này đã được giải rồi
+
+`analytics/opportunity_cost.py` xử lý đúng tình huống này, và chú thích trong đó nói thẳng ra:
+
+> *"quyết định 22/7 sáng neo vào ring_sell, mà ring_sell chỉ còn tới 22/7 chiều — so hai kỳ cách nhau vài giờ ra +0,00% và **không nói gì** về chi phí của một hành động phòng thủ."*
+
+Sửa ở module đó, **không sửa ở `decision_review`** — mà `decision_review` mới là nơi nạp accuracy vào điểm tin cậy. Hai module vì thế chấm cùng một quyết định ra hai con số trái nhau: `+0,00%` và `+5,48%`. Đây là lần thứ tư đúng lớp lỗi "sửa một nơi trong nhiều nơi" trong đợt rà soát này.
+
+### Sửa
+
+- `FALLBACK_FIELDS` + `best_measurement()` chuyển về `analytics/decision_review.py` làm **một chỗ định nghĩa duy nhất**; `opportunity_cost` import lại, bản trùng bị xoá. Có test chặn tái phát nếu module nào khai lại bảng của riêng nó.
+- Ràng buộc bất di bất dịch được giữ nguyên và có test riêng: **đọc giá ở cả hai đầu bằng cùng một trường**. Không bao giờ so `ref_price` (ring_sell ~147) với giá sau (xauusd ~4340) — đó không phải xấp xỉ, đó là vô nghĩa. Không đọc được cả hai đầu → `CHƯA ĐỦ DỮ LIỆU`, một trạng thái trung thực, khác hẳn một verdict.
+- Mỗi verdict nay kèm **chân trời đánh giá**. Một kết luận trên 0 ngày và một kết luận trên 19 ngày không cùng sức nặng; giấu con số đó đi là để người đọc tự hiểu nhầm rằng chúng ngang nhau. Báo cáo cảnh báo riêng những dòng chấm trên cửa sổ dưới 1 ngày.
+
+Kết quả trên chính dữ liệu đó:
+
+```
+2026-07-22 (sang) CHỐT BỚT → +5.48% tới 2026-08-10 [19 ngày, đo bằng xauusd, xấp xỉ] — ❌ sai hướng
+2026-07-22 (chieu) CHỐT BỚT → +4.99% tới 2026-08-10 [19 ngày, đo bằng xauusd, xấp xỉ] — ❌ sai hướng
+
+Đã chấm điểm: 2 (đúng 0 / sai 2) · Accuracy: 0.0%
+⚠️ 1 quyết định được chấm trên cửa sổ DƯỚI 1 NGÀY — đọc như chưa có kết luận.
+```
+
+Accuracy vẫn chưa nạp vào điểm tin cậy vì ngưỡng tối thiểu là 5 quyết định đã chấm — đúng như thiết kế. Nhưng nó **không còn là con số không bao giờ tính được**.
+
+**762 test** (trước đó 751).
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```
