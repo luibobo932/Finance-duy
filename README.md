@@ -851,6 +851,30 @@ Accuracy vẫn chưa nạp vào điểm tin cậy vì ngưỡng tối thiểu l�
 
 **762 test** (trước đó 751).
 
+## Quỹ khẩn cấp bị chừa hai lần — 2,4 tr/năm lãi bỏ lỡ (30/08/2026)
+
+`config/risk_limits.yaml` khai `minimum_cash_buffer_vnd: 30 tr`. Đó là yêu cầu ở tầng **danh mục**, không phải yêu cầu riêng của khoản tiết kiệm — và tiền mặt đang nắm đã tính vào đó rồi.
+
+| | phép tính | kết quả |
+|---|---|---|
+| Lần 1 — `run_morning.py` | tiền mặt 35 tr − quỹ 30 tr | "tiền khả dụng ngay chỉ 5 tr" ✓ |
+| Lần 2 — `deposits_report.py` | tiết kiệm 246 tr − quỹ 30 tr | chia kỳ hạn trên 216 tr ✗ |
+| **Tổng đã chừa** | | **60 tr** — gấp đôi hạn mức |
+
+Hệ quả: **30 tr tiết kiệm nằm ngoài kế hoạch**, không được đặt vào kỳ hạn nào. Ở mức tốt nhất đo được 8,00%/năm, đó là **2,4 tr/năm tiền lãi bỏ lỡ** — trong đúng module sinh ra để tối đa hoá lãi tiền gửi. Và báo cáo in ra dòng "Quỹ khẩn cấp giữ lại (không đầu tư): 30.000.000đ" như thể đó là một khoản dự phòng thứ hai chính đáng.
+
+`deposits/strategy.py::buffer_needed_from_savings()` nay trả về phần **còn thiếu** sau khi trừ tiền mặt. Tiền mặt đã đủ quỹ → 0, toàn bộ 246 tr vào kế hoạch. Báo cáo nói rõ vì sao:
+
+```
+Quỹ khẩn cấp 30.000.000đ đã được TIỀN MẶT (35.000.000đ) đáp ứng đủ — không chừa
+thêm từ tiết kiệm. Chừa hai lần là để 30.000.000đ nằm ngoài kế hoạch mà không
+có lý do.
+```
+
+Lãi dự kiến phần đã phân bổ tăng từ 8,99 tr lên **10,23 tr/năm**. (73,8 tr vẫn chưa phân bổ vì dữ liệu chưa có ngân hàng nào cho kỳ hạn 13 tháng — hạn chế đã được báo cáo trung thực từ trước, không phải lỗi mới.)
+
+**771 test** (trước đó 762).
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```

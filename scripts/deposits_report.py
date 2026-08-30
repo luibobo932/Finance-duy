@@ -14,7 +14,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from deposits.ranking import load_normalized, rank  # noqa: E402
-from deposits.strategy import split_strategy, total_expected_interest_vnd  # noqa: E402
+from deposits.strategy import (buffer_needed_from_savings, split_strategy,  # noqa: E402
+                               total_expected_interest_vnd)
 from portfolio.loader import load_portfolio, load_risk_limits  # noqa: E402
 
 
@@ -29,12 +30,15 @@ def main():
     for r in ranked:
         print(f"{r['bank']:<18}{r['term_months']:>6}T{r['rate_pct']:>9.2f}%{(r['channel'] or '-'):>10}  {r['conditions']}")
 
-    excluded_count = len(rates) - len({(r["bank"], r["term_months"]) for r in ranked})
     print(f"\n(Đã lọc bỏ {len(rates) - len(ranked)} mục không hợp lệ cho retail — VIP/số dư quá lớn/bảo hiểm/CCTG/thiếu dữ liệu)")
 
     port = load_portfolio()
     limits = load_risk_limits()
-    buffer = limits.get("minimum_cash_buffer_vnd", 0)
+    # Quỹ khẩn cấp là yêu cầu ở tầng DANH MỤC — tiền mặt đang nắm đã tính vào
+    # đó. Trừ nguyên mức quỹ ra khỏi tiết kiệm nữa là chừa hai lần: 60 tr trong
+    # khi hạn mức chỉ đòi 30 tr, và 30 tr tiết kiệm nằm ngoài kế hoạch.
+    buffer_limit = limits.get("minimum_cash_buffer_vnd", 0)
+    buffer = buffer_needed_from_savings(buffer_limit, port.cash_amount_vnd)
     allocations = split_strategy(port.savings_principal_vnd, buffer, ranked)
 
     print(f"\n=== CHIẾN LƯỢC CHIA KỲ HẠN cho {port.savings_principal_vnd:,.0f}đ tiết kiệm hiện có ===")
@@ -58,7 +62,13 @@ def main():
         )
     total_interest = total_expected_interest_vnd(allocations)
     print(f"\nTổng lãi dự kiến (phần đã phân bổ, giữ đúng hạn): {total_interest:,.0f}đ/năm")
-    print(f"Quỹ khẩn cấp giữ lại (không đầu tư): {buffer:,.0f}đ")
+    if buffer > 0:
+        print(f"Quỹ khẩn cấp còn phải chừa từ tiết kiệm: {buffer:,.0f}đ "
+              f"(hạn mức {buffer_limit:,.0f}đ − tiền mặt {port.cash_amount_vnd:,.0f}đ)")
+    else:
+        print(f"Quỹ khẩn cấp {buffer_limit:,.0f}đ đã được TIỀN MẶT ({port.cash_amount_vnd:,.0f}đ) "
+              "đáp ứng đủ — không chừa thêm từ tiết kiệm. Chừa hai lần là để "
+              f"{buffer_limit:,.0f}đ nằm ngoài kế hoạch mà không có lý do.")
 
 
 if __name__ == "__main__":

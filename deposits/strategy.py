@@ -40,6 +40,29 @@ class DepositAllocation:
         return self.expected_interest_vnd - actual_if_withdrawn_early
 
 
+def buffer_needed_from_savings(buffer_vnd: float, liquid_cash_vnd: float) -> float:
+    """Còn phải chừa BAO NHIÊU từ khoản tiết kiệm cho quỹ khẩn cấp.
+
+    Quỹ khẩn cấp là yêu cầu ở tầng DANH MỤC, không phải yêu cầu riêng của
+    khoản tiết kiệm: tiền mặt đang nắm đã tính vào đó rồi. Bỏ qua điều này
+    thì cùng một quỹ bị chừa HAI LẦN.
+
+    Lỗi thật, đo ngày 30/08 trên chính config của dự án:
+
+        risk_limits: minimum_cash_buffer_vnd = 30 tr
+        tiền mặt 35 tr − 30 tr  → run_morning: "tiền khả dụng ngay chỉ 5 tr"   ✓ đúng
+        tiết kiệm 246 tr − 30 tr → deposits_report chia kỳ hạn trên 216 tr     ✗ chừa lần hai
+
+    Tổng chừa 60 tr trong khi hạn mức chỉ yêu cầu 30 tr. Hệ quả: **30 tr tiết
+    kiệm nằm ngoài kế hoạch**, và ở mức tốt nhất đo được 8,00%/năm đó là
+    **2,4 tr/năm tiền lãi bị bỏ lỡ** — trong đúng module sinh ra để tối đa hoá
+    lãi tiền gửi.
+
+    Trả về phần CÒN THIẾU sau khi trừ tiền mặt. Tiền mặt đã đủ quỹ → trả 0.
+    """
+    return max(0.0, float(buffer_vnd or 0) - float(liquid_cash_vnd or 0))
+
+
 def split_strategy(
     total_vnd: float,
     emergency_buffer_vnd: float,
