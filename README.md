@@ -768,6 +768,44 @@ Cùng lượt, sửa nốt `L8` (chia cho 0 trong `journal.py`, đã ghi trong a
 
 **747 test** (trước đó 697).
 
+## Backtest tự chấm điểm mình cao hơn thực tế (30/08/2026)
+
+`scripts/backtest.py` tính lợi nhuận sau chi phí bằng **công thức riêng**, không dùng `equity/costs.py` như phần còn lại của hệ thống:
+
+```python
+(sell - buy) / buy * 100 - 2 * fee_pct
+```
+
+Sai hai chỗ, và cả hai đều lệch về phía **lạc quan**:
+
+1. **Bỏ hẳn thuế bán 0,1%** — khoản bắt buộc, phải nộp *kể cả khi lỗ*. Mọi lệnh trong mọi backtest đều được cộng không 0,1 điểm %.
+2. **Trừ phí như điểm phần trăm phẳng.** Phí mua tính trên tiền vào, phí bán tính trên tiền **ra**. Trừ `2 × fee_pct` là coi cả hai như tính trên tiền vào — sai càng nhiều khi lãi càng lớn, tức sai đúng ở chỗ quan trọng.
+
+Đo trên chính dữ liệu CTD, phí 0,2%/chiều:
+
+| mua | bán | gộp | công thức cũ | đúng | lệch |
+|---|---|---|---|---|---|
+| 62,4 | 63,0 | +0,96% | +0,562% | +0,459% | 0,10 |
+| 62,4 | 93,0 | +49,04% | +48,638% | +48,391% | 0,25 |
+| 100 | 200 | +100% | +99,600% | +99,200% | 0,40 |
+
+0,1–0,4 điểm % nghe nhỏ, nhưng sai số này **luôn cùng một chiều** và cộng dồn theo số lệnh. Backtest tồn tại để trả lời "quy tắc này có đáng theo không", mà thước đo là tiền gửi ~8%/năm KHÔNG rủi ro — một sai số luôn nghiêng về phía làm quy tắc trông tốt hơn thực tế là loại sai số dẫn thẳng tới quyết định sai.
+
+### Hai thay đổi kèm theo
+
+- **Mặc định không còn là "miễn phí".** `--fee` mặc định lấy phí thật trong `config/decision_rules.yaml` thay vì 0. Giao dịch miễn phí chưa bao giờ là sự thật, và một backtest mặc định bỏ chi phí là backtest mặc định trả lời sai câu hỏi nó sinh ra để trả lời. Thuế bán thì bị trừ **luôn**, kể cả khi khai `--fee 0`.
+- **Rào lợi suất, đúng nguyên tắc đã áp cho khuyến nghị mua.** Backtest nay so kết quả với lãi tiền gửi trên **đúng số ngày vốn thực sự nằm trong thị trường** — không quy ra %/năm, vì 3 lệnh trong 43 phiên quy ra năm là phóng đại một mẫu quá nhỏ thành tuyên bố về tương lai:
+
+```
+Số lệnh: 3 | Thắng: 0/3 (0%) | Tổng lợi nhuận cộng dồn: -5.8%
+Vốn nằm trong thị trường 6 ngày. Cùng 6 ngày đó, gửi tiết kiệm ở mức tốt nhất
+đo được (8.00%/năm) cho +0.13% KHÔNG rủi ro.
+→ Quy tắc THUA tiền gửi 5.92 điểm %, trong khi vẫn phải chịu rủi ro giá.
+⚠️ Chỉ 3 lệnh — quá ít để nói quy tắc tốt hay xấu.
+```
+
+**751 test** (trước đó 747). Test cũ từng **mã hoá chính cái sai**: nó assert chênh lệch đúng bằng `2 × 0,15 = 0,3` — con số chỉ đúng với công thức phẳng.
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```
