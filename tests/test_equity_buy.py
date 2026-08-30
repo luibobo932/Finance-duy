@@ -172,6 +172,17 @@ def test_tien_mat_bang_dung_quy_khan_cap_thi_noi_ro_khong_dung_duoc():
 
 # --- Nối vào Decision Engine: nút MUA nay bấm được ------------------------
 
+
+def _phien_cuoi(signal):
+    """"Hôm nay" = ngày của nến EOD cuối, cho các test KHÔNG nói về độ mới.
+
+    Xem tests/test_equity_signals.py::_phien_cuoi — dùng dữ liệu EOD thật trên
+    đĩa mà không ghim mốc thời gian thì test tự hỏng theo lịch, không theo code.
+    """
+    from datetime import date
+
+    return date.fromisoformat(signal.last_date)
+
 def test_bien_an_toan_nay_duoc_TRUYEN_THAT_vao_decision_engine():
     """Điều kiện duy nhất dẫn tới MUA THĂM DÒ trước đây không bao giờ thoả."""
     from equity.signals import analyze, decide_for, valuation_for
@@ -181,7 +192,7 @@ def test_bien_an_toan_nay_duoc_TRUYEN_THAT_vao_decision_engine():
         pytest.skip("chưa có data/eod/CTD.csv")
     v = valuation_for(s)
     assert v is not None and v.margin_of_safety_pct is not None
-    assert decide_for(s)["action"] == "BUY_SMALL"
+    assert decide_for(s, today=_phien_cuoi(s))["action"] == "BUY_SMALL"
 
 
 def test_ma_khong_du_bien_an_toan_van_dung_ngoai():
@@ -190,7 +201,7 @@ def test_ma_khong_du_bien_an_toan_van_dung_ngoai():
     s = analyze("VCB")
     if not s.has_data:
         pytest.skip("chưa có data/eod/VCB.csv")
-    assert decide_for(s)["action"] != "BUY_SMALL"
+    assert decide_for(s, today=_phien_cuoi(s))["action"] != "BUY_SMALL"
 
 
 def test_dinh_gia_di_muon_lam_GIAM_do_day_du_du_lieu():
@@ -201,7 +212,7 @@ def test_dinh_gia_di_muon_lam_GIAM_do_day_du_du_lieu():
     if not s.has_data:
         pytest.skip("chưa có EOD")
     # VCB có độ phân tán cao (30%) nên completeness bị hạ -> tin cậy thấp hơn
-    assert decide_for(s)["confidence"] < 100
+    assert decide_for(s, today=_phien_cuoi(s))["confidence"] < 100
 
 
 def test_rule_quan_tri_van_thang_ca_bien_an_toan():
@@ -212,7 +223,7 @@ def test_rule_quan_tri_van_thang_ca_bien_an_toan():
     s = analyze("CTD")
     if not s.has_data:
         pytest.skip("chưa có EOD")
-    d = decide_for(s, governance_status="INDICTED")
+    d = decide_for(s, governance_status="INDICTED", today=_phien_cuoi(s))
     assert d["action"] == "STAND_ASIDE" and d["risk_veto"] is True
 
 

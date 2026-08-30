@@ -46,6 +46,17 @@ ROOT = Path(__file__).resolve().parent.parent
 # scripts/health_check.py — nó import hằng số này để hai nơi không trôi khỏi nhau.
 STALE_ESCALATE_FACTOR = 3
 
+# Tuổi tối đa của một nến EOD trước khi coi là cũ. 4 ngày lịch chứ không phải 1:
+# giá đóng cửa thứ Sáu đọc vào sáng thứ Hai đã 3 ngày tuổi mà vẫn là phiên gần
+# nhất — ngưỡng phải nuốt được một cuối tuần bình thường.
+#
+# Hằng số này là ĐỊNH NGHĨA DUY NHẤT của "EOD quá cũ": `scripts/health_check.py`
+# import nó thay vì viết lại số 4, đúng nguyên tắc đã nêu ở đầu module — một hệ
+# thống không nên có hai định nghĩa "quá cũ". Giới hạn phải nói thẳng: không có
+# lịch nghỉ lễ, nên một kỳ nghỉ Tết dài sẽ làm dữ liệu trông cũ hơn thực tế. Sai
+# theo hướng thận trọng (khuyên ít đi), không theo hướng nguy hiểm.
+EOD_MAX_AGE_DAYS = 4
+
 
 @dataclass
 class Source:
@@ -230,3 +241,58 @@ def _parse(value: object) -> Optional[date]:
         return datetime.strptime(value[:10], "%Y-%m-%d").date()
     except ValueError:
         return None
+
+
+# --- Bộ nguồn thật cho quyết định CỔ PHIẾU ----------------------------------
+#
+# Vì sao cần, bằng chứng đo được ngày 29/08/2026 trên chính repo này:
+#
+#   scripts/health_check.py  → "❌ EOD VCB: mới nhất 2026-08-10 — đã 19 ngày,
+#                               gấp >3× ngưỡng 4 ngày. Automation đã ngừng chạy."
+#   scripts/run_morning.py   → "CTD 62.40 (EOD 2026-08-10) → MUA THĂM DÒ
+#                               (tin cậy 80/100) · Mua tối đa 81 tr ·
+#                               cắt lỗ dưới 53.61 · mục tiêu 93.00"
+#
+# Cùng một file, cùng một lần chạy: một nửa hệ thống gọi dữ liệu là HỎNG, nửa
+# kia dựng trên nó một lệnh mua kèm mức cắt lỗ. Trong khi ĐÚNG kỳ đó, vàng —
+# đọc từ snapshot cũ y hệt — bị Risk Officer chặn thành CHƯA ĐỦ DỮ LIỆU
+# (30/100). Cơ chế chặn có sẵn và chạy đúng; nhánh cổ phiếu chỉ đơn giản không
+# đi qua nó: `equity/signals.py::decide_for` ghi cứng
+# `data_freshness_score=100.0` và dựng `RiskContext` không có `data_stale`.
+#
+# Mức cắt lỗ mới là chỗ nguy hiểm nhất, không phải nhãn hành động: 53.61 được
+# tính từ vùng hỗ trợ của 19 ngày trước. Sau ngần ấy phiên không quan sát, giá
+# có thể đã ở bất kỳ đâu — đó là một con số chính xác đến hai chữ số thập phân
+# nói về một thị trường mà hệ thống không còn nhìn thấy.
+
+def equity_sources(ticker: str, last_eod: Optional[date] = None) -> list[Source]:
+    """Nguồn mà một quyết định cổ phiếu đang dựa vào — chuỗi EOD của chính mã đó.
+
+    `last_eod` truyền từ tín hiệu đã nạp (`TickerSignal.last_date`) chứ không
+    đọc lại đĩa, để hai chỗ không thể lệch nhau — cùng nguyên tắc mà
+    `run_gold_decision()` đang áp cho chuỗi vàng. Chỉ khi caller không có sẵn
+    tín hiệu thì mới rơi về đọc file.
+
+    Chỉ khai báo chuỗi EOD, không nhét thêm nguồn cho đủ bộ: giá, RSI/MACD,
+    hỗ trợ/kháng cự và mức cắt lỗ đều rút ra từ đúng chuỗi này. Giá mục tiêu
+    CTCK có vấn đề riêng của nó (độ phân tán, không rõ ngày phát hành) và đã
+    được `equity/target_prices.py` xử lý ở chỗ khác — không phạt chồng.
+    """
+    t = ticker.upper()
+    as_of = last_eod if last_eod is not None else _latest_eod_date(t)
+    return [Source(f"EOD {t} (data/eod/{t}.csv)", as_of, EOD_MAX_AGE_DAYS, critical=True)]
+
+
+def assess_equity(ticker: str, last_eod: Optional[date] = None,
+                  today: Optional[date] = None) -> Assessment:
+    return assess(equity_sources(ticker, last_eod), today)
+
+
+def _latest_eod_date(ticker: str) -> Optional[date]:
+    path = ROOT / "data" / "eod" / f"{ticker.upper()}.csv"
+    if not path.exists():
+        return None
+    with path.open(encoding="utf-8") as f:
+        dates = [_parse(r.get("date")) for r in csv.DictReader(f)]
+    real = [d for d in dates if d]
+    return max(real) if real else None

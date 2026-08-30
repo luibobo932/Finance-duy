@@ -680,6 +680,201 @@ Chỉ cổ tức **tiền mặt sau thuế** được cộng vào tổng lợi n
 
 Rào lợi suất so **tổng mức tăng tới giá mục tiêu** với lãi tiền gửi **một năm**. Điều đó chỉ đúng nếu giá mục tiêu được kỳ vọng đạt trong khoảng 12 tháng; xa hơn thì rào đang dễ dãi với cổ phiếu. Mỗi kế hoạch vào lệnh nay in kèm câu cảnh báo đó thay vì để giả định nằm im trong code.
 
+## Dữ liệu cũ phải chặn được khuyến nghị cổ phiếu, đúng như nó đang chặn vàng (29/08/2026)
+
+Cùng một lần chạy, ngày 29/08, hai nửa hệ thống nói hai điều trái ngược về **cùng một file**:
+
+```
+scripts/health_check.py  → ❌ EOD CTD: mới nhất 2026-08-10 — đã 19 ngày,
+                             gấp >3× ngưỡng 4 ngày. Automation đã ngừng chạy.
+scripts/run_morning.py   → CTD 62.40 (EOD 2026-08-10) → MUA THĂM DÒ (80/100)
+                             Mua tối đa 81 tr · cắt lỗ dưới 53.61 · mục tiêu 93.00
+```
+
+Một nửa gọi dữ liệu là hỏng, nửa kia dựng trên nó một lệnh mua kèm mức cắt lỗ. Trong khi **đúng kỳ đó**, vàng — đọc từ snapshot cũ y hệt — bị Risk Officer chặn thành CHƯA ĐỦ DỮ LIỆU (30/100).
+
+### Cơ chế chặn không thiếu, nhánh cổ phiếu chỉ không đi qua nó
+
+`equity/signals.py::decide_for` ghi cứng `data_freshness_score=100.0` và dựng một `RiskContext` không có `data_stale`. Rule `stale_critical_data` chạy đúng cho vàng, nhưng về cấu trúc **không thể chạm tới cổ phiếu** — không caller nào truyền dữ liệu vào để nó xét.
+
+Đây là lần thứ ba đúng lớp lỗi này: `margin_of_safety_pct` từng không được truyền nên nhánh cổ phiếu không thể khuyến nghị MUA; `data_completeness_pct` từng mặc định 100 nên 13/13 quyết định vàng cùng một điểm 92. Trường có tồn tại, kiểu đúng, mặc định trông vô hại — và không ai truyền. Lý lẽ "chuỗi EOD là nguồn tự động thật" cũng sai ở đúng chỗ đó: **"tự động" nói về cách lấy, không nói gì về việc nó có còn chạy hay không.**
+
+### Chỗ nguy hiểm nhất không phải nhãn hành động, mà là mức cắt lỗ
+
+`53.61` — chính xác tới hai chữ số thập phân — được suy ra từ vùng hỗ trợ của gần ba tuần trước. Sau ngần ấy phiên không quan sát, giá có thể đã ở bất kỳ đâu. Bốn ràng buộc sẵn có của `decision/position_size.py` đều nói về **tương quan** giữa các con số (giá vs hỗ trợ, lợi nhuận vs rào tiền gửi, cỡ lệnh vs hạn mức) nên vẫn cho ra kết quả đẹp khi mọi con số cùng cũ 19 ngày. Nay có ràng buộc thứ năm: `price_stale_note` chặn hẳn kế hoạch vào lệnh, và đứng **đầu** danh sách lý do — các blocker khác bàn về chất lượng của lệnh, cái này bàn về việc có được phép bàn hay không.
+
+### Một ngưỡng, một câu giải thích, hai nơi hiển thị
+
+- `analytics/data_quality.py::EOD_MAX_AGE_DAYS = 4` là **định nghĩa duy nhất** của "EOD quá cũ" — `scripts/health_check.py` import nó thay vì giữ riêng số 4. Bốn ngày lịch chứ không phải một: giá đóng cửa thứ Sáu đọc sáng thứ Hai đã 3 ngày tuổi mà vẫn là phiên gần nhất, ngưỡng phải nuốt được một cuối tuần bình thường. Không có lịch nghỉ lễ, nên Tết dài sẽ làm dữ liệu trông cũ hơn thực tế — sai theo hướng khuyên ít đi, không theo hướng nguy hiểm.
+- `equity/signals.py::stale_price_note()` là **câu giải thích duy nhất**. Cần vậy vì có hai nơi hiển thị: bản tin văn bản và `dashboard/ban-tin-dau-tu.html`. Trang HTML — thứ chủ danh mục thật sự đọc — đã in "CHƯA ĐỦ DỮ LIỆU ĐỂ RA QUYẾT ĐỊNH" ở cột Khuyến nghị và "Mua tối đa 81 tr · cắt lỗ dưới 53.61" ở cột ngay bên cạnh, **trên cùng một hàng**.
+- Độ mới đo trên `TickerSignal.last_date` — chuỗi đã nạp — chứ không đọc lại đĩa, để nhãn hành động và nhãn chất lượng không thể nói về hai bộ dữ liệu khác nhau.
+
+### Test tự hỏng theo lịch cũng là một lỗi
+
+Ba test cũ chạy trên EOD thật mà không ghim mốc thời gian, nên rule chặn dữ liệu cũ làm chúng đỏ — chúng xanh khi vừa viết và đỏ ba tuần sau mà không dòng code nào thay đổi. Nay `decide_for(..., today=...)` tiêm được, và mọi test **không** nói về độ mới đều lấy "hôm nay" là ngày của nến EOD cuối. Phần độ mới nằm riêng ở `tests/test_equity_freshness.py` (17 test).
+
+Kết quả sau khi sửa: cùng chuỗi EOD đó, đọc **trong ngày** vẫn ra MUA THĂM DÒ 80/100 như trước — hành vi đường chạy bình thường không đổi; đọc **hôm nay** ra CHƯA ĐỦ DỮ LIỆU 30/100, không kèm cỡ lệnh hay mức cắt lỗ nào.
+
+## Bốn lỗi tìm được khi rà soát toàn hệ thống (29/08/2026)
+
+Rà soát bằng cách CHẠY mọi script rồi soi kết quả, chứ không chỉ đọc code. Ba trong bốn lỗi chỉ lộ ra khi chạy thật.
+
+### 1. `fetch_market_snapshot.py` ghi snapshot RỖNG và báo thành công
+
+Chạy script khi mạng bị chặn: thoát mã 0 như bình thường, và ghi vào `data/history.jsonl`:
+
+```json
+{"date": "2026-08-29", "ky": "chieu", "vnindex": {}, "gold": {},
+ "vcb": {"close": 60300, "change_pct": 1.01}, "ctd": {"close": 62400, "change_pct": 0.48}}
+```
+
+Hai chuyện sai cùng lúc, và chúng khuếch đại nhau:
+
+- **Không có giá vàng** — mà vàng là ~76% tài sản. Hậu quả đo được ngay: `value_at()` trả `total_trieu=None` cho kỳ mới nhất, đường tài sản ròng **thủng đúng ở đầu bên phải**; Decision Engine ghi tiếp 4 quyết định dựa trên kỳ rỗng đó.
+- **Giá VCB/CTD là nến ngày 10/08 mang nhãn ngày 29/08** — rửa dữ liệu cũ thành dữ liệu mới. `analytics/price_sanity.py` không bắt được, vì nó so với snapshot liền trước, mà chép nguyên giá cũ thì lệch 0% — qua mọi kiểm tra một cách hoàn hảo.
+
+`validate_snapshot()` bắt giá **sai** (âm, bằng 0, bất khả thi) nhưng không bắt giá **thiếu**, vì thiếu không phải một giá trị bất thường. Nay `refuse_reasons()` từ chối ghi khi không có giá vàng hoặc tỷ giá, và `latest_eod_close_pct()` mang theo `as_of` để nến cũ hơn `EOD_MAX_AGE_DAYS` bị loại thay vì đóng dấu ngày hôm nay. **Thà không ghi gì còn hơn ghi một kỳ rỗng rồi để cả hệ thống coi đó là hiện trạng mới nhất.**
+
+### 2. Dashboard nói "mua tối đa 81 tr", bản tin nói 34 tr — cùng một câu hỏi
+
+Với 83 tr CTD đang nắm, trần 10% cho một mã chỉ còn 34,3 tr. Bản tin tính đúng; `reporting/dashboard_builder.py` gọi thẳng `plan_position()` mà **bỏ bốn tham số ràng buộc** (vị thế đang nắm cho cả hai trần, tiền mặt khả dụng, quỹ khẩn cấp) nên in ra 81 tr — gấp 2,4 lần, đẩy vị thế lên 14% tài sản.
+
+Trần chỉ trừ được phần đang nắm khi caller **truyền** phần đang nắm vào; không truyền thì trần im lặng nới ra. Đúng lỗi này đã sửa một lần rồi — commit "Vòng đời vị thế" ghi nguyên văn *"đang nắm 83 tr CTD, hệ thống vẫn bảo mua tối đa 89 tr"* — nhưng chỉ sửa ở `run_morning.py`. Dashboard mới là trang chủ danh mục thật sự đọc.
+
+Nay có `equity/signals.py::plan_for()` là **chỗ dựng duy nhất**, cả hai bề mặt gọi lại. Test `test_chi_MOT_noi_duoc_goi_thang_plan_position` chặn tái phát: thêm bề mặt mới mà gọi thẳng `plan_position()` là test đỏ.
+
+### 3. Bộ đếm kỷ luật giao dịch vừa bỏ sót vừa buộc tội oan
+
+`docs/AUDIT_REPORT.md` mục L7 xếp logic string-matching cũ là "dễ vỡ". Đo lại trên đúng 9 nhãn mà `action_mapper.py` sinh ra thì nó không dễ vỡ — **nó đã vỡ sẵn**:
+
+| Khuyến nghị lúc đó | Lệnh | Logic cũ | Đúng ra |
+|---|---|---|---|
+| KHÔNG MUA THÊM | SELL | ⚠️ "đi ngược" | thuận — bán không mâu thuẫn với "đừng mua thêm" |
+| ĐỨNG NGOÀI | BUY | không gắn cờ | **đi ngược** |
+| CHỜ XÁC NHẬN | BUY | không gắn cờ | **đi ngược** |
+| GIỮ | SELL | không gắn cờ | **đi ngược** |
+
+Nhánh BUY dò chuỗi `"CHƯA MUA"` — chuỗi này chỉ có trong `PositionPlan.summary()`, **không nằm trong bất kỳ nhãn quyết định nào**. Nên trên cả 9 nhãn, cột BUY luôn `False`: mọi lệnh mua sai đều lọt. Mà mua sai mới là phía mất tiền. Ngược lại "KHÔNG MUA THÊM" chứa chuỗi con "MUA" nên lệnh bán đúng bị đếm là sai.
+
+Nay `decision/discipline.py` đối chiếu bằng **enum**, bảng 9 hành động tường minh, và tách **ba** trạng thái chứ không hai: `CHƯA ĐỦ DỮ LIỆU` không phải một khuyến nghị để mà đi ngược — nó là lời thú nhận hệ thống không biết; trộn vào cột "đi ngược" sẽ làm loãng đúng thứ cần nhìn.
+
+### 4. Mức cắt lỗ ghi xuống đĩa từ dữ liệu cũ (`L8` cũng chưa từng được sửa)
+
+`_sync_stop_alerts()` là bề mặt **thứ ba** của lỗi dữ liệu cũ đã sửa lượt trước — và là bề mặt duy nhất **ghi xuống đĩa**: mức cắt lỗ suy từ vùng hỗ trợ của 19 ngày trước nằm lại trong `data/alerts.json` và được `alerts.py` quét mỗi kỳ như một mức rủi ro đang sống.
+
+Chỗ dễ làm sai là vế thứ hai: bỏ mã ra khỏi `positions` "cho an toàn" sẽ khiến `sync_stops` coi là vị thế đã đóng và **xoá** cảnh báo — dữ liệu cũ làm một vị thế thật mất mức canh cắt lỗ. Nay có tham số `freeze`: **không tính lại, và cũng không gỡ**. Dữ liệu cũ phải làm hệ thống im lặng, không được làm nó tháo bỏ một thứ đang bảo vệ tiền thật.
+
+Cùng lượt, sửa nốt `L8` (chia cho 0 trong `journal.py`, đã ghi trong audit đầu tiên và chưa từng được thêm guard): `journal.py add BUY VCB 58.5 0` rồi `report` → `ZeroDivisionError`, mất toàn bộ báo cáo. Chặn ở **hai** tầng — cửa vào (giá/khối lượng phải > 0) và chỗ đọc (cho những dòng đã lỡ ghi trước đây).
+
+**747 test** (trước đó 697).
+
+## Backtest tự chấm điểm mình cao hơn thực tế (30/08/2026)
+
+`scripts/backtest.py` tính lợi nhuận sau chi phí bằng **công thức riêng**, không dùng `equity/costs.py` như phần còn lại của hệ thống:
+
+```python
+(sell - buy) / buy * 100 - 2 * fee_pct
+```
+
+Sai hai chỗ, và cả hai đều lệch về phía **lạc quan**:
+
+1. **Bỏ hẳn thuế bán 0,1%** — khoản bắt buộc, phải nộp *kể cả khi lỗ*. Mọi lệnh trong mọi backtest đều được cộng không 0,1 điểm %.
+2. **Trừ phí như điểm phần trăm phẳng.** Phí mua tính trên tiền vào, phí bán tính trên tiền **ra**. Trừ `2 × fee_pct` là coi cả hai như tính trên tiền vào — sai càng nhiều khi lãi càng lớn, tức sai đúng ở chỗ quan trọng.
+
+Đo trên chính dữ liệu CTD, phí 0,2%/chiều:
+
+| mua | bán | gộp | công thức cũ | đúng | lệch |
+|---|---|---|---|---|---|
+| 62,4 | 63,0 | +0,96% | +0,562% | +0,459% | 0,10 |
+| 62,4 | 93,0 | +49,04% | +48,638% | +48,391% | 0,25 |
+| 100 | 200 | +100% | +99,600% | +99,200% | 0,40 |
+
+0,1–0,4 điểm % nghe nhỏ, nhưng sai số này **luôn cùng một chiều** và cộng dồn theo số lệnh. Backtest tồn tại để trả lời "quy tắc này có đáng theo không", mà thước đo là tiền gửi ~8%/năm KHÔNG rủi ro — một sai số luôn nghiêng về phía làm quy tắc trông tốt hơn thực tế là loại sai số dẫn thẳng tới quyết định sai.
+
+### Hai thay đổi kèm theo
+
+- **Mặc định không còn là "miễn phí".** `--fee` mặc định lấy phí thật trong `config/decision_rules.yaml` thay vì 0. Giao dịch miễn phí chưa bao giờ là sự thật, và một backtest mặc định bỏ chi phí là backtest mặc định trả lời sai câu hỏi nó sinh ra để trả lời. Thuế bán thì bị trừ **luôn**, kể cả khi khai `--fee 0`.
+- **Rào lợi suất, đúng nguyên tắc đã áp cho khuyến nghị mua.** Backtest nay so kết quả với lãi tiền gửi trên **đúng số ngày vốn thực sự nằm trong thị trường** — không quy ra %/năm, vì 3 lệnh trong 43 phiên quy ra năm là phóng đại một mẫu quá nhỏ thành tuyên bố về tương lai:
+
+```
+Số lệnh: 3 | Thắng: 0/3 (0%) | Tổng lợi nhuận cộng dồn: -5.8%
+Vốn nằm trong thị trường 6 ngày. Cùng 6 ngày đó, gửi tiết kiệm ở mức tốt nhất
+đo được (8.00%/năm) cho +0.13% KHÔNG rủi ro.
+→ Quy tắc THUA tiền gửi 5.92 điểm %, trong khi vẫn phải chịu rủi ro giá.
+⚠️ Chỉ 3 lệnh — quá ít để nói quy tắc tốt hay xấu.
+```
+
+**751 test** (trước đó 747). Test cũ từng **mã hoá chính cái sai**: nó assert chênh lệch đúng bằng `2 × 0,15 = 0,3` — con số chỉ đúng với công thức phẳng.
+
+## Thước đo độ chính xác đang tự bảo vệ mình (30/08/2026)
+
+`scripts/review.py` chạy trên dữ liệu thật cho ra: **đã chấm điểm 0**, accuracy "chưa tính được", suốt 15 quyết định đã ghi. Nghe như "chưa đủ mẫu". Thực tế là thước đo bị **đóng băng ở đúng chỗ nó đáng lẽ phải ghi một lần đoán sai**.
+
+### Nguyên nhân: một trường giá chết
+
+`gold.ring_sell` (giá vàng nhẫn trong nước) chỉ có tới **22/07** rồi ngừng hẳn — không có nguồn tự động. Bốn quyết định neo vào trường đó bị kẹt: kỳ so sánh muộn nhất còn giá là 22/07 chiều, cách quyết định 22/07 sáng **vài giờ**.
+
+Với quyết định **CHỐT BỚT** ngày 22/07 sáng — một hành động kỳ vọng giá **giảm**:
+
+| đo bằng | tới kỳ | thay đổi | verdict |
+|---|---|---|---|
+| `ring_sell` (trường gốc) | 22/07 chiều, **0 ngày** | +0,00% | "đi ngang" |
+| `xauusd` (trường thay thế) | 10/08 chiều, **19 ngày** | **+5,48%** | **sai hướng** |
+
+Cả hai quyết định CHỐT BỚT của 22/07 đều rơi vào đó. Nên `scored = 0`, accuracy vĩnh viễn "chưa tính được" — trong khi thực tế đã có **hai lần đoán sai** nằm sẵn trong dữ liệu.
+
+### Điều đáng nói nhất: vấn đề này đã được giải rồi
+
+`analytics/opportunity_cost.py` xử lý đúng tình huống này, và chú thích trong đó nói thẳng ra:
+
+> *"quyết định 22/7 sáng neo vào ring_sell, mà ring_sell chỉ còn tới 22/7 chiều — so hai kỳ cách nhau vài giờ ra +0,00% và **không nói gì** về chi phí của một hành động phòng thủ."*
+
+Sửa ở module đó, **không sửa ở `decision_review`** — mà `decision_review` mới là nơi nạp accuracy vào điểm tin cậy. Hai module vì thế chấm cùng một quyết định ra hai con số trái nhau: `+0,00%` và `+5,48%`. Đây là lần thứ tư đúng lớp lỗi "sửa một nơi trong nhiều nơi" trong đợt rà soát này.
+
+### Sửa
+
+- `FALLBACK_FIELDS` + `best_measurement()` chuyển về `analytics/decision_review.py` làm **một chỗ định nghĩa duy nhất**; `opportunity_cost` import lại, bản trùng bị xoá. Có test chặn tái phát nếu module nào khai lại bảng của riêng nó.
+- Ràng buộc bất di bất dịch được giữ nguyên và có test riêng: **đọc giá ở cả hai đầu bằng cùng một trường**. Không bao giờ so `ref_price` (ring_sell ~147) với giá sau (xauusd ~4340) — đó không phải xấp xỉ, đó là vô nghĩa. Không đọc được cả hai đầu → `CHƯA ĐỦ DỮ LIỆU`, một trạng thái trung thực, khác hẳn một verdict.
+- Mỗi verdict nay kèm **chân trời đánh giá**. Một kết luận trên 0 ngày và một kết luận trên 19 ngày không cùng sức nặng; giấu con số đó đi là để người đọc tự hiểu nhầm rằng chúng ngang nhau. Báo cáo cảnh báo riêng những dòng chấm trên cửa sổ dưới 1 ngày.
+
+Kết quả trên chính dữ liệu đó:
+
+```
+2026-07-22 (sang) CHỐT BỚT → +5.48% tới 2026-08-10 [19 ngày, đo bằng xauusd, xấp xỉ] — ❌ sai hướng
+2026-07-22 (chieu) CHỐT BỚT → +4.99% tới 2026-08-10 [19 ngày, đo bằng xauusd, xấp xỉ] — ❌ sai hướng
+
+Đã chấm điểm: 2 (đúng 0 / sai 2) · Accuracy: 0.0%
+⚠️ 1 quyết định được chấm trên cửa sổ DƯỚI 1 NGÀY — đọc như chưa có kết luận.
+```
+
+Accuracy vẫn chưa nạp vào điểm tin cậy vì ngưỡng tối thiểu là 5 quyết định đã chấm — đúng như thiết kế. Nhưng nó **không còn là con số không bao giờ tính được**.
+
+**762 test** (trước đó 751).
+
+## Quỹ khẩn cấp bị chừa hai lần — 2,4 tr/năm lãi bỏ lỡ (30/08/2026)
+
+`config/risk_limits.yaml` khai `minimum_cash_buffer_vnd: 30 tr`. Đó là yêu cầu ở tầng **danh mục**, không phải yêu cầu riêng của khoản tiết kiệm — và tiền mặt đang nắm đã tính vào đó rồi.
+
+| | phép tính | kết quả |
+|---|---|---|
+| Lần 1 — `run_morning.py` | tiền mặt 35 tr − quỹ 30 tr | "tiền khả dụng ngay chỉ 5 tr" ✓ |
+| Lần 2 — `deposits_report.py` | tiết kiệm 246 tr − quỹ 30 tr | chia kỳ hạn trên 216 tr ✗ |
+| **Tổng đã chừa** | | **60 tr** — gấp đôi hạn mức |
+
+Hệ quả: **30 tr tiết kiệm nằm ngoài kế hoạch**, không được đặt vào kỳ hạn nào. Ở mức tốt nhất đo được 8,00%/năm, đó là **2,4 tr/năm tiền lãi bỏ lỡ** — trong đúng module sinh ra để tối đa hoá lãi tiền gửi. Và báo cáo in ra dòng "Quỹ khẩn cấp giữ lại (không đầu tư): 30.000.000đ" như thể đó là một khoản dự phòng thứ hai chính đáng.
+
+`deposits/strategy.py::buffer_needed_from_savings()` nay trả về phần **còn thiếu** sau khi trừ tiền mặt. Tiền mặt đã đủ quỹ → 0, toàn bộ 246 tr vào kế hoạch. Báo cáo nói rõ vì sao:
+
+```
+Quỹ khẩn cấp 30.000.000đ đã được TIỀN MẶT (35.000.000đ) đáp ứng đủ — không chừa
+thêm từ tiết kiệm. Chừa hai lần là để 30.000.000đ nằm ngoài kế hoạch mà không
+có lý do.
+```
+
+Lãi dự kiến phần đã phân bổ tăng từ 8,99 tr lên **10,23 tr/năm**. (73,8 tr vẫn chưa phân bổ vì dữ liệu chưa có ngân hàng nào cho kỳ hạn 13 tháng — hạn chế đã được báo cáo trung thực từ trước, không phải lỗi mới.)
+
+**771 test** (trước đó 762).
+
 ## Quy trình mỗi kỳ bản tin (đã gộp còn 2 lệnh)
 
 ```

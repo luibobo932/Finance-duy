@@ -10,6 +10,14 @@ Cập nhật 20/07/2026. ✅ = đã xây & test xong · 🟡 = có công cụ, c
 | 2 | Tick data thật cho CTD | ✅ | `scripts/tick.py fetch CTD <ngày>` đã chạy được thật trên laptop local (cùng domain entrade, nến 1 phút — **vẫn là proxy gần đúng, không phải từng lệnh khớp thật**, đúng như tài liệu đã ghi). Test 17/7/2026: 171 bản ghi, không phát hiện bất thường. |
 | 3 | Backtest quy tắc | ✅ | `scripts/backtest.py` (MA cross, mở rộng được). Chạy khi `data/eod/` đủ dài. |
 
+> **29/08/2026 — dữ liệu EOD đã cũ 19 ngày và không ai chạy `fetch_eod.py`.**
+> Hệ quả không phải "thiếu dữ liệu" mà là **lời khuyên sai**: bản tin ra MUA THĂM DÒ
+> CTD 80/100 kèm mức cắt lỗ 53.61 tính trên giá của ba tuần trước, trong khi
+> `health_check.py` gọi đúng chuỗi đó là hỏng. Đã sửa (xem README, mục 29/08): nay
+> Risk Officer chặn nhánh cổ phiếu bằng cùng rule đang chặn vàng. Việc còn lại là của
+> vận hành — chạy `python3 scripts/fetch_eod.py` định kỳ, vì hệ thống giờ **im lặng**
+> thay vì đoán bừa, và im lặng kéo dài cũng là mất mát.
+
 ## Nhóm 2 — Cảnh báo & lịch
 
 | # | Ý tưởng | Trạng thái | Ghi chú |

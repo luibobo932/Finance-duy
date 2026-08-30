@@ -46,8 +46,33 @@ def load_closes(path) -> list[tuple[str, float]]:
 
 
 def _net_return_pct(buy: float, sell: float, fee_pct: float) -> float:
-    """Lợi nhuận % sau khi trừ phí giao dịch fee_pct mỗi chiều (mua + bán)."""
-    return (sell - buy) / buy * 100 - 2 * fee_pct
+    """Lợi nhuận % sau thuế và phí — dùng CHUNG `equity/costs.py` với phần còn
+    lại của hệ thống, không tự tính lấy một công thức riêng.
+
+    Công thức cũ ở đây là `(sell-buy)/buy*100 - 2*fee_pct`, sai hai chỗ và cả
+    hai đều lệch về phía LẠC QUAN:
+
+    1. **Bỏ hẳn thuế bán 0,1%** — khoản bắt buộc, phải nộp KỂ CẢ KHI LỖ
+       (`equity/costs.SELL_TAX_PCT`). Mọi lệnh trong mọi backtest đều được
+       cộng không 0,1 điểm %.
+    2. **Trừ phí như điểm phần trăm phẳng.** Phí mua tính trên tiền vào, phí
+       bán tính trên tiền RA. Trừ `2*fee_pct` là coi cả hai như tính trên tiền
+       vào — sai càng nhiều khi lãi càng lớn, tức sai đúng ở chỗ quan trọng.
+
+    Đo trên chính dữ liệu CTD (phí 0,2%/chiều):
+
+        mua 62,4 → bán 63,0   cũ +0,562%   đúng +0,459%   lệch 0,10
+        mua 62,4 → bán 93,0   cũ +48,638%  đúng +48,391%  lệch 0,25
+        mua 100  → bán 200    cũ +99,600%  đúng +99,200%  lệch 0,40
+
+    Vì sao 0,1–0,4 điểm % không phải chuyện nhỏ: backtest tồn tại để trả lời
+    "quy tắc này có đáng theo không", mà thước đo là lãi tiền gửi ~8%/năm KHÔNG
+    rủi ro. Một sai số luôn cùng chiều, cộng dồn theo số lệnh, đúng ở phía làm
+    quy tắc trông tốt hơn thực tế — đó là loại sai số dẫn tới quyết định sai.
+    """
+    from equity.costs import net_upside_pct
+
+    return net_upside_pct((sell - buy) / buy * 100, fee_pct)
 
 
 def backtest_ma(series: list[tuple[str, float]], n: int = 20, fee_pct: float = 0.0) -> Optional[list[Trade]]:
@@ -94,11 +119,63 @@ def backtest_rsi(series: list[tuple[str, float]], period: int = 14,
     return trades
 
 
+def _so_voi_tien_gui(trades: list, total_ret_pct: float) -> None:
+    """Quy tắc này có thắng nổi tiền gửi KHÔNG rủi ro trong cùng khoảng thời
+    gian không — câu hỏi mà con số "+5,5%" một mình không trả lời được.
+
+    Cùng nguyên tắc "rào lợi suất" đã áp cho khuyến nghị mua ở
+    `decision/position_size.py`: một chiến lược chỉ đáng theo nếu vượt được
+    mức tiền gửi tốt nhất đo được. Ở đây so trên ĐÚNG số ngày vốn thực sự nằm
+    trong thị trường, không qui năm — 3 lệnh trong 43 phiên qui ra %/năm là
+    phóng đại một mẫu quá nhỏ thành một tuyên bố về tương lai.
+    """
+    from datetime import datetime
+
+    try:
+        from deposits.ranking import load_normalized, rank
+
+        ranked = rank(load_normalized())
+        rate = ranked[0]["rate_pct"] if ranked else None
+    except Exception:  # noqa: BLE001 — thiếu bảng lãi suất không được chặn backtest
+        rate = None
+    if rate is None:
+        print("Chưa có bảng lãi suất tiền gửi để đối chiếu — "
+              "không kết luận được quy tắc này có đáng theo không.")
+        return
+
+    ngay = 0
+    for d1, d2, *_ in trades:
+        try:
+            ngay += (datetime.strptime(d2, "%Y-%m-%d")
+                     - datetime.strptime(d1, "%Y-%m-%d")).days
+        except (ValueError, TypeError):
+            continue
+    if ngay <= 0:
+        return
+    tien_gui = rate * ngay / 365
+    print(f"\nVốn nằm trong thị trường {ngay} ngày. Cùng {ngay} ngày đó, gửi tiết kiệm "
+          f"ở mức tốt nhất đo được ({rate:.2f}%/năm) cho {tien_gui:+.2f}% KHÔNG rủi ro.")
+    if total_ret_pct > tien_gui:
+        print(f"→ Quy tắc vượt tiền gửi {total_ret_pct - tien_gui:+.2f} điểm % — "
+              "nhưng có rủi ro, và mẫu này quá nhỏ để kết luận.")
+    else:
+        print(f"→ Quy tắc THUA tiền gửi {tien_gui - total_ret_pct:.2f} điểm %, "
+              "trong khi vẫn phải chịu rủi ro giá.")
+    if len(trades) < 30:
+        print(f"⚠️ Chỉ {len(trades)} lệnh — quá ít để nói quy tắc tốt hay xấu. "
+              "Đây là mô tả những gì ĐÃ xảy ra, không phải dự báo.")
+
+
 def main() -> None:
     args = sys.argv[1:]
     n = 20
     rule = "ma"
-    fee = 0.0
+    # Mặc định là phí THẬT trong config, không phải 0. Giao dịch miễn phí chưa
+    # bao giờ là sự thật, và một backtest mặc định bỏ chi phí là một backtest
+    # mặc định trả lời sai câu hỏi nó sinh ra để trả lời.
+    from equity.costs import load_fee_pct
+
+    fee = load_fee_pct()
     buy_th, sell_th = 30.0, 70.0
     period = 14
 
@@ -145,16 +222,19 @@ def main() -> None:
         print(f"Đủ dữ liệu ({len(series)} phiên) nhưng quy tắc {label} không phát tín hiệu "
               f"mua-bán trọn vẹn nào trong giai đoạn này.")
         return
-    print(f"=== BACKTEST {label} — {path.stem} ({len(series)} phiên"
-          f"{f', phí {fee:g}%/chiều' if fee else ''}) ===")
+    from equity.costs import SELL_TAX_PCT
+
+    print(f"=== BACKTEST {label} — {path.stem} ({len(series)} phiên, "
+          f"phí {fee:g}%/chiều + thuế bán {SELL_TAX_PCT:g}%) ===")
     wins = sum(1 for *_, r in trades if r > 0)
     total_ret = sum(r for *_, r in trades)
     for d1, d2, p1, p2, r in trades:
         print(f"  {d1} mua {p1:.2f} → {d2} bán {p2:.2f}: {r:+.1f}%")
     print(f"\nSố lệnh: {len(trades)} | Thắng: {wins}/{len(trades)} ({wins/len(trades)*100:.0f}%) "
           f"| Tổng lợi nhuận cộng dồn: {total_ret:+.1f}%")
-    if not fee:
-        print("Lưu ý: chưa tính phí, trượt giá — thêm --fee 0.15 để gần thực tế hơn.")
+    print("Lợi nhuận đã trừ phí hai chiều và thuế bán (equity/costs.py) — "
+          "CHƯA trừ trượt giá.")
+    _so_voi_tien_gui(trades, total_ret)
 
 
 if __name__ == "__main__":

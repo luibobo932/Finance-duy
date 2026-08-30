@@ -14,6 +14,7 @@ Cách dùng:
 """
 import json
 import sys
+from datetime import date  # noqa: F401 — dùng trong chú thích kiểu
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -323,9 +324,9 @@ def section_chung_khoan() -> str:
     Decision Engine, rule quản trị của Risk Officer) và chạy được ngay trên 43
     phiên EOD thật của VCB/CTD — chỉ chưa ai gọi.
     """
-    from decision.position_size import plan_position
     from equity.signals import analyze as eq_analyze
-    from equity.signals import decide_for, dividends_for, valuation_for
+    from equity.signals import (data_quality_for, decide_for, dividends_for, plan_for,
+                                stale_price_note, valuation_for)
     from equity.target_prices import undated_warning
     from portfolio.loader import load_portfolio, load_risk_limits
 
@@ -353,6 +354,11 @@ def section_chung_khoan() -> str:
         d = decide_for(s, has_position=t in held)
         lines.append(f"- **{t}** {s.close:,.2f} (EOD {s.last_date}) → "
                      f"**{d['action_vi']}** (tin cậy {d['confidence']}/100)")
+        # Một câu giải thích, dùng cho cả nhãn hành động lẫn kế hoạch vào lệnh
+        # bên dưới, để hai thứ không thể nói khác nhau.
+        stale_note = stale_price_note(s)
+        if stale_note:
+            lines.append(f"  - ⚠️ DỮ LIỆU CŨ: {data_quality_for(s).explain()}")
         lines.append(f"  - {s.evidence()}")
         sr = []
         if s.tech.get("support") is not None:
@@ -377,23 +383,11 @@ def section_chung_khoan() -> str:
         div = dividends_for(s)
         if div:
             lines.append(f"  - {div.note()}")
-        if net:
-            plan = plan_position(
-                t, s.close, net, limits=limits,
-                # Vị thế ĐANG NẮM phải được trừ vào room còn lại, nếu không
-                # trần "tổng cổ phiếu ≤20%" bị bỏ qua: đã nắm 83 tr mà hệ thống
-                # vẫn bảo "mua tối đa 89 tr", tức cho phép vượt trần mà không
-                # báo gì.
-                current_stock_value_trieu=port.stock_market_value_vnd / 1e6,
-                current_position_value_trieu=(
-                    held[t].market_value_vnd / 1e6 if t in held else 0.0),
-                support=s.tech.get("support"), resistance=s.tech.get("resistance"),
-                target=view.lowest.target_nghin_dong if view and view.lowest else None,
-                hurdle_pct=hurdle,
-                dividend_yield_pct=div.net_yield_pct if div else None,
-                available_cash_trieu=port.cash_amount_vnd / 1e6,
-                min_cash_buffer_trieu=(limits.get("minimum_cash_buffer_vnd") or 0) / 1e6,
-            )
+        # Mọi ràng buộc (trần 1 mã/tổng đã trừ phần đang nắm, rào lợi suất,
+        # tiền phải có thật, giá không được cũ) nằm trong plan_for — dashboard
+        # gọi đúng hàm này, nên hai nơi không thể ra hai con số khác nhau.
+        plan = plan_for(s, port, limits, net_worth_trieu=net, hurdle_pct=hurdle)
+        if plan:
             lines.append(f"  - **{plan.summary()}**")
             for n in plan.notes:
                 lines.append(f"    - ⚠️ {n}")
@@ -445,17 +439,29 @@ def _sync_stop_alerts(held: dict, limits: dict) -> list[str]:
 
         from decision.stop_registry import sync_stops
         from equity.signals import analyze as eq_analyze
+        from equity.signals import stale_price_note
 
         path = ROOT / "data" / "alerts.json"
         data = _json.loads(path.read_text(encoding="utf-8"))
-        positions = []
+        positions, freeze = [], []
         for ticker, pos in held.items():
             s = eq_analyze(ticker)
+            # Chuỗi EOD cũ thì KHÔNG tính lại mức cắt lỗ — và cũng không gỡ mức
+            # đang canh. Đây là nơi mức cắt lỗ được GHI XUỐNG ĐĨA, nên nó nguy
+            # hiểm hơn hai nơi chỉ hiển thị: một con số suy từ vùng hỗ trợ của
+            # 19 ngày trước nằm lại trong data/alerts.json và được quét mỗi kỳ
+            # như thể là mức rủi ro đang sống.
+            if s.has_data and stale_price_note(s):
+                freeze.append(ticker)
+                continue
             sup = s.tech.get("support") if s.has_data else None
             if sup and s.close and sup < s.close:
                 positions.append({"ticker": ticker, "stop": round(sup * 0.98, 2),
                                   "entry": (pos.avg_cost_vnd or 0) / 1000 or None})
-        alerts, changes = sync_stops(data.get("alerts", []), positions)
+        alerts, changes = sync_stops(data.get("alerts", []), positions, freeze=freeze)
+        if freeze:
+            changes.append("giữ nguyên mức cắt lỗ " + ", ".join(freeze)
+                           + " — chuỗi EOD quá cũ để tính lại (không gỡ, không đổi)")
         if changes:
             data["alerts"] = alerts
             path.write_text(_json.dumps(data, ensure_ascii=False, indent=2) + "\n",

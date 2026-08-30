@@ -146,11 +146,20 @@ def plan_position(
     min_cash_buffer_trieu: Optional[float] = None,
     fee_pct: Optional[float] = None,
     dividend_yield_pct: Optional[float] = None,   # SAU thuế 5%, trên giá mua
+    price_stale_note: Optional[str] = None,
 ) -> PositionPlan:
     """Kế hoạch vào lệnh cho 1 mã, hoặc lý do KHÔNG nên vào.
 
     Trả `blockers` rỗng chỉ khi mọi ràng buộc đều qua — thiếu dữ liệu cũng là
     một blocker, không phải lý do để bỏ qua ràng buộc đó.
+
+    `price_stale_note` là ràng buộc thứ NĂM, bổ sung sau khi đo được ngày 29/08:
+    cả bốn ràng buộc trên đều nói về TƯƠNG QUAN giữa các con số (giá vs hỗ trợ,
+    lợi nhuận vs rào tiền gửi, cỡ lệnh vs hạn mức) và tất cả vẫn tính ra kết quả
+    đẹp khi mọi con số cùng cũ 19 ngày. Mức cắt lỗ là chỗ hỏng nặng nhất: 53.61
+    được suy ra từ vùng hỗ trợ của gần ba tuần trước, chính xác tới hai chữ số
+    thập phân về một thị trường mà hệ thống không còn nhìn thấy. Một kế hoạch
+    vào lệnh dựng trên giá cũ không phải kế hoạch kém — nó không thực hiện được.
     """
     fee = load_fee_pct() if fee_pct is None else float(fee_pct)
     single_max = float(limits.get("single_stock_max") or 0.10)
@@ -164,6 +173,12 @@ def plan_position(
 
     blockers: list[str] = []
     notes: list[str] = []
+
+    # Đặt TRƯỚC mọi ràng buộc khác để nó là dòng đầu tiên người đọc thấy: các
+    # blocker sau đều bàn về chất lượng của lệnh, cái này bàn về việc có được
+    # phép bàn hay không.
+    if price_stale_note:
+        blockers.append(price_stale_note)
 
     # --- Mức cắt lỗ: dưới hỗ trợ THẬT ---------------------------------------
     stop = None
